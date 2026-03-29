@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-bd-primary text-white font-semibold py-3 px-6 rounded-xl
+           active:scale-95 transition-transform duration-100;
+  }
+
+  .card {
+    @apply bg-bd-card rounded-2xl p-4 shadow-lg;
+  }
+}
