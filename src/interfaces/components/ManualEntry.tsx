@@ -40,7 +40,7 @@ export function ManualEntry({ onSubmit, onCancel }: ManualEntryProps) {
 
   return (
     <div className="card w-full max-w-sm">
-      <h2 className="font-bold text-lg mb-4">Saisie manuelle</h2>
+      <h2 className="font-bold text-lg mb-4 text-text-primary">Saisie manuelle</h2>
 
       <div className="flex flex-col gap-3">
         <Field label="Titre *" value={title} onChange={setTitle} placeholder="Spirou et Fantasio" />
@@ -61,13 +61,13 @@ export function ManualEntry({ onSubmit, onCancel }: ManualEntryProps) {
       </div>
 
       <div className="flex gap-3 mt-4">
-        <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-bd-dark text-bd-muted font-semibold">
+        <button onClick={onCancel} className="btn-secondary flex-1">
           Annuler
         </button>
         <button
           onClick={handleSubmit}
           disabled={!title.trim()}
-          className="flex-1 btn-primary disabled:opacity-40"
+          className="btn-primary flex-1"
         >
           Ajouter
         </button>
@@ -93,16 +93,16 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-sm text-bd-muted block mb-1">{label}</label>
+      <label className="text-sm text-text-secondary block mb-1 font-medium">{label}</label>
       <input
         type="text"
         inputMode={inputMode ?? "text"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-bd-dark rounded-lg px-3 py-2 text-white outline-none focus:ring-2 focus:ring-bd-primary text-sm placeholder:text-bd-muted/50"
+        className="input-rect"
       />
-      {hint && <p className="text-xs text-bd-muted/60 mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-text-muted mt-0.5">{hint}</p>}
     </div>
   );
 }

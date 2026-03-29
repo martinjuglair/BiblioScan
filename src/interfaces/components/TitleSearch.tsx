@@ -26,7 +26,6 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
   };
 
   const handleSelect = (item: BnfSearchResult) => {
-    // Generate a pseudo-ISBN for books without one (use timestamp to ensure uniqueness)
     const isbn = item.isbn?.replace(/[-\s]/g, "") ?? `NOISBN${Date.now()}`;
 
     onSelect({
@@ -50,25 +49,25 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ex: Spirou recueil 42"
-          className="flex-1 bg-bd-card rounded-xl px-4 py-3 text-white placeholder:text-bd-muted outline-none focus:ring-2 focus:ring-bd-primary"
+          className="input-field flex-1"
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSearch();
           }}
         />
-        <button onClick={handleSearch} className="btn-primary px-4" disabled={loading}>
+        <button onClick={handleSearch} className="btn-primary px-5" disabled={loading}>
           {loading ? "..." : "Chercher"}
         </button>
       </div>
 
       {loading && (
         <div className="flex justify-center py-6">
-          <div className="animate-spin w-8 h-8 border-2 border-bd-primary border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-2 border-brand-amber border-t-transparent rounded-full" />
         </div>
       )}
 
       {!loading && searched && results.length === 0 && (
         <div className="text-center py-6">
-          <p className="text-bd-muted text-sm mb-3">Aucun résultat dans le catalogue BnF</p>
+          <p className="text-text-tertiary text-sm mb-3">Aucun résultat dans le catalogue BnF</p>
           <button onClick={onManualEntry} className="btn-primary w-full">
             Saisir manuellement
           </button>
@@ -81,34 +80,34 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
             <button
               key={`${item.isbn ?? i}-${item.title}`}
               onClick={() => handleSelect(item)}
-              className="card text-left active:scale-[0.98] transition-transform"
+              className="card text-left active:scale-[0.98] transition-all duration-200 hover:shadow-float"
             >
-              <h3 className="font-semibold text-sm leading-tight">{item.title}</h3>
+              <h3 className="font-semibold text-sm leading-tight text-text-primary">{item.title}</h3>
               {item.seriesName && (
-                <p className="text-bd-primary text-xs">
+                <p className="text-brand-orange text-xs font-medium">
                   {item.seriesName}
                   {item.volumeNumber ? ` — Tome ${item.volumeNumber}` : ""}
                 </p>
               )}
-              <p className="text-bd-muted text-xs truncate">
+              <p className="text-text-tertiary text-xs truncate">
                 {item.authors.join(", ") || "Auteur inconnu"} · {item.publisher}
               </p>
               <div className="flex justify-between items-center mt-1">
-                <p className="text-bd-muted text-xs">{item.publishedDate}</p>
+                <p className="text-text-muted text-xs">{item.publishedDate}</p>
                 {item.price && (
-                  <p className="text-bd-primary text-xs font-semibold">
+                  <p className="text-brand-orange text-xs font-semibold">
                     {item.price.amount.toFixed(2)} €
                   </p>
                 )}
                 {!item.isbn && (
-                  <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">
+                  <span className="text-xs bg-status-warning-bg text-status-warning px-2 py-0.5 rounded-pill font-medium">
                     Sans ISBN
                   </span>
                 )}
               </div>
             </button>
           ))}
-          <button onClick={onManualEntry} className="text-bd-muted text-sm text-center py-3">
+          <button onClick={onManualEntry} className="text-text-tertiary text-sm text-center py-3 font-medium">
             Pas trouvé ? Saisir manuellement
           </button>
         </div>

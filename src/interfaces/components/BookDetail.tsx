@@ -47,7 +47,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin w-8 h-8 border-2 border-bd-primary border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-brand-amber border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -55,16 +55,24 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   if (!book) {
     return (
       <div className="p-4">
-        <button onClick={onBack} className="text-bd-primary mb-4">← Retour</button>
-        <p className="text-red-400">BD introuvable</p>
+        <button onClick={onBack} className="text-brand-orange font-medium mb-4 flex items-center gap-1">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Retour
+        </button>
+        <p className="text-status-error">BD introuvable</p>
       </div>
     );
   }
 
   return (
     <div className="p-4">
-      <button onClick={onBack} className="text-bd-primary mb-4 flex items-center gap-1">
-        ← Retour
+      <button onClick={onBack} className="text-brand-orange font-medium mb-4 flex items-center gap-1">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Retour
       </button>
 
       <div className="flex flex-col items-center mb-6">
@@ -72,14 +80,14 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           <img
             src={book.coverUrl}
             alt={book.title}
-            className="w-40 h-60 object-cover rounded-2xl shadow-xl mb-4"
+            className="w-40 h-60 object-cover rounded-card shadow-hero mb-4"
           />
         ) : (
-          <div className="w-40 h-60 bg-bd-card rounded-2xl flex items-center justify-center text-bd-muted mb-4">
+          <div className="w-40 h-60 bg-surface-subtle rounded-card flex items-center justify-center text-text-muted mb-4">
             Pas de couverture
           </div>
         )}
-        <h1 className="text-xl font-bold text-center">{book.title}</h1>
+        <h1 className="text-xl font-bold text-center text-text-primary">{book.title}</h1>
       </div>
 
       <div className="card space-y-3">
@@ -95,31 +103,33 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         )}
         {/* Editable series */}
         <div>
-          <p className="text-bd-muted text-xs uppercase tracking-wide mb-1">Série</p>
+          <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">Série</p>
           {editingSeries ? (
             <div className="flex gap-2">
               <input
                 type="text"
                 value={seriesInput}
                 onChange={(e) => setSeriesInput(e.target.value)}
-                className="flex-1 bg-bd-dark rounded-lg px-3 py-2 text-white text-sm outline-none focus:ring-2 focus:ring-bd-primary"
+                className="input-rect flex-1"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleUpdateSeries();
                   if (e.key === "Escape") setEditingSeries(false);
                 }}
               />
-              <button onClick={handleUpdateSeries} className="text-bd-primary text-sm font-semibold">
+              <button onClick={handleUpdateSeries} className="text-brand-orange text-sm font-semibold">
                 OK
               </button>
             </div>
           ) : (
             <button
               onClick={() => setEditingSeries(true)}
-              className="text-white text-sm flex items-center gap-2"
+              className="text-text-primary text-sm flex items-center gap-2"
             >
               {book.seriesName}
-              <span className="text-bd-muted text-xs">✎</span>
+              <svg className="w-3.5 h-3.5 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
             </button>
           )}
         </div>
@@ -127,7 +137,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
       <button
         onClick={handleDelete}
-        className="w-full mt-6 py-3 rounded-xl bg-red-500/10 text-red-400 font-semibold"
+        className="w-full mt-6 py-3 rounded-pill bg-status-error-bg text-status-error font-semibold transition-all duration-200 active:scale-95"
       >
         Supprimer cette BD
       </button>
@@ -138,8 +148,8 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-bd-muted text-xs uppercase tracking-wide">{label}</p>
-      <p className="text-sm">{value}</p>
+      <p className="text-text-tertiary text-xs uppercase tracking-wide">{label}</p>
+      <p className="text-sm text-text-primary">{value}</p>
     </div>
   );
 }
