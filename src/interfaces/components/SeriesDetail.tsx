@@ -12,6 +12,7 @@ interface SeriesDetailProps {
 
 export function SeriesDetail({ seriesName, refreshKey, onBack, onSelectBook }: SeriesDetailProps) {
   const [books, setBooks] = useState<ComicBook[]>([]);
+  const [missing, setMissing] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,6 +20,7 @@ export function SeriesDetail({ seriesName, refreshKey, onBack, onSelectBook }: S
       if (result.ok) {
         const series = result.value.find((s: Series) => s.name === seriesName);
         setBooks(series?.sortedBooks ?? []);
+        setMissing(series?.missingVolumes ?? []);
       }
       setLoading(false);
     });
@@ -45,6 +47,17 @@ export function SeriesDetail({ seriesName, refreshKey, onBack, onSelectBook }: S
       <p className="text-text-tertiary text-sm mb-4">
         {books.length} tome{books.length > 1 ? "s" : ""}
       </p>
+
+      {missing.length > 0 && (
+        <div className="card bg-status-warning-bg border border-status-warning/20 mb-4">
+          <p className="text-status-warning text-sm font-semibold mb-1">
+            {missing.length} tome{missing.length > 1 ? "s" : ""} manquant{missing.length > 1 ? "s" : ""}
+          </p>
+          <p className="text-status-warning/80 text-xs">
+            Tomes : {missing.join(", ")}
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         {books.map((book) => (

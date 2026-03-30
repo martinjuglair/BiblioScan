@@ -16,9 +16,18 @@ export class ScanComicBook {
 
   /** Save a confirmed comic book to the collection */
   async confirm(input: ComicBookCreateInput): Promise<Result<ComicBook>> {
+    // Check duplicates by ISBN
     const existing = await this.repository.findByISBN(input.isbn);
     if (existing.ok && existing.value !== null) {
       return Result.fail("Cette BD est déjà dans votre collection");
+    }
+
+    // For books without real ISBN, also check by exact title match
+    if (input.isbn.startsWith("NOISBN")) {
+      const byTitle = await this.repository.findByTitle(input.title);
+      if (byTitle.ok && byTitle.value !== null) {
+        return Result.fail(`Un livre avec le titre "${input.title}" existe déjà dans votre collection`);
+      }
     }
 
     const bookResult = ComicBook.create(input);

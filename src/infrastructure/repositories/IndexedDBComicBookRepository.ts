@@ -68,6 +68,20 @@ export class IndexedDBComicBookRepository implements IComicBookRepository {
     }
   }
 
+  async findByTitle(title: string): Promise<Result<ComicBook | null>> {
+    try {
+      const db = await this.dbPromise;
+      const records: ComicBookRecord[] = await db.getAll(STORE_NAME);
+      const match = records.find(
+        (r) => r.title.toLowerCase() === title.toLowerCase(),
+      );
+      if (!match) return Result.ok(null);
+      return Result.ok(recordToEntity(match));
+    } catch {
+      return Result.fail("Erreur de lecture en base");
+    }
+  }
+
   async findAll(): Promise<Result<ComicBook[]>> {
     try {
       const db = await this.dbPromise;

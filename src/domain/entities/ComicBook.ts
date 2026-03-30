@@ -103,6 +103,21 @@ export class ComicBook {
     return new ComicBook({ ...this.props, seriesName: newName });
   }
 
+  withUpdates(updates: {
+    seriesName?: string;
+    volumeNumber?: number | null;
+    retailPrice?: Price | null;
+    coverUrl?: string | null;
+  }): ComicBook {
+    return new ComicBook({
+      ...this.props,
+      ...(updates.seriesName !== undefined && { seriesName: updates.seriesName }),
+      ...(updates.volumeNumber !== undefined && { volumeNumber: updates.volumeNumber }),
+      ...(updates.retailPrice !== undefined && { retailPrice: updates.retailPrice }),
+      ...(updates.coverUrl !== undefined && { coverUrl: updates.coverUrl }),
+    });
+  }
+
   /** Serializable representation for IndexedDB */
   toPersistence(): ComicBookRecord {
     return {

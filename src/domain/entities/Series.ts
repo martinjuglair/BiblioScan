@@ -26,14 +26,37 @@ export class Series {
     });
   }
 
+  /** Detect gaps in volume numbering (e.g. has 1,2,4 → missing 3) */
+  get missingVolumes(): number[] {
+    const volumes = this.books
+      .map((b) => b.volumeNumber)
+      .filter((v): v is number => v !== null)
+      .sort((a, b) => a - b);
+
+    if (volumes.length < 2) return [];
+
+    const missing: number[] = [];
+    for (let i = volumes[0]!; i < volumes[volumes.length - 1]!; i++) {
+      if (!volumes.includes(i)) missing.push(i);
+    }
+    return missing;
+  }
+
   /** Group a flat list of books into Series */
   static groupFromBooks(books: ComicBook[]): Series[] {
     const map = new Map<string, ComicBook[]>();
 
     for (const book of books) {
-      const existing = map.get(book.seriesName) ?? [];
+      let key = book.seriesName;
+
+      // Books with "Sans série" are grouped by publisher instead
+      if (key === "Sans série") {
+        key = book.publisher ? `${book.publisher} (hors série)` : "Sans série";
+      }
+
+      const existing = map.get(key) ?? [];
       existing.push(book);
-      map.set(book.seriesName, existing);
+      map.set(key, existing);
     }
 
     return Array.from(map.entries())

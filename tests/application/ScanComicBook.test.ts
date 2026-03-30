@@ -22,6 +22,7 @@ function createMocks() {
   const repository: IComicBookRepository = {
     save: vi.fn().mockResolvedValue(Result.ok(undefined)),
     findByISBN: vi.fn().mockResolvedValue(Result.ok(null)),
+    findByTitle: vi.fn().mockResolvedValue(Result.ok(null)),
     findAll: vi.fn().mockResolvedValue(Result.ok([])),
     update: vi.fn().mockResolvedValue(Result.ok(undefined)),
     delete: vi.fn().mockResolvedValue(Result.ok(undefined)),

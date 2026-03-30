@@ -88,10 +88,30 @@ export class SupabaseComicBookRepository implements IComicBookRepository {
 
   async findByISBN(isbn: string): Promise<Result<ComicBook | null>> {
     try {
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from("comic_books")
         .select("*")
+        .eq("user_id", userId)
         .eq("isbn", isbn)
+        .maybeSingle();
+
+      if (error) return Result.fail(`Erreur de lecture: ${error.message}`);
+      if (!data) return Result.ok(null);
+      return Result.ok(rowToEntity(data as ComicBookRow));
+    } catch (e) {
+      return Result.fail(e instanceof Error ? e.message : "Erreur de lecture");
+    }
+  }
+
+  async findByTitle(title: string): Promise<Result<ComicBook | null>> {
+    try {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from("comic_books")
+        .select("*")
+        .eq("user_id", userId)
+        .ilike("title", title)
         .maybeSingle();
 
       if (error) return Result.fail(`Erreur de lecture: ${error.message}`);
@@ -104,9 +124,11 @@ export class SupabaseComicBookRepository implements IComicBookRepository {
 
   async findAll(): Promise<Result<ComicBook[]>> {
     try {
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from("comic_books")
         .select("*")
+        .eq("user_id", userId)
         .order("added_at", { ascending: false });
 
       if (error) return Result.fail(`Erreur de lecture: ${error.message}`);
@@ -122,9 +144,11 @@ export class SupabaseComicBookRepository implements IComicBookRepository {
 
   async delete(isbn: string): Promise<Result<void>> {
     try {
+      const userId = await getUserId();
       const { error } = await supabase
         .from("comic_books")
         .delete()
+        .eq("user_id", userId)
         .eq("isbn", isbn);
 
       if (error) return Result.fail(`Erreur de suppression: ${error.message}`);
