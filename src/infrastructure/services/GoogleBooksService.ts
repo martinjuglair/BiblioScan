@@ -22,7 +22,13 @@ const SingleVolumeSchema = z.object({
 export class GoogleBooksService implements IBookLookupService {
   async lookupByISBN(isbn: string): Promise<Result<ComicBookCreateInput>> {
     try {
-      const response = await fetch(`${GOOGLE_BOOKS_API}?q=isbn:${isbn}&country=FR`);
+      let response = await fetch(`${GOOGLE_BOOKS_API}?q=isbn:${isbn}&country=FR`);
+
+      // Retry once after a short delay on rate limit (429)
+      if (response.status === 429) {
+        await new Promise((r) => setTimeout(r, 2000));
+        response = await fetch(`${GOOGLE_BOOKS_API}?q=isbn:${isbn}&country=FR`);
+      }
 
       if (!response.ok) {
         return Result.fail(`Google Books API erreur HTTP ${response.status}`);

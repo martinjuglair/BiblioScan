@@ -6,6 +6,10 @@ export interface BnfBookData {
   price: { amount: number; currency: string } | null;
   seriesName: string | null;
   volumeNumber: number | null;
+  title: string | null;
+  authors: string[];
+  publisher: string | null;
+  publishedDate: string | null;
 }
 
 /**
@@ -23,7 +27,7 @@ export class BnfService {
 
       const response = await fetch(url);
       if (!response.ok) {
-        return Result.ok({ price: null, seriesName: null, volumeNumber: null });
+        return Result.ok({ price: null, seriesName: null, volumeNumber: null, title: null, authors: [], publisher: null, publishedDate: null });
       }
 
       const xml = await response.text();
@@ -31,9 +35,13 @@ export class BnfService {
         price: this.extractPrice(xml),
         seriesName: this.extractSeriesName(xml),
         volumeNumber: this.extractVolumeNumber(xml),
+        title: this.extractTitle(xml),
+        authors: this.extractAuthors(xml),
+        publisher: this.extractPublisher(xml),
+        publishedDate: this.extractPublishedDate(xml),
       });
     } catch {
-      return Result.ok({ price: null, seriesName: null, volumeNumber: null });
+      return Result.ok({ price: null, seriesName: null, volumeNumber: null, title: null, authors: [], publisher: null, publishedDate: null });
     }
   }
 
@@ -80,6 +88,39 @@ export class BnfService {
       }
     }
     return null;
+  }
+
+  private extractTitle(xml: string): string | null {
+    const field = this.extractField(xml, "200");
+    if (!field) return null;
+    return this.extractSubfield(field, "a")?.trim() ?? null;
+  }
+
+  private extractAuthors(xml: string): string[] {
+    const authors: string[] = [];
+    for (const tag of ["700", "701", "702"]) {
+      const fields = this.extractAllFields(xml, tag);
+      for (const field of fields) {
+        const lastName = this.extractSubfield(field, "a");
+        const firstName = this.extractSubfield(field, "b");
+        if (lastName) {
+          authors.push(firstName ? `${firstName.trim()} ${lastName.trim()}` : lastName.trim());
+        }
+      }
+    }
+    return authors;
+  }
+
+  private extractPublisher(xml: string): string | null {
+    const field = this.extractField(xml, "210");
+    if (!field) return null;
+    return this.extractSubfield(field, "c")?.trim() ?? null;
+  }
+
+  private extractPublishedDate(xml: string): string | null {
+    const field = this.extractField(xml, "210");
+    if (!field) return null;
+    return this.extractSubfield(field, "d")?.trim() ?? null;
   }
 
   private extractField(xml: string, tag: string): string | null {

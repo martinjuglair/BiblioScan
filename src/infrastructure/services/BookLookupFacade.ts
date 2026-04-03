@@ -3,7 +3,7 @@ import { IBookLookupService } from "@domain/services/IBookLookupService";
 import { Result } from "@domain/shared/Result";
 import { BnfService } from "./BnfPriceService";
 
-/** Tries Google Books first, falls back to Open Library, enriches with BnF data (price + series) */
+/** Tries Google Books first, falls back to Open Library, then BnF. Enriches with BnF data. */
 export class BookLookupFacade implements IBookLookupService {
   private readonly bnfService = new BnfService();
 
@@ -19,13 +19,29 @@ export class BookLookupFacade implements IBookLookupService {
       this.bnfService.fetchBookData(isbn),
     ]);
 
-    if (!metadataResult.ok) return metadataResult;
+    const bnf = bnfResult.ok ? bnfResult.value : null;
+
+    // If Google Books + Open Library both failed, try to build from BnF data alone
+    if (!metadataResult.ok) {
+      if (bnf?.title) {
+        return Result.ok({
+          isbn,
+          title: bnf.title,
+          authors: bnf.authors,
+          publisher: bnf.publisher ?? "Inconnu",
+          publishedDate: bnf.publishedDate ?? "",
+          coverUrl: null,
+          retailPrice: bnf.price,
+          seriesNameOverride: bnf.seriesName ?? undefined,
+          volumeNumberOverride: bnf.volumeNumber ?? undefined,
+        });
+      }
+      return metadataResult;
+    }
 
     const book = metadataResult.value;
 
-    if (bnfResult.ok) {
-      const bnf = bnfResult.value;
-
+    if (bnf) {
       // Enrich with BnF price if no price from Google Books
       if (!book.retailPrice && bnf.price) {
         book.retailPrice = {
