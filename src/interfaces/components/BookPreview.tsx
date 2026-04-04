@@ -32,20 +32,20 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
 
   return (
     <div className="card w-full max-w-sm">
-      <div className="flex gap-4">
+      <div className="flex gap-3">
         {data.coverUrl ? (
           <img
             src={data.coverUrl}
             alt={data.title}
-            className="w-24 h-36 object-cover rounded-lg shadow-float flex-shrink-0"
+            className="w-20 h-28 min-[360px]:w-24 min-[360px]:h-36 object-cover rounded-lg shadow-float flex-shrink-0"
           />
         ) : (
-          <div className="w-24 h-36 bg-surface-subtle rounded-lg flex items-center justify-center text-text-muted text-xs flex-shrink-0">
+          <div className="w-20 h-28 min-[360px]:w-24 min-[360px]:h-36 bg-surface-subtle rounded-lg flex items-center justify-center text-text-muted text-xs flex-shrink-0">
             Pas de couverture
           </div>
         )}
         <div className="flex flex-col gap-1 min-w-0">
-          <h2 className="font-bold text-lg leading-tight truncate text-text-primary">{data.title}</h2>
+          <h2 className="font-bold text-base min-[360px]:text-lg leading-tight line-clamp-2 text-text-primary">{data.title}</h2>
           <p className="text-text-tertiary text-sm truncate">
             {data.authors.join(", ") || "Auteur inconnu"}
           </p>

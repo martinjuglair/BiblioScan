@@ -39,7 +39,7 @@ export function ManualEntry({ onSubmit, onCancel }: ManualEntryProps) {
   };
 
   return (
-    <div className="card w-full max-w-sm">
+    <div className="card w-full">
       <h2 className="font-bold text-lg mb-4 text-text-primary">Saisie manuelle</h2>
 
       <div className="flex flex-col gap-3">

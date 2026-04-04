@@ -8,7 +8,7 @@ export class UpdateBookSeries {
   async execute(isbn: string, newSeriesName: string): Promise<Result<ComicBook>> {
     const bookResult = await this.repository.findByISBN(isbn);
     if (!bookResult.ok) return Result.fail(bookResult.error);
-    if (!bookResult.value) return Result.fail("BD introuvable");
+    if (!bookResult.value) return Result.fail("Livre introuvable");
 
     const updated = bookResult.value.withSeriesName(newSeriesName);
     const saveResult = await this.repository.update(updated);

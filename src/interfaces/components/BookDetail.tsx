@@ -21,6 +21,11 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [priceInput, setPriceInput] = useState("");
   const [coverInput, setCoverInput] = useState("");
 
+  // Rating/comment state
+  const [rating, setRating] = useState<number | null>(null);
+  const [comment, setComment] = useState("");
+  const [savingReview, setSavingReview] = useState(false);
+
   useEffect(() => {
     getLibrary.execute().then((result) => {
       if (result.ok) {
@@ -39,6 +44,8 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     setVolumeInput(b.volumeNumber !== null ? String(b.volumeNumber) : "");
     setPriceInput(b.retailPrice ? b.retailPrice.amount.toFixed(2) : "");
     setCoverInput(b.coverUrl ?? "");
+    setRating(b.rating);
+    setComment(b.comment ?? "");
   };
 
   const handleSave = async () => {
@@ -63,8 +70,22 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     }
   };
 
+  const handleSaveReview = async () => {
+    if (!book) return;
+    setSavingReview(true);
+    const result = await updateBook.execute(isbn, {
+      rating,
+      comment: comment.trim() || null,
+    });
+    setSavingReview(false);
+    if (result.ok) {
+      setBook(result.value);
+      onUpdated();
+    }
+  };
+
   const handleDelete = async () => {
-    if (!confirm("Supprimer cette BD de votre collection ?")) return;
+    if (!confirm("Supprimer ce livre de votre collection ?")) return;
     const result = await deleteBook.execute(isbn);
     if (result.ok) onDeleted();
   };
@@ -81,7 +102,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     return (
       <div className="p-4">
         <BackButton onClick={onBack} />
-        <p className="text-status-error">BD introuvable</p>
+        <p className="text-status-error">Livre introuvable</p>
       </div>
     );
   }
@@ -95,10 +116,10 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           <img
             src={book.coverUrl}
             alt={book.title}
-            className="w-40 h-60 object-cover rounded-card shadow-hero mb-4"
+            className="w-32 h-48 min-[360px]:w-40 min-[360px]:h-60 object-cover rounded-card shadow-hero mb-4"
           />
         ) : (
-          <div className="w-40 h-60 bg-surface-subtle rounded-card flex items-center justify-center text-text-muted mb-4">
+          <div className="w-32 h-48 min-[360px]:w-40 min-[360px]:h-60 bg-surface-subtle rounded-card flex items-center justify-center text-text-muted mb-4">
             Pas de couverture
           </div>
         )}
@@ -149,11 +170,51 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         </div>
       )}
 
+      {/* Rating & Comment */}
+      {!editing && (
+        <div className="card mt-4 space-y-3">
+          <h3 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide">Mon avis</h3>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onClick={() => setRating(rating === star ? null : star)}
+                className="p-0.5 transition-transform active:scale-90"
+              >
+                <svg
+                  className={`w-8 h-8 ${star <= (rating ?? 0) ? "text-brand-amber" : "text-border-strong"}`}
+                  fill={star <= (rating ?? 0) ? "currentColor" : "none"}
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Votre commentaire..."
+            rows={3}
+            className="input-rect w-full resize-none"
+          />
+          <button
+            onClick={handleSaveReview}
+            disabled={savingReview}
+            className="w-full py-2.5 rounded-pill bg-brand-amber/10 text-brand-amber font-semibold transition-all duration-200 active:scale-95"
+          >
+            {savingReview ? "..." : "Enregistrer mon avis"}
+          </button>
+        </div>
+      )}
+
       <button
         onClick={handleDelete}
         className="w-full mt-6 py-3 rounded-pill bg-status-error-bg text-status-error font-semibold transition-all duration-200 active:scale-95"
       >
-        Supprimer cette BD
+        Supprimer ce livre
       </button>
     </div>
   );

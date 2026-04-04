@@ -67,8 +67,8 @@ export function Scanner({ onBookAdded }: ScannerProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 p-4">
-      <h1 className="text-2xl font-bold text-text-primary">Ajouter une BD</h1>
+    <div className="flex flex-col items-center gap-4 px-4 py-4">
+      <h1 className="text-2xl font-bold text-text-primary">Ajouter un livre</h1>
 
       {/* Camera view */}
       <div

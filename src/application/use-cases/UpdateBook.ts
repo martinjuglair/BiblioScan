@@ -8,6 +8,8 @@ export interface UpdateBookInput {
   volumeNumber?: number | null;
   retailPriceAmount?: number | null;
   coverUrl?: string | null;
+  rating?: number | null;
+  comment?: string | null;
 }
 
 export class UpdateBook {
@@ -16,7 +18,7 @@ export class UpdateBook {
   async execute(isbn: string, input: UpdateBookInput): Promise<Result<ComicBook>> {
     const bookResult = await this.repository.findByISBN(isbn);
     if (!bookResult.ok) return Result.fail(bookResult.error);
-    if (!bookResult.value) return Result.fail("BD introuvable");
+    if (!bookResult.value) return Result.fail("Livre introuvable");
 
     let retailPrice: Price | null | undefined = undefined;
     if (input.retailPriceAmount !== undefined) {
@@ -34,6 +36,8 @@ export class UpdateBook {
       volumeNumber: input.volumeNumber,
       retailPrice,
       coverUrl: input.coverUrl,
+      rating: input.rating,
+      comment: input.comment,
     });
 
     const saveResult = await this.repository.update(updated);

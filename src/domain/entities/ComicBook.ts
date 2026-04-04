@@ -13,6 +13,8 @@ export interface ComicBookProps {
   retailPrice: Price | null;
   seriesName: string;
   volumeNumber: number | null;
+  rating: number | null;
+  comment: string | null;
   addedAt: Date;
 }
 
@@ -58,6 +60,12 @@ export class ComicBook {
   get volumeNumber(): number | null {
     return this.props.volumeNumber;
   }
+  get rating(): number | null {
+    return this.props.rating;
+  }
+  get comment(): string | null {
+    return this.props.comment;
+  }
   get addedAt(): Date {
     return this.props.addedAt;
   }
@@ -89,6 +97,8 @@ export class ComicBook {
         retailPrice,
         seriesName: input.seriesNameOverride ?? detected.seriesName,
         volumeNumber: input.volumeNumberOverride ?? detected.volumeNumber,
+        rating: null,
+        comment: null,
         addedAt: new Date(),
       }),
     );
@@ -108,6 +118,8 @@ export class ComicBook {
     volumeNumber?: number | null;
     retailPrice?: Price | null;
     coverUrl?: string | null;
+    rating?: number | null;
+    comment?: string | null;
   }): ComicBook {
     return new ComicBook({
       ...this.props,
@@ -115,6 +127,8 @@ export class ComicBook {
       ...(updates.volumeNumber !== undefined && { volumeNumber: updates.volumeNumber }),
       ...(updates.retailPrice !== undefined && { retailPrice: updates.retailPrice }),
       ...(updates.coverUrl !== undefined && { coverUrl: updates.coverUrl }),
+      ...(updates.rating !== undefined && { rating: updates.rating }),
+      ...(updates.comment !== undefined && { comment: updates.comment }),
     });
   }
 
@@ -130,6 +144,8 @@ export class ComicBook {
       retailPrice: this.retailPrice?.toJSON() ?? null,
       seriesName: this.seriesName,
       volumeNumber: this.volumeNumber,
+      rating: this.rating,
+      comment: this.comment,
       addedAt: this.addedAt.toISOString(),
     };
   }
@@ -146,5 +162,7 @@ export interface ComicBookRecord {
   retailPrice: { amount: number; currency: string } | null;
   seriesName: string;
   volumeNumber: number | null;
+  rating: number | null;
+  comment: string | null;
   addedAt: string;
 }

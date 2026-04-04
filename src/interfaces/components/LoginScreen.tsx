@@ -23,7 +23,7 @@ export function LoginScreen({ onSignIn, onSignUp, loading, error }: LoginScreenP
   };
 
   return (
-    <div className="min-h-screen bg-surface-light flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-surface-light flex flex-col items-center justify-center px-5 py-8">
       {/* Logo / Title */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center shadow-float"
@@ -33,7 +33,7 @@ export function LoginScreen({ onSignIn, onSignUp, loading, error }: LoginScreenP
           </svg>
         </div>
         <h1 className="text-3xl font-extrabold text-text-primary tracking-tight">BiblioScan</h1>
-        <p className="text-text-tertiary text-sm mt-1">Gérez votre collection de BD</p>
+        <p className="text-text-tertiary text-sm mt-1">Gérez votre collection de livres</p>
       </div>
 
       {/* Form */}

@@ -18,6 +18,8 @@ interface ComicBookRow {
   retail_price_currency: string | null;
   series_name: string;
   volume_number: number | null;
+  rating: number | null;
+  comment: string | null;
   added_at: string;
 }
 
@@ -41,6 +43,8 @@ function rowToEntity(row: ComicBookRow): ComicBook {
     retailPrice,
     seriesName: row.series_name,
     volumeNumber: row.volume_number,
+    rating: row.rating ?? null,
+    comment: row.comment ?? null,
     addedAt: new Date(row.added_at),
   });
 }
@@ -65,6 +69,8 @@ function entityToRow(book: ComicBook, userId: string): ComicBookRow {
     retail_price_currency: persistence.retailPrice?.currency ?? null,
     series_name: persistence.seriesName,
     volume_number: persistence.volumeNumber,
+    rating: persistence.rating ?? null,
+    comment: persistence.comment ?? null,
     added_at: persistence.addedAt,
   };
 }

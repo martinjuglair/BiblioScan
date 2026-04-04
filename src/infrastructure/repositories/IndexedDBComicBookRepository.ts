@@ -29,6 +29,8 @@ function recordToEntity(record: ComicBookRecord): ComicBook {
     retailPrice,
     seriesName: record.seriesName,
     volumeNumber: record.volumeNumber,
+    rating: record.rating ?? null,
+    comment: record.comment ?? null,
     addedAt: new Date(record.addedAt),
   });
 }

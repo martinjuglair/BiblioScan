@@ -28,7 +28,7 @@ export function CollectionStats({ books, series }: CollectionStatsProps) {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="card flex-shrink-0 w-36 flex flex-col items-center text-center py-3 px-2"
+            className="card flex-shrink-0 w-32 min-[360px]:w-36 flex flex-col items-center text-center py-3 px-2"
           >
             <span className={`text-2xl font-bold leading-tight ${stat.color}`}>{stat.value}</span>
             <span className="text-xs text-text-tertiary leading-tight mt-1">{stat.label}</span>
@@ -49,7 +49,7 @@ function computeStats(books: ComicBook[], series: Series[]): StatCard[] {
 
   stats.push({
     value: `${books.length}`,
-    label: "BD",
+    label: "Livres",
     color: "text-brand-orange",
   });
 
@@ -103,7 +103,7 @@ function computeStats(books: ComicBook[], series: Series[]): StatCard[] {
       }
     }
     stats.push({
-      value: `${topCount} BD`,
+      value: `${topCount} livres`,
       label: "Top éditeur",
       sub: topPub,
       color: "text-brand-purple",

@@ -19,7 +19,7 @@ export class ScanComicBook {
     // Check duplicates by ISBN
     const existing = await this.repository.findByISBN(input.isbn);
     if (existing.ok && existing.value !== null) {
-      return Result.fail("Cette BD est déjà dans votre collection");
+      return Result.fail("Ce livre est déjà dans votre collection");
     }
 
     // For books without real ISBN, also check by exact title match

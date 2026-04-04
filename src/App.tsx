@@ -53,7 +53,7 @@ export default function App() {
 
   // Authenticated → main app
   return (
-    <div className="min-h-screen pb-20 max-w-lg mx-auto">
+    <div className="min-h-screen pb-20 max-w-lg mx-auto px-safe">
       {/* Sign out button */}
       <div className="flex justify-end p-3">
         <button
