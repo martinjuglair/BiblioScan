@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
-import { Series } from "@domain/entities/Series";
 
 interface CollectionStatsProps {
   books: ComicBook[];
-  series: Series[];
+  categoryCount: number;
 }
 
 interface StatCard {
@@ -14,8 +13,8 @@ interface StatCard {
   color: string;
 }
 
-export function CollectionStats({ books, series }: CollectionStatsProps) {
-  const stats = useMemo(() => computeStats(books, series), [books, series]);
+export function CollectionStats({ books, categoryCount }: CollectionStatsProps) {
+  const stats = useMemo(() => computeStats(books, categoryCount), [books, categoryCount]);
 
   if (books.length === 0) return null;
 
@@ -44,7 +43,7 @@ export function CollectionStats({ books, series }: CollectionStatsProps) {
   );
 }
 
-function computeStats(books: ComicBook[], series: Series[]): StatCard[] {
+function computeStats(books: ComicBook[], categoryCount: number): StatCard[] {
   const stats: StatCard[] = [];
 
   stats.push({
@@ -54,8 +53,8 @@ function computeStats(books: ComicBook[], series: Series[]): StatCard[] {
   });
 
   stats.push({
-    value: `${series.length}`,
-    label: series.length > 1 ? "Séries" : "Série",
+    value: `${categoryCount}`,
+    label: categoryCount > 1 ? "Catégories" : "Catégorie",
     color: "text-brand-purple",
   });
 
@@ -75,16 +74,6 @@ function computeStats(books: ComicBook[], series: Series[]): StatCard[] {
       value: formatEur(avg),
       label: "Prix moyen",
       color: "text-brand-teal",
-    });
-  }
-
-  if (series.length > 0) {
-    const topSeries = [...series].sort((a, b) => b.count - a.count)[0]!;
-    stats.push({
-      value: `${topSeries.count} t.`,
-      label: "Série la + complète",
-      sub: topSeries.name,
-      color: "text-brand-amber",
     });
   }
 
@@ -117,7 +106,7 @@ function computeStats(books: ComicBook[], series: Series[]): StatCard[] {
     const oldest = dated[0]!;
     stats.push({
       value: extractYear(oldest.publishedDate),
-      label: "La + ancienne",
+      label: "Le + ancien",
       sub: truncate(oldest.title, 20),
       color: "text-text-secondary",
     });
@@ -127,7 +116,7 @@ function computeStats(books: ComicBook[], series: Series[]): StatCard[] {
     const newest = dated[dated.length - 1]!;
     stats.push({
       value: extractYear(newest.publishedDate),
-      label: "La + récente",
+      label: "Le + récent",
       sub: truncate(newest.title, 20),
       color: "text-brand-teal",
     });
@@ -142,7 +131,7 @@ function computeStats(books: ComicBook[], series: Series[]): StatCard[] {
   });
   stats.push({
     value: `${thisMonth.length}`,
-    label: "Ajoutées ce mois",
+    label: "Ajoutés ce mois",
     color: "text-brand-orange",
   });
 

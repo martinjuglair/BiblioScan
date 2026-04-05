@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
-import { getLibrary, updateBook, deleteBook, categoryRepository } from "@infrastructure/container";
+import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository } from "@infrastructure/container";
 
 interface BookDetailProps {
   isbn: string;
@@ -17,8 +17,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [saving, setSaving] = useState(false);
 
   // Edit form state
-  const [seriesInput, setSeriesInput] = useState("");
-  const [volumeInput, setVolumeInput] = useState("");
   const [priceInput, setPriceInput] = useState("");
   const [coverInput, setCoverInput] = useState("");
 
@@ -34,13 +32,15 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
   useEffect(() => {
     Promise.all([
-      getLibrary.execute(),
+      getCategorizedLibrary.execute(),
       categoryRepository.findAllByUser(),
-    ]).then(([booksResult, catsResult]) => {
-      if (booksResult.ok) {
-        const found = booksResult.value
-          .flatMap((s) => s.books)
-          .find((b) => b.isbn === isbn);
+    ]).then(([libResult, catsResult]) => {
+      if (libResult.ok) {
+        const allBooks = [
+          ...libResult.value.categories.flatMap((c) => c.books),
+          ...libResult.value.uncategorized,
+        ];
+        const found = allBooks.find((b) => b.isbn === isbn);
         setBook(found ?? null);
         if (found) initForm(found);
       }
@@ -52,8 +52,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   }, [isbn]);
 
   const initForm = (b: ComicBook) => {
-    setSeriesInput(b.seriesName);
-    setVolumeInput(b.volumeNumber !== null ? String(b.volumeNumber) : "");
     setPriceInput(b.retailPrice ? b.retailPrice.amount.toFixed(2) : "");
     setCoverInput(b.coverUrl ?? "");
     setRating(b.rating);
@@ -65,12 +63,9 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     if (!book) return;
     setSaving(true);
 
-    const volumeNum = volumeInput.trim() ? parseInt(volumeInput, 10) : null;
     const priceNum = priceInput.trim() ? parseFloat(priceInput) : null;
 
     const result = await updateBook.execute(isbn, {
-      seriesName: seriesInput.trim() || undefined,
-      volumeNumber: volumeNum,
       retailPriceAmount: priceNum,
       coverUrl: coverInput.trim() || null,
     });
@@ -152,10 +147,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
       {editing ? (
         <EditForm
-          seriesInput={seriesInput}
-          setSeriesInput={setSeriesInput}
-          volumeInput={volumeInput}
-          setVolumeInput={setVolumeInput}
           priceInput={priceInput}
           setPriceInput={setPriceInput}
           coverInput={coverInput}
@@ -173,10 +164,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           <InfoRow label="Auteur(s)" value={book.authors.join(", ") || "Inconnu"} />
           <InfoRow label="Éditeur" value={book.publisher} />
           <InfoRow label="Date de parution" value={book.publishedDate || "Inconnue"} />
-          <InfoRow label="Série" value={book.seriesName} />
-          {book.volumeNumber !== null && (
-            <InfoRow label="Tome" value={`${book.volumeNumber}`} />
-          )}
           <InfoRow
             label="Prix neuf"
             value={book.retailPrice ? book.retailPrice.format() : "Non renseigné"}
@@ -281,10 +268,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function EditForm({
-  seriesInput,
-  setSeriesInput,
-  volumeInput,
-  setVolumeInput,
   priceInput,
   setPriceInput,
   coverInput,
@@ -293,10 +276,6 @@ function EditForm({
   onSave,
   onCancel,
 }: {
-  seriesInput: string;
-  setSeriesInput: (v: string) => void;
-  volumeInput: string;
-  setVolumeInput: (v: string) => void;
   priceInput: string;
   setPriceInput: (v: string) => void;
   coverInput: string;
@@ -307,26 +286,6 @@ function EditForm({
 }) {
   return (
     <div className="card space-y-3">
-      <div>
-        <label className="text-text-tertiary text-xs uppercase tracking-wide block mb-1">Série</label>
-        <input
-          type="text"
-          value={seriesInput}
-          onChange={(e) => setSeriesInput(e.target.value)}
-          className="input-rect w-full"
-        />
-      </div>
-      <div>
-        <label className="text-text-tertiary text-xs uppercase tracking-wide block mb-1">Tome</label>
-        <input
-          type="number"
-          inputMode="numeric"
-          value={volumeInput}
-          onChange={(e) => setVolumeInput(e.target.value)}
-          placeholder="Ex: 5"
-          className="input-rect w-full"
-        />
-      </div>
       <div>
         <label className="text-text-tertiary text-xs uppercase tracking-wide block mb-1">Prix neuf (€)</label>
         <input

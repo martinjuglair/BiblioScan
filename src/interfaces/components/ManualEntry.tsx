@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ComicBookCreateInput } from "@domain/entities/ComicBook";
+import { Category } from "@domain/entities/Category";
+import { categoryRepository } from "@infrastructure/container";
 
 interface ManualEntryProps {
   onSubmit: (data: ComicBookCreateInput) => void;
@@ -11,15 +13,20 @@ export function ManualEntry({ onSubmit, onCancel }: ManualEntryProps) {
   const [authors, setAuthors] = useState("");
   const [publisher, setPublisher] = useState("");
   const [publishedDate, setPublishedDate] = useState("");
-  const [seriesName, setSeriesName] = useState("");
-  const [volumeNumber, setVolumeNumber] = useState("");
   const [retailPrice, setRetailPrice] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    categoryRepository.findAllByUser().then((result) => {
+      if (result.ok) setCategories(result.value);
+    });
+  }, []);
 
   const handleSubmit = () => {
     if (!title.trim()) return;
 
     const isbn = `MANUAL${Date.now()}`;
-    const vol = parseInt(volumeNumber, 10);
     const price = parseFloat(retailPrice);
 
     onSubmit({
@@ -33,8 +40,7 @@ export function ManualEntry({ onSubmit, onCancel }: ManualEntryProps) {
       publishedDate: publishedDate.trim(),
       coverUrl: null,
       retailPrice: !isNaN(price) && price > 0 ? { amount: price, currency: "EUR" } : null,
-      seriesNameOverride: seriesName.trim() || undefined,
-      volumeNumberOverride: !isNaN(vol) && vol > 0 ? vol : undefined,
+      categoryId,
     });
   };
 
@@ -43,21 +49,26 @@ export function ManualEntry({ onSubmit, onCancel }: ManualEntryProps) {
       <h2 className="font-bold text-lg mb-4 text-text-primary">Saisie manuelle</h2>
 
       <div className="flex flex-col gap-3">
-        <Field label="Titre *" value={title} onChange={setTitle} placeholder="Spirou et Fantasio" />
-        <Field label="Auteur(s)" value={authors} onChange={setAuthors} placeholder="Franquin, Jidéhem" hint="Séparés par des virgules" />
-        <Field label="Série" value={seriesName} onChange={setSeriesName} placeholder="Spirou et Fantasio" />
+        <Field label="Titre *" value={title} onChange={setTitle} placeholder="Le Petit Prince" />
+        <Field label="Auteur(s)" value={authors} onChange={setAuthors} placeholder="Saint-Exupéry" hint="Séparés par des virgules" />
 
-        <div className="flex flex-col min-[320px]:flex-row gap-3">
-          <div className="flex-1">
-            <Field label="Tome n°" value={volumeNumber} onChange={setVolumeNumber} placeholder="12" inputMode="numeric" />
-          </div>
-          <div className="flex-1">
-            <Field label="Prix neuf (€)" value={retailPrice} onChange={setRetailPrice} placeholder="12.50" inputMode="decimal" />
-          </div>
+        <div>
+          <label className="text-sm text-text-secondary block mb-1 font-medium">Catégorie</label>
+          <select
+            value={categoryId ?? ""}
+            onChange={(e) => setCategoryId(e.target.value || null)}
+            className="input-rect w-full"
+          >
+            <option value="">Non classé</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
         </div>
 
-        <Field label="Éditeur" value={publisher} onChange={setPublisher} placeholder="Dupuis" />
-        <Field label="Date" value={publishedDate} onChange={setPublishedDate} placeholder="1965" />
+        <Field label="Prix neuf (€)" value={retailPrice} onChange={setRetailPrice} placeholder="12.50" inputMode="decimal" />
+        <Field label="Éditeur" value={publisher} onChange={setPublisher} placeholder="Gallimard" />
+        <Field label="Date" value={publishedDate} onChange={setPublishedDate} placeholder="1943" />
       </div>
 
       <div className="flex gap-3 mt-4">

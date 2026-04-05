@@ -85,12 +85,6 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
               )}
               <div className="min-w-0">
                 <h3 className="font-semibold text-text-primary truncate">{book.title}</h3>
-                {book.seriesName && book.seriesName !== "Sans série" && (
-                  <p className="text-brand-orange text-sm font-medium truncate">
-                    {book.seriesName}
-                    {book.volumeNumber !== null && ` - T.${book.volumeNumber}`}
-                  </p>
-                )}
                 <p className="text-text-tertiary text-sm truncate">
                   {book.authors.join(", ")}
                 </p>

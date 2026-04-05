@@ -32,8 +32,6 @@ export class BookLookupFacade implements IBookLookupService {
           publishedDate: bnf.publishedDate ?? "",
           coverUrl: null,
           retailPrice: bnf.price,
-          seriesNameOverride: bnf.seriesName ?? undefined,
-          volumeNumberOverride: bnf.volumeNumber ?? undefined,
         });
       }
       return metadataResult;
@@ -50,13 +48,6 @@ export class BookLookupFacade implements IBookLookupService {
         };
       }
 
-      // Use BnF series info — much more reliable than title parsing
-      if (bnf.seriesName) {
-        book.seriesNameOverride = bnf.seriesName;
-      }
-      if (bnf.volumeNumber) {
-        book.volumeNumberOverride = bnf.volumeNumber;
-      }
     }
 
     return Result.ok(book);

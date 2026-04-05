@@ -17,30 +17,25 @@ describe("ComicBook", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.title).toBe("Astérix - Tome 5");
-      expect(result.value.seriesName).toBe("Astérix");
-      expect(result.value.volumeNumber).toBe(5);
       expect(result.value.isbn).toBe("9782205250015");
     }
   });
 
-  it("should auto-detect series from title", () => {
+  it("should assign categoryId when provided", () => {
     const result = ComicBook.create({
       ...validInput,
-      title: "Tintin - Tome 3",
+      categoryId: "cat-123",
     });
+    expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.seriesName).toBe("Tintin");
-      expect(result.value.volumeNumber).toBe(3);
+      expect(result.value.categoryId).toBe("cat-123");
     }
   });
 
-  it("should allow series name override", () => {
-    const result = ComicBook.create({
-      ...validInput,
-      seriesNameOverride: "Les aventures d'Astérix",
-    });
+  it("should default categoryId to null", () => {
+    const result = ComicBook.create(validInput);
     if (result.ok) {
-      expect(result.value.seriesName).toBe("Les aventures d'Astérix");
+      expect(result.value.categoryId).toBeNull();
     }
   });
 
@@ -73,18 +68,17 @@ describe("ComicBook", () => {
     if (result.ok) {
       const record = result.value.toPersistence();
       expect(record.isbn).toBe("9782205250015");
-      expect(record.seriesName).toBe("Astérix");
       expect(record.retailPrice).toEqual({ amount: 12.5, currency: "EUR" });
       expect(typeof record.addedAt).toBe("string");
     }
   });
 
-  it("should update series name immutably", () => {
+  it("should update with withUpdates immutably", () => {
     const result = ComicBook.create(validInput);
     if (result.ok) {
-      const updated = result.value.withSeriesName("Nouvelle série");
-      expect(updated.seriesName).toBe("Nouvelle série");
-      expect(result.value.seriesName).toBe("Astérix");
+      const updated = result.value.withUpdates({ categoryId: "cat-456" });
+      expect(updated.categoryId).toBe("cat-456");
+      expect(result.value.categoryId).toBeNull();
     }
   });
 });

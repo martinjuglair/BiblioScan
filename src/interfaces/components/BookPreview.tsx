@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ComicBookCreateInput } from "@domain/entities/ComicBook";
-import { SeriesDetector } from "@domain/services/SeriesDetector";
+import { Category } from "@domain/entities/Category";
+import { categoryRepository } from "@infrastructure/container";
 
 interface BookPreviewProps {
   data: ComicBookCreateInput;
@@ -9,24 +10,27 @@ interface BookPreviewProps {
 }
 
 export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
-  const detected = SeriesDetector.detect(data.title);
-  const initialSeries = data.seriesNameOverride ?? detected.seriesName;
-  const initialVolume = data.volumeNumberOverride ?? detected.volumeNumber;
-
-  const [seriesName, setSeriesName] = useState(initialSeries);
   const [retailPriceInput, setRetailPriceInput] = useState(
     data.retailPrice ? data.retailPrice.amount.toFixed(2) : "",
   );
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    categoryRepository.findAllByUser().then((result) => {
+      if (result.ok) setCategories(result.value);
+    });
+  }, []);
+
   const handleConfirm = () => {
     const retailAmount = parseFloat(retailPriceInput);
 
     onConfirm({
       ...data,
-      seriesNameOverride: seriesName,
-      volumeNumberOverride: initialVolume ?? undefined,
       retailPrice: !isNaN(retailAmount) && retailAmount > 0
         ? { amount: retailAmount, currency: "EUR" }
         : data.retailPrice,
+      categoryId,
     });
   };
 
@@ -54,18 +58,19 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
         </div>
       </div>
 
-      {/* Series assignment */}
+      {/* Category selector */}
       <div className="mt-4">
-        <label className="text-sm text-text-secondary block mb-1 font-medium">Série détectée</label>
-        <input
-          type="text"
-          value={seriesName}
-          onChange={(e) => setSeriesName(e.target.value)}
-          className="input-rect"
-        />
-        {initialVolume !== null && (
-          <p className="text-xs text-brand-orange mt-1 font-medium">Tome {initialVolume}</p>
-        )}
+        <label className="text-sm text-text-secondary block mb-1 font-medium">Catégorie</label>
+        <select
+          value={categoryId ?? ""}
+          onChange={(e) => setCategoryId(e.target.value || null)}
+          className="input-rect w-full"
+        >
+          <option value="">Non classé</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Price input */}

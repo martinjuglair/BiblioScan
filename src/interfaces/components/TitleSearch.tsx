@@ -107,8 +107,6 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
 
       if (lookupResult.ok) {
         const data = lookupResult.value;
-        if (item.seriesName) data.seriesNameOverride = item.seriesName;
-        if (item.volumeNumber) data.volumeNumberOverride = item.volumeNumber;
         if (!data.retailPrice && item.price) {
           data.retailPrice = item.price;
         }
@@ -130,8 +128,6 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
       publishedDate: item.publishedDate,
       coverUrl: cleanIsbn ? openLibraryCoverUrl(cleanIsbn) : null,
       retailPrice: item.price,
-      seriesNameOverride: item.seriesName ?? undefined,
-      volumeNumberOverride: item.volumeNumber ?? undefined,
     });
   };
 
@@ -144,8 +140,6 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
       publishedDate: item.publicationDate,
       coverUrl: item.coverUrl,
       retailPrice: null,
-      seriesNameOverride: item.seriesName,
-      volumeNumberOverride: item.issueNumber ? parseInt(item.issueNumber, 10) || undefined : undefined,
     });
   };
 

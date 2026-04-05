@@ -1,6 +1,5 @@
 import { ISBN } from "../value-objects/ISBN";
 import { Price } from "../value-objects/Price";
-import { SeriesDetector } from "../services/SeriesDetector";
 import { Result } from "../shared/Result";
 
 export interface ComicBookProps {
@@ -27,8 +26,7 @@ export interface ComicBookCreateInput {
   publishedDate: string;
   coverUrl: string | null;
   retailPrice: { amount: number; currency?: string } | null;
-  seriesNameOverride?: string;
-  volumeNumberOverride?: number;
+  categoryId?: string | null;
 }
 
 export class ComicBook {
@@ -88,8 +86,6 @@ export class ComicBook {
       retailPrice = priceResult.value;
     }
 
-    const detected = SeriesDetector.detect(input.title);
-
     return Result.ok(
       new ComicBook({
         isbn: isbnResult.value,
@@ -99,11 +95,11 @@ export class ComicBook {
         publishedDate: input.publishedDate,
         coverUrl: input.coverUrl,
         retailPrice,
-        seriesName: input.seriesNameOverride ?? detected.seriesName,
-        volumeNumber: input.volumeNumberOverride ?? detected.volumeNumber,
+        seriesName: input.title,
+        volumeNumber: null,
         rating: null,
         comment: null,
-        categoryId: null,
+        categoryId: input.categoryId ?? null,
         addedAt: new Date(),
       }),
     );

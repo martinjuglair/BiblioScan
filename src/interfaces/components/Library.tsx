@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
-import { Series } from "@domain/entities/Series";
 import { getCategorizedLibrary, createCategory } from "@infrastructure/container";
 import { CategorizedLibrary } from "@application/use-cases/GetCategorizedLibrary";
 import { CollectionStats } from "./CollectionStats";
@@ -25,10 +24,6 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
     if (!data) return [];
     return [...data.categories.flatMap((c) => c.books), ...data.uncategorized];
   }, [data]);
-
-  const allSeries = useMemo(() => {
-    return Series.groupFromBooks(allBooks);
-  }, [allBooks]);
 
   useEffect(() => {
     setLoading(true);
@@ -129,7 +124,7 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
         </button>
       </div>
 
-      <CollectionStats books={allBooks} series={allSeries} />
+      <CollectionStats books={allBooks} categoryCount={data?.categories.length ?? 0} />
 
       {allBooks.length === 0 ? (
         <div className="text-center py-12 sm:py-16 text-text-tertiary">
