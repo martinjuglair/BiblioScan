@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
-import { getLibrary, updateBook, deleteBook } from "@infrastructure/container";
+import { Category } from "@domain/entities/Category";
+import { getLibrary, updateBook, deleteBook, categoryRepository } from "@infrastructure/container";
 
 interface BookDetailProps {
   isbn: string;
@@ -26,14 +27,25 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [comment, setComment] = useState("");
   const [savingReview, setSavingReview] = useState(false);
 
+  // Category state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [savingCategory, setSavingCategory] = useState(false);
+
   useEffect(() => {
-    getLibrary.execute().then((result) => {
-      if (result.ok) {
-        const found = result.value
+    Promise.all([
+      getLibrary.execute(),
+      categoryRepository.findAllByUser(),
+    ]).then(([booksResult, catsResult]) => {
+      if (booksResult.ok) {
+        const found = booksResult.value
           .flatMap((s) => s.books)
           .find((b) => b.isbn === isbn);
         setBook(found ?? null);
         if (found) initForm(found);
+      }
+      if (catsResult.ok) {
+        setCategories(catsResult.value);
       }
       setLoading(false);
     });
@@ -46,6 +58,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     setCoverInput(b.coverUrl ?? "");
     setRating(b.rating);
     setComment(b.comment ?? "");
+    setCategoryId(b.categoryId);
   };
 
   const handleSave = async () => {
@@ -66,6 +79,17 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     if (result.ok) {
       setBook(result.value);
       setEditing(false);
+      onUpdated();
+    }
+  };
+
+  const handleCategoryChange = async (newCategoryId: string | null) => {
+    setCategoryId(newCategoryId);
+    setSavingCategory(true);
+    const result = await updateBook.execute(isbn, { categoryId: newCategoryId });
+    setSavingCategory(false);
+    if (result.ok) {
+      setBook(result.value);
       onUpdated();
     }
   };
@@ -157,6 +181,22 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             label="Prix neuf"
             value={book.retailPrice ? book.retailPrice.format() : "Non renseigné"}
           />
+
+          {/* Category selector */}
+          <div>
+            <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">Catégorie</p>
+            <select
+              value={categoryId ?? ""}
+              onChange={(e) => handleCategoryChange(e.target.value || null)}
+              disabled={savingCategory}
+              className="input-rect w-full"
+            >
+              <option value="">Non classé</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
 
           <button
             onClick={() => setEditing(true)}

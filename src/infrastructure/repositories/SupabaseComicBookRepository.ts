@@ -20,6 +20,7 @@ interface ComicBookRow {
   volume_number: number | null;
   rating: number | null;
   comment: string | null;
+  category_id: string | null;
   added_at: string;
 }
 
@@ -45,6 +46,7 @@ function rowToEntity(row: ComicBookRow): ComicBook {
     volumeNumber: row.volume_number,
     rating: row.rating ?? null,
     comment: row.comment ?? null,
+    categoryId: row.category_id ?? null,
     addedAt: new Date(row.added_at),
   });
 }
@@ -71,6 +73,7 @@ function entityToRow(book: ComicBook, userId: string): ComicBookRow {
     volume_number: persistence.volumeNumber,
     rating: persistence.rating ?? null,
     comment: persistence.comment ?? null,
+    category_id: persistence.categoryId ?? null,
     added_at: persistence.addedAt,
   };
 }

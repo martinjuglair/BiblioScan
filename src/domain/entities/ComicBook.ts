@@ -15,6 +15,7 @@ export interface ComicBookProps {
   volumeNumber: number | null;
   rating: number | null;
   comment: string | null;
+  categoryId: string | null;
   addedAt: Date;
 }
 
@@ -66,6 +67,9 @@ export class ComicBook {
   get comment(): string | null {
     return this.props.comment;
   }
+  get categoryId(): string | null {
+    return this.props.categoryId;
+  }
   get addedAt(): Date {
     return this.props.addedAt;
   }
@@ -99,6 +103,7 @@ export class ComicBook {
         volumeNumber: input.volumeNumberOverride ?? detected.volumeNumber,
         rating: null,
         comment: null,
+        categoryId: null,
         addedAt: new Date(),
       }),
     );
@@ -120,6 +125,7 @@ export class ComicBook {
     coverUrl?: string | null;
     rating?: number | null;
     comment?: string | null;
+    categoryId?: string | null;
   }): ComicBook {
     return new ComicBook({
       ...this.props,
@@ -129,6 +135,7 @@ export class ComicBook {
       ...(updates.coverUrl !== undefined && { coverUrl: updates.coverUrl }),
       ...(updates.rating !== undefined && { rating: updates.rating }),
       ...(updates.comment !== undefined && { comment: updates.comment }),
+      ...(updates.categoryId !== undefined && { categoryId: updates.categoryId }),
     });
   }
 
@@ -146,6 +153,7 @@ export class ComicBook {
       volumeNumber: this.volumeNumber,
       rating: this.rating,
       comment: this.comment,
+      categoryId: this.categoryId,
       addedAt: this.addedAt.toISOString(),
     };
   }
@@ -164,5 +172,6 @@ export interface ComicBookRecord {
   volumeNumber: number | null;
   rating: number | null;
   comment: string | null;
+  categoryId: string | null;
   addedAt: string;
 }

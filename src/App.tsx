@@ -3,7 +3,7 @@ import { useAuth } from "@interfaces/hooks/useAuth";
 import { LoginScreen } from "@interfaces/components/LoginScreen";
 import { Scanner } from "@interfaces/components/Scanner";
 import { Library } from "@interfaces/components/Library";
-import { SeriesDetail } from "@interfaces/components/SeriesDetail";
+import { CategoryDetail } from "@interfaces/components/CategoryDetail";
 import { BookDetail } from "@interfaces/components/BookDetail";
 import { BottomNav } from "@interfaces/components/BottomNav";
 
@@ -11,8 +11,8 @@ type Tab = "scanner" | "library";
 
 type View =
   | { screen: "main" }
-  | { screen: "series"; name: string }
-  | { screen: "book"; isbn: string; seriesName: string };
+  | { screen: "category"; categoryId: string | null }
+  | { screen: "book"; isbn: string; fromCategoryId: string | null };
 
 export default function App() {
   const { user, loading, error, signIn, signUp, signOut } = useAuth();
@@ -71,17 +71,17 @@ export default function App() {
       {tab === "library" && view.screen === "main" && (
         <Library
           refreshKey={refreshKey}
-          onSelectSeries={(name) => setView({ screen: "series", name })}
+          onSelectCategory={(categoryId) => setView({ screen: "category", categoryId })}
         />
       )}
 
-      {tab === "library" && view.screen === "series" && (
-        <SeriesDetail
-          seriesName={view.name}
+      {tab === "library" && view.screen === "category" && (
+        <CategoryDetail
+          categoryId={view.categoryId}
           refreshKey={refreshKey}
           onBack={() => setView({ screen: "main" })}
           onSelectBook={(isbn) =>
-            setView({ screen: "book", isbn, seriesName: view.name })
+            setView({ screen: "book", isbn, fromCategoryId: view.categoryId })
           }
         />
       )}
@@ -89,10 +89,10 @@ export default function App() {
       {tab === "library" && view.screen === "book" && (
         <BookDetail
           isbn={view.isbn}
-          onBack={() => setView({ screen: "series", name: view.seriesName })}
+          onBack={() => setView({ screen: "category", categoryId: view.fromCategoryId })}
           onDeleted={() => {
             refresh();
-            setView({ screen: "series", name: view.seriesName });
+            setView({ screen: "category", categoryId: view.fromCategoryId });
           }}
           onUpdated={refresh}
         />

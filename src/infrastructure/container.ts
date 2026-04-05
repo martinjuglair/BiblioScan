@@ -1,4 +1,5 @@
 import { SupabaseComicBookRepository } from "./repositories/SupabaseComicBookRepository";
+import { SupabaseCategoryRepository } from "./repositories/SupabaseCategoryRepository";
 import { GoogleBooksService } from "./services/GoogleBooksService";
 import { OpenLibraryService } from "./services/OpenLibraryService";
 import { BookLookupFacade } from "./services/BookLookupFacade";
@@ -6,6 +7,9 @@ import { BnfSearchService } from "./services/BnfSearchService";
 import { AuthService } from "./auth/AuthService";
 import { ScanComicBook } from "@application/use-cases/ScanComicBook";
 import { GetLibrary } from "@application/use-cases/GetLibrary";
+import { GetCategorizedLibrary } from "@application/use-cases/GetCategorizedLibrary";
+import { CreateCategory } from "@application/use-cases/CreateCategory";
+import { DeleteCategory } from "@application/use-cases/DeleteCategory";
 import { UpdateBookSeries } from "@application/use-cases/UpdateBookSeries";
 import { UpdateBook } from "@application/use-cases/UpdateBook";
 import { DeleteBook } from "@application/use-cases/DeleteBook";
@@ -15,6 +19,7 @@ export const authService = new AuthService();
 
 // Singletons
 const repository = new SupabaseComicBookRepository();
+const categoryRepository = new SupabaseCategoryRepository();
 const googleBooks = new GoogleBooksService();
 const openLibrary = new OpenLibraryService();
 const lookupFacade = new BookLookupFacade(googleBooks, openLibrary);
@@ -25,6 +30,9 @@ export const bookLookup = lookupFacade;
 // Use cases
 export const scanComicBook = new ScanComicBook(lookupFacade, repository);
 export const getLibrary = new GetLibrary(repository);
+export const getCategorizedLibrary = new GetCategorizedLibrary(repository, categoryRepository);
+export const createCategory = new CreateCategory(categoryRepository);
+export const deleteCategory = new DeleteCategory(categoryRepository);
 export const updateBookSeries = new UpdateBookSeries(repository);
 export const updateBook = new UpdateBook(repository);
 export const deleteBook = new DeleteBook(repository);
@@ -34,3 +42,6 @@ export const bnfSearchService = new BnfSearchService();
 
 import { GcdService } from "./services/GcdService";
 export const gcdService = new GcdService();
+
+// Expose category repository for BookDetail dropdown
+export { categoryRepository };

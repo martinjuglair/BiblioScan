@@ -10,6 +10,7 @@ export interface UpdateBookInput {
   coverUrl?: string | null;
   rating?: number | null;
   comment?: string | null;
+  categoryId?: string | null;
 }
 
 export class UpdateBook {
@@ -38,6 +39,7 @@ export class UpdateBook {
       coverUrl: input.coverUrl,
       rating: input.rating,
       comment: input.comment,
+      categoryId: input.categoryId,
     });
 
     const saveResult = await this.repository.update(updated);

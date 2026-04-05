@@ -31,6 +31,7 @@ function recordToEntity(record: ComicBookRecord): ComicBook {
     volumeNumber: record.volumeNumber,
     rating: record.rating ?? null,
     comment: record.comment ?? null,
+    categoryId: record.categoryId ?? null,
     addedAt: new Date(record.addedAt),
   });
 }
