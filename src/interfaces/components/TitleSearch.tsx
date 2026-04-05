@@ -158,7 +158,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
   };
 
   return (
-    <div className="w-full max-w-sm">
+    <div className="w-full">
       <div className="flex gap-2 mb-3">
         <input
           type="text"
@@ -216,7 +216,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <h3 className="font-semibold text-sm leading-tight text-text-primary truncate">{item.title}</h3>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-pill font-medium flex-shrink-0 ${
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded-pill font-medium flex-shrink-0 ${
                     item.source === "gcd"
                       ? "bg-brand-purple/10 text-brand-purple"
                       : "bg-brand-teal/10 text-brand-teal"

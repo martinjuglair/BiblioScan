@@ -32,7 +32,7 @@ export function LoginScreen({ onSignIn, onSignUp, loading, error }: LoginScreenP
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M3 17v2a2 2 0 002 2h2M17 21h2a2 2 0 002-2v-2M7 12h10" />
           </svg>
         </div>
-        <h1 className="text-3xl font-extrabold text-text-primary tracking-tight">BiblioScan</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">BiblioScan</h1>
         <p className="text-text-tertiary text-sm mt-1">Gérez votre collection de livres</p>
       </div>
 

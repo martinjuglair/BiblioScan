@@ -115,12 +115,12 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-text-primary">Ma Collection</h1>
+    <div className="px-3 sm:px-4 py-4">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Ma Collection</h1>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="w-10 h-10 rounded-full flex items-center justify-center shadow-card transition-all active:scale-90"
+          className="w-11 h-11 rounded-full flex items-center justify-center shadow-card transition-all active:scale-90"
           style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}
         >
           <svg className="w-5 h-5 text-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -132,8 +132,8 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
       <CollectionStats books={allBooks} series={allSeries} />
 
       {allBooks.length === 0 ? (
-        <div className="text-center py-16 text-text-tertiary">
-          <svg className="w-16 h-16 mx-auto mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+        <div className="text-center py-12 sm:py-16 text-text-tertiary">
+          <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
           <p className="font-medium text-text-secondary">Votre collection est vide.</p>
@@ -183,10 +183,10 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
                       <img
                         src={books[0]!.coverUrl}
                         alt={category.name}
-                        className="w-full h-32 object-cover rounded-lg mb-2"
+                        className="w-full h-28 sm:h-32 object-cover rounded-lg mb-2"
                       />
                     ) : (
-                      <div className="w-full h-32 bg-surface-subtle rounded-lg mb-2 flex items-center justify-center">
+                      <div className="w-full h-28 sm:h-32 bg-surface-subtle rounded-lg mb-2 flex items-center justify-center">
                         <svg className="w-10 h-10 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
                         </svg>

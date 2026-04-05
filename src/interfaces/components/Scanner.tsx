@@ -67,8 +67,8 @@ export function Scanner({ onBookAdded }: ScannerProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 px-4 py-4">
-      <h1 className="text-2xl font-bold text-text-primary">Ajouter un livre</h1>
+    <div className="flex flex-col items-center gap-3 sm:gap-4 px-3 sm:px-4 py-4">
+      <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Ajouter un livre</h1>
 
       {/* Camera view */}
       <div
@@ -88,7 +88,7 @@ export function Scanner({ onBookAdded }: ScannerProps) {
         {isScanning && (
           <button
             onClick={handleCancel}
-            className="absolute top-3 right-3 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl backdrop-blur-sm"
+            className="absolute top-3 right-3 bg-black/50 text-white rounded-full w-11 h-11 flex items-center justify-center text-xl backdrop-blur-sm"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -123,9 +123,9 @@ export function Scanner({ onBookAdded }: ScannerProps) {
             </div>
           </div>
 
-          <div className="w-full max-w-sm border-t border-border pt-4 mt-1">
-            <p className="text-text-tertiary text-sm text-center mb-3">Pas de code-barres ?</p>
-            <div className="flex gap-2">
+          <div className="w-full max-w-sm border-t border-border pt-3 sm:pt-4 mt-1">
+            <p className="text-text-tertiary text-sm text-center mb-2 sm:mb-3">Pas de code-barres ?</p>
+            <div className="flex flex-col min-[320px]:flex-row gap-2">
               <button
                 onClick={() => setState({ step: "titleSearch" })}
                 className="btn-secondary flex-1"

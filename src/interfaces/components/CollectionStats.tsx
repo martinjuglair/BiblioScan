@@ -24,16 +24,16 @@ export function CollectionStats({ books, series }: CollectionStatsProps) {
       <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide mb-2 px-1">
         Statistiques
       </h2>
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+      <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 -mx-3 px-3 sm:-mx-4 sm:px-4 scrollbar-hide">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="card flex-shrink-0 w-32 min-[360px]:w-36 flex flex-col items-center text-center py-3 px-2"
+            className="card flex-shrink-0 w-28 min-[360px]:w-32 sm:w-36 flex flex-col items-center text-center py-2.5 sm:py-3 px-2"
           >
-            <span className={`text-2xl font-bold leading-tight ${stat.color}`}>{stat.value}</span>
-            <span className="text-xs text-text-tertiary leading-tight mt-1">{stat.label}</span>
+            <span className={`text-xl sm:text-2xl font-bold leading-tight ${stat.color}`}>{stat.value}</span>
+            <span className="text-[11px] sm:text-xs text-text-tertiary leading-tight mt-1">{stat.label}</span>
             {stat.sub && (
-              <span className="text-xs text-brand-orange mt-0.5 leading-tight truncate max-w-full font-medium">
+              <span className="text-[11px] sm:text-xs text-brand-orange mt-0.5 leading-tight truncate max-w-full font-medium">
                 {stat.sub}
               </span>
             )}

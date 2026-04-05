@@ -31,7 +31,7 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
   };
 
   return (
-    <div className="card w-full max-w-sm">
+    <div className="card w-full">
       <div className="flex gap-3">
         {data.coverUrl ? (
           <img

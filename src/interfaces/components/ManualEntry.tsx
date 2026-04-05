@@ -47,7 +47,7 @@ export function ManualEntry({ onSubmit, onCancel }: ManualEntryProps) {
         <Field label="Auteur(s)" value={authors} onChange={setAuthors} placeholder="Franquin, Jidéhem" hint="Séparés par des virgules" />
         <Field label="Série" value={seriesName} onChange={setSeriesName} placeholder="Spirou et Fantasio" />
 
-        <div className="flex gap-3">
+        <div className="flex flex-col min-[320px]:flex-row gap-3">
           <div className="flex-1">
             <Field label="Tome n°" value={volumeNumber} onChange={setVolumeNumber} placeholder="12" inputMode="numeric" />
           </div>

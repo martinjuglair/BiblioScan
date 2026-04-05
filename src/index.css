@@ -14,8 +14,8 @@
 @layer components {
   .btn-primary {
     background: linear-gradient(62deg, #FFAF36 0%, #FFC536 100%);
-    @apply text-text-primary font-semibold py-3 px-6 rounded-pill
-           active:scale-95 transition-all duration-200;
+    @apply text-text-primary font-semibold py-2.5 px-4 sm:py-3 sm:px-6 rounded-pill
+           active:scale-95 transition-all duration-200 text-sm sm:text-base;
   }
   .btn-primary:hover {
     background: linear-gradient(62deg, #FF9F26 0%, #FFB526 100%);
@@ -25,19 +25,19 @@
   }
 
   .btn-secondary {
-    @apply bg-white border border-border text-text-primary font-semibold py-3 px-6 rounded-pill
-           active:scale-95 transition-all duration-200;
+    @apply bg-white border border-border text-text-primary font-semibold py-2.5 px-4 sm:py-3 sm:px-6 rounded-pill
+           active:scale-95 transition-all duration-200 text-sm sm:text-base;
   }
   .btn-secondary:hover {
     @apply border-border-strong;
   }
 
   .card {
-    @apply bg-white rounded-card p-4 shadow-card;
+    @apply bg-white rounded-card p-3 sm:p-4 shadow-card;
   }
 
   .input-field {
-    @apply w-full bg-white border border-border rounded-pill px-5 py-3
+    @apply w-full bg-white border border-border rounded-pill px-4 py-2.5 sm:px-5 sm:py-3
            text-text-primary text-sm font-sans
            outline-none transition-colors duration-200
            placeholder:text-text-tertiary;
@@ -47,7 +47,7 @@
   }
 
   .input-rect {
-    @apply w-full bg-white border border-border rounded-lg px-4 py-2.5
+    @apply w-full bg-white border border-border rounded-lg px-3 py-2 sm:px-4 sm:py-2.5
            text-text-primary text-sm font-sans
            outline-none transition-colors duration-200
            placeholder:text-text-tertiary;

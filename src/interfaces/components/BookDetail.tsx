@@ -132,22 +132,22 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   }
 
   return (
-    <div className="p-4">
+    <div className="px-3 sm:px-4 py-4">
       <BackButton onClick={onBack} />
 
-      <div className="flex flex-col items-center mb-6">
+      <div className="flex flex-col items-center mb-4 sm:mb-6">
         {book.coverUrl ? (
           <img
             src={book.coverUrl}
             alt={book.title}
-            className="w-32 h-48 min-[360px]:w-40 min-[360px]:h-60 object-cover rounded-card shadow-hero mb-4"
+            className="w-28 h-40 min-[360px]:w-36 min-[360px]:h-52 sm:w-40 sm:h-60 object-cover rounded-card shadow-hero mb-3 sm:mb-4"
           />
         ) : (
-          <div className="w-32 h-48 min-[360px]:w-40 min-[360px]:h-60 bg-surface-subtle rounded-card flex items-center justify-center text-text-muted mb-4">
+          <div className="w-28 h-40 min-[360px]:w-36 min-[360px]:h-52 sm:w-40 sm:h-60 bg-surface-subtle rounded-card flex items-center justify-center text-text-muted text-sm mb-3 sm:mb-4">
             Pas de couverture
           </div>
         )}
-        <h1 className="text-xl font-bold text-center text-text-primary">{book.title}</h1>
+        <h1 className="text-lg sm:text-xl font-bold text-center text-text-primary px-2">{book.title}</h1>
       </div>
 
       {editing ? (
@@ -214,15 +214,15 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       {!editing && (
         <div className="card mt-4 space-y-3">
           <h3 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide">Mon avis</h3>
-          <div className="flex gap-1">
+          <div className="flex gap-0">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 onClick={() => setRating(rating === star ? null : star)}
-                className="p-0.5 transition-transform active:scale-90"
+                className="p-1.5 transition-transform active:scale-90"
               >
                 <svg
-                  className={`w-8 h-8 ${star <= (rating ?? 0) ? "text-brand-amber" : "text-border-strong"}`}
+                  className={`w-7 h-7 sm:w-8 sm:h-8 ${star <= (rating ?? 0) ? "text-brand-amber" : "text-border-strong"}`}
                   fill={star <= (rating ?? 0) ? "currentColor" : "none"}
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -237,7 +237,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Votre commentaire..."
-            rows={3}
+            rows={2}
             className="input-rect w-full resize-none"
           />
           <button
@@ -262,7 +262,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="text-brand-orange font-medium mb-4 flex items-center gap-1">
+    <button onClick={onClick} className="text-brand-orange font-medium mb-3 sm:mb-4 flex items-center gap-1 min-h-[44px]">
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
       </svg>

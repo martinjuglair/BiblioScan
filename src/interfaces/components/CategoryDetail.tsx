@@ -46,15 +46,15 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
   }
 
   return (
-    <div className="p-4">
-      <button onClick={onBack} className="text-brand-orange font-medium mb-4 flex items-center gap-1">
+    <div className="px-3 sm:px-4 py-4">
+      <button onClick={onBack} className="text-brand-orange font-medium mb-3 sm:mb-4 flex items-center gap-1 min-h-[44px]">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
         Retour
       </button>
 
-      <h1 className="text-2xl font-bold text-text-primary mb-1">{categoryName}</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-1">{categoryName}</h1>
       <p className="text-text-tertiary text-sm mb-4">
         {books.length} livre{books.length > 1 ? "s" : ""}
       </p>
