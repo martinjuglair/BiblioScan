@@ -7,10 +7,11 @@ import { CategoryDetail } from "@interfaces/components/CategoryDetail";
 import { BookDetail } from "@interfaces/components/BookDetail";
 import { Groups } from "@interfaces/components/Groups";
 import { GroupDetail } from "@interfaces/components/GroupDetail";
+import { Profile } from "@interfaces/components/Profile";
 import { BottomNav } from "@interfaces/components/BottomNav";
 import { ToastProvider } from "@interfaces/components/Toast";
 
-type Tab = "scanner" | "library" | "groups";
+type Tab = "scanner" | "library" | "groups" | "profile";
 
 type View =
   | { screen: "main" }
@@ -79,12 +80,6 @@ export default function App() {
             </span>
           )}
         </div>
-        <button
-          onClick={signOut}
-          className="text-text-tertiary text-xs font-medium px-3 py-1.5 rounded-pill border border-border hover:border-border-strong transition-colors"
-        >
-          Déconnexion
-        </button>
       </div>
 
       {tab === "scanner" && (
@@ -133,6 +128,15 @@ export default function App() {
         <GroupDetail
           groupId={view.groupId}
           onBack={() => setView({ screen: "main" })}
+        />
+      )}
+
+      {tab === "profile" && (
+        <Profile
+          email={user.email ?? ""}
+          firstName={firstName}
+          onUpdateFirstName={updateFirstName}
+          onSignOut={signOut}
         />
       )}
 

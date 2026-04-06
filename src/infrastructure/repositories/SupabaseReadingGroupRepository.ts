@@ -36,7 +36,8 @@ export class SupabaseReadingGroupRepository {
       const user = await getUserMeta();
       const inviteCode = generateInviteCode();
 
-      const { data, error } = await supabase
+      // Insert group (returns id only — SELECT policy needs membership)
+      const { data: insertData, error: insertError } = await supabase
         .from("reading_groups")
         .insert({
           name,
@@ -45,20 +46,28 @@ export class SupabaseReadingGroupRepository {
           created_by: user.id,
           invite_code: inviteCode,
         })
-        .select()
+        .select("id")
         .single();
 
-      if (error) return Result.fail(error.message);
+      if (insertError) return Result.fail(insertError.message);
 
-      // Auto-add creator as admin member
+      // Add creator as admin member FIRST (so SELECT policy works)
       await supabase.from("group_members").insert({
-        group_id: data.id,
+        group_id: insertData.id,
         user_id: user.id,
         first_name: user.firstName,
         email: user.email,
         role: "admin",
       });
 
+      // Now fetch full group (RLS allows it since user is a member)
+      const { data, error } = await supabase
+        .from("reading_groups")
+        .select("*")
+        .eq("id", insertData.id)
+        .single();
+
+      if (error) return Result.fail(error.message);
       return Result.ok(this.rowToGroup(data));
     } catch (e) {
       return Result.fail(e instanceof Error ? e.message : "Erreur création groupe");
