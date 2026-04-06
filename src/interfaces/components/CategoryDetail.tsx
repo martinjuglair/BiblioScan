@@ -7,6 +7,7 @@ import { BottomSheet } from "./BottomSheet";
 import { CategoryDetailSkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
 import { hapticMedium, hapticError } from "@interfaces/utils/haptics";
+import { LazyImage } from "./LazyImage";
 
 type BookSortOption = "title" | "added" | "rating";
 
@@ -332,10 +333,10 @@ function SwipeableBookCard({
         onTouchEnd={handleTouchEnd}
       >
         {book.coverUrl ? (
-          <img
+          <LazyImage
             src={book.coverUrl}
             alt={book.title}
-            className="w-14 h-20 object-cover rounded-lg flex-shrink-0"
+            className="w-14 h-20 rounded-lg flex-shrink-0"
           />
         ) : (
           <div className="w-14 h-20 bg-surface-subtle rounded-lg flex items-center justify-center text-text-muted text-xs flex-shrink-0">

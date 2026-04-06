@@ -10,6 +10,8 @@ import { ScanSuccess } from "./ScanSuccess";
 
 interface ScannerProps {
   onBookAdded: () => void;
+  firstName: string | null;
+  onUpdateFirstName: (name: string) => Promise<void>;
 }
 
 type ScanState =
@@ -22,9 +24,15 @@ type ScanState =
   | { step: "success"; title: string; coverUrl: string | null }
   | { step: "error"; message: string };
 
-export function Scanner({ onBookAdded }: ScannerProps) {
+export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerProps) {
   const [state, setState] = useState<ScanState>({ step: "idle" });
   const [manualIsbn, setManualIsbn] = useState("");
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchCount, setBatchCount] = useState(0);
+
+  // First name prompt state
+  const [showNamePrompt, setShowNamePrompt] = useState(!firstName);
+  const [nameInput, setNameInput] = useState("");
 
   const handleDetected = useCallback(async (isbn: string) => {
     triggerScanFeedback();
@@ -56,55 +64,143 @@ export function Scanner({ onBookAdded }: ScannerProps) {
     const result = await scanComicBook.confirm(data);
     if (result.ok) {
       setState({ step: "success", title: data.title, coverUrl: data.coverUrl });
+      setBatchCount((c) => c + 1);
       onBookAdded();
     } else {
       setState({ step: "error", message: result.error });
     }
   };
 
+  const handleSuccessDone = () => {
+    if (batchMode) {
+      // In batch mode, go straight back to scanning
+      setState({ step: "scanning" });
+      start();
+    } else {
+      setState({ step: "idle" });
+      setManualIsbn("");
+    }
+  };
+
   const handleCancel = () => {
     stop();
     setState({ step: "idle" });
+    if (batchMode) {
+      setBatchMode(false);
+      setBatchCount(0);
+    }
+  };
+
+  const handleSaveName = async () => {
+    const name = nameInput.trim();
+    if (!name) return;
+    await onUpdateFirstName(name);
+    setShowNamePrompt(false);
+  };
+
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Bonjour";
+    if (hour < 18) return "Bon après-midi";
+    return "Bonsoir";
   };
 
   return (
     <div className="flex flex-col items-center gap-3 sm:gap-4 px-3 sm:px-4 py-4">
-      <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Ajouter un livre</h1>
-
-      {/* Camera view */}
-      <div
-        className={`relative w-full max-w-sm aspect-[3/4] rounded-card overflow-hidden bg-text-primary ${
-          state.step === "scanning" ? "block" : "hidden"
-        }`}
-      >
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          playsInline
-          muted
-        />
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-3/4 h-16 border-2 border-brand-amber rounded-lg opacity-80" />
-        </div>
-        {isScanning && (
-          <button
-            onClick={handleCancel}
-            className="absolute top-3 right-3 bg-black/50 text-white rounded-full w-11 h-11 flex items-center justify-center text-xl backdrop-blur-sm"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      {/* First name prompt for new users */}
+      {showNamePrompt && !firstName && state.step === "idle" && (
+        <div className="card w-full max-w-sm text-center space-y-3">
+          <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #FFAF36 0%, #FFC536 50%, #F66236 100%)" }}>
+            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
             </svg>
-          </button>
-        )}
-      </div>
+          </div>
+          <h2 className="text-lg font-bold text-text-primary">Comment vous appelez-vous ?</h2>
+          <p className="text-sm text-text-tertiary">Pour personnaliser votre expérience</p>
+          <input
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            placeholder="Votre prénom"
+            className="input-field text-center"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(); }}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowNamePrompt(false)}
+              className="btn-secondary flex-1 text-sm"
+            >
+              Plus tard
+            </button>
+            <button
+              onClick={handleSaveName}
+              disabled={!nameInput.trim()}
+              className="btn-primary flex-1 text-sm"
+            >
+              Valider
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Idle state */}
-      {state.step === "idle" && (
+      {/* Greeting + Hero section */}
+      {state.step === "idle" && !(showNamePrompt && !firstName) && (
         <>
-          <button onClick={handleStartScan} className="btn-primary w-full max-w-sm">
-            Scanner un code-barres
-          </button>
+          <div className="w-full max-w-sm text-center mb-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary">
+              {firstName ? `${getGreeting()}, ${firstName}` : "Ajouter un livre"}
+            </h1>
+            <p className="text-text-tertiary text-sm mt-1">
+              {firstName ? "Prêt à agrandir votre collection ?" : "Scannez ou recherchez pour commencer"}
+            </p>
+          </div>
 
+          {/* Quick stats badge */}
+          {batchCount > 0 && (
+            <div className="bg-status-success-bg text-status-success text-sm font-semibold px-4 py-2 rounded-pill">
+              +{batchCount} livre{batchCount > 1 ? "s" : ""} ajouté{batchCount > 1 ? "s" : ""} aujourd'hui
+            </div>
+          )}
+
+          {/* Main action cards */}
+          <div className="w-full max-w-sm grid grid-cols-2 gap-3">
+            {/* Scan card */}
+            <button
+              onClick={handleStartScan}
+              className="card text-center py-6 active:scale-[0.97] transition-all duration-200 hover:shadow-float group"
+            >
+              <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center transition-transform group-active:scale-90"
+                style={{ background: "linear-gradient(135deg, #FFAF36 0%, #FFC536 100%)" }}>
+                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M3 17v2a2 2 0 002 2h2M17 21h2a2 2 0 002-2v-2" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 12h10" />
+                </svg>
+              </div>
+              <h3 className="font-bold text-text-primary text-sm">Scanner</h3>
+              <p className="text-text-tertiary text-xs mt-0.5">Code-barres</p>
+            </button>
+
+            {/* Batch scan card */}
+            <button
+              onClick={() => { setBatchMode(true); setBatchCount(0); handleStartScan(); }}
+              className="card text-center py-6 active:scale-[0.97] transition-all duration-200 hover:shadow-float group"
+            >
+              <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center transition-transform group-active:scale-90"
+                style={{ background: "linear-gradient(135deg, #F66236 0%, #F45C5A 100%)" }}>
+                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
+                </svg>
+              </div>
+              <h3 className="font-bold text-text-primary text-sm">Scan en lot</h3>
+              <p className="text-text-tertiary text-xs mt-0.5">Enchaîner vite</p>
+            </button>
+          </div>
+
+          {/* ISBN manual entry */}
           <div className="w-full max-w-sm">
             <p className="text-text-tertiary text-sm text-center my-2">ou entrer l'ISBN</p>
             <div className="flex gap-2">
@@ -124,6 +220,7 @@ export function Scanner({ onBookAdded }: ScannerProps) {
             </div>
           </div>
 
+          {/* Secondary actions */}
           <div className="w-full max-w-sm border-t border-border pt-3 sm:pt-4 mt-1">
             <p className="text-text-tertiary text-sm text-center mb-2 sm:mb-3">Pas de code-barres ?</p>
             <div className="flex flex-col min-[320px]:flex-row gap-2">
@@ -144,7 +241,41 @@ export function Scanner({ onBookAdded }: ScannerProps) {
         </>
       )}
 
-      {/* Title search (BnF) */}
+      {/* Camera view */}
+      <div
+        className={`relative w-full max-w-sm aspect-[3/4] rounded-card overflow-hidden bg-text-primary ${
+          state.step === "scanning" ? "block" : "hidden"
+        }`}
+      >
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          playsInline
+          muted
+        />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-3/4 h-16 border-2 border-brand-amber rounded-lg opacity-80" />
+        </div>
+        {/* Batch mode indicator */}
+        {batchMode && isScanning && (
+          <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-pill backdrop-blur-sm flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-status-error animate-pulse" />
+            Lot : {batchCount} ajouté{batchCount !== 1 ? "s" : ""}
+          </div>
+        )}
+        {isScanning && (
+          <button
+            onClick={handleCancel}
+            className="absolute top-3 right-3 bg-black/50 text-white rounded-full w-11 h-11 flex items-center justify-center text-xl backdrop-blur-sm"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Title search */}
       {state.step === "titleSearch" && (
         <>
           <button onClick={handleCancel} className="text-brand-orange font-medium self-start flex items-center gap-1">
@@ -198,10 +329,7 @@ export function Scanner({ onBookAdded }: ScannerProps) {
         <ScanSuccess
           title={state.title}
           coverUrl={state.coverUrl}
-          onDone={() => {
-            setState({ step: "idle" });
-            setManualIsbn("");
-          }}
+          onDone={handleSuccessDone}
         />
       )}
 

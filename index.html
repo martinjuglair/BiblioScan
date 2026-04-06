@@ -9,9 +9,68 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>BiblioScan</title>
+    <style>
+      /* Inline splash screen — shows while JS bundle loads */
+      #splash {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        background: #F9F9F9;
+        transition: opacity 0.4s ease-out;
+      }
+      #splash.hide { opacity: 0; pointer-events: none; }
+      #splash-logo {
+        width: 80px; height: 80px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #FFAF36 0%, #FFC536 50%, #F66236 100%);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+        animation: splash-pulse 1.5s ease-in-out infinite;
+      }
+      #splash-logo svg { width: 40px; height: 40px; color: white; }
+      #splash-text {
+        margin-top: 16px; font-family: 'Manrope', sans-serif;
+        font-size: 24px; font-weight: 800; color: #292935;
+        letter-spacing: -0.02em;
+      }
+      #splash-sub {
+        margin-top: 4px; font-family: 'Manrope', sans-serif;
+        font-size: 13px; color: #8E8E93;
+      }
+      @keyframes splash-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+    </style>
   </head>
   <body class="bg-surface-light text-text-primary min-h-screen">
+    <!-- Splash screen -->
+    <div id="splash">
+      <div id="splash-logo">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      </div>
+      <div id="splash-text">BiblioScan</div>
+      <div id="splash-sub">Votre bibliothèque de poche</div>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Hide splash when React mounts
+      const observer = new MutationObserver(() => {
+        const root = document.getElementById('root');
+        if (root && root.children.length > 0) {
+          const splash = document.getElementById('splash');
+          if (splash) {
+            splash.classList.add('hide');
+            setTimeout(() => splash.remove(), 500);
+          }
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.getElementById('root'), { childList: true });
+    </script>
   </body>
 </html>

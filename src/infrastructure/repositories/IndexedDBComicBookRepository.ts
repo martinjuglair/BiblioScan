@@ -32,6 +32,7 @@ function recordToEntity(record: ComicBookRecord): ComicBook {
     rating: record.rating ?? null,
     comment: record.comment ?? null,
     categoryId: record.categoryId ?? null,
+    wishlist: record.wishlist ?? false,
     addedAt: new Date(record.addedAt),
   });
 }

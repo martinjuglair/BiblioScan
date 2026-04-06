@@ -12,14 +12,27 @@ export class AuthService {
     return Result.ok(data.user);
   }
 
-  async signUp(email: string, password: string): Promise<Result<User>> {
+  async signUp(email: string, password: string, firstName?: string): Promise<Result<User>> {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: firstName ? { data: { first_name: firstName } } : undefined,
     });
     if (error) return Result.fail(error.message);
     if (!data.user) return Result.fail("Erreur lors de la création du compte");
     return Result.ok(data.user);
+  }
+
+  async updateFirstName(firstName: string): Promise<Result<User>> {
+    const { data, error } = await supabase.auth.updateUser({
+      data: { first_name: firstName },
+    });
+    if (error) return Result.fail(error.message);
+    return Result.ok(data.user);
+  }
+
+  getFirstName(user: User): string | null {
+    return (user.user_metadata?.first_name as string) ?? null;
   }
 
   async signOut(): Promise<Result<void>> {

@@ -11,6 +11,7 @@ export interface UpdateBookInput {
   rating?: number | null;
   comment?: string | null;
   categoryId?: string | null;
+  wishlist?: boolean;
 }
 
 export class UpdateBook {
@@ -40,6 +41,7 @@ export class UpdateBook {
       rating: input.rating,
       comment: input.comment,
       categoryId: input.categoryId,
+      wishlist: input.wishlist,
     });
 
     const saveResult = await this.repository.update(updated);

@@ -15,6 +15,7 @@ export interface ComicBookProps {
   rating: number | null;
   comment: string | null;
   categoryId: string | null;
+  wishlist: boolean;
   addedAt: Date;
 }
 
@@ -68,6 +69,9 @@ export class ComicBook {
   get categoryId(): string | null {
     return this.props.categoryId;
   }
+  get wishlist(): boolean {
+    return this.props.wishlist;
+  }
   get addedAt(): Date {
     return this.props.addedAt;
   }
@@ -100,6 +104,7 @@ export class ComicBook {
         rating: null,
         comment: null,
         categoryId: input.categoryId ?? null,
+        wishlist: false,
         addedAt: new Date(),
       }),
     );
@@ -122,6 +127,7 @@ export class ComicBook {
     rating?: number | null;
     comment?: string | null;
     categoryId?: string | null;
+    wishlist?: boolean;
   }): ComicBook {
     return new ComicBook({
       ...this.props,
@@ -132,6 +138,7 @@ export class ComicBook {
       ...(updates.rating !== undefined && { rating: updates.rating }),
       ...(updates.comment !== undefined && { comment: updates.comment }),
       ...(updates.categoryId !== undefined && { categoryId: updates.categoryId }),
+      ...(updates.wishlist !== undefined && { wishlist: updates.wishlist }),
     });
   }
 
@@ -150,6 +157,7 @@ export class ComicBook {
       rating: this.rating,
       comment: this.comment,
       categoryId: this.categoryId,
+      wishlist: this.wishlist,
       addedAt: this.addedAt.toISOString(),
     };
   }
@@ -169,5 +177,6 @@ export interface ComicBookRecord {
   rating: number | null;
   comment: string | null;
   categoryId: string | null;
+  wishlist: boolean;
   addedAt: string;
 }

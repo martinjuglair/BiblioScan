@@ -35,6 +35,9 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
 
+  // Wishlist state
+  const [isWishlist, setIsWishlist] = useState(false);
+
   // Lightbox state
   const [showLightbox, setShowLightbox] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -67,6 +70,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     setRating(b.rating);
     setComment(b.comment ?? "");
     setCategoryId(b.categoryId);
+    setIsWishlist(b.wishlist);
   };
 
   const handleSave = async () => {
@@ -100,6 +104,18 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       setBook(result.value);
       onUpdated();
       toast("Catégorie mise à jour", "success");
+    }
+  };
+
+  const handleToggleWishlist = async () => {
+    const newVal = !isWishlist;
+    hapticLight();
+    setIsWishlist(newVal);
+    const result = await updateBook.execute(isbn, { wishlist: newVal });
+    if (result.ok) {
+      setBook(result.value);
+      onUpdated();
+      toast(newVal ? "Ajouté aux souhaits" : "Retiré des souhaits", "success");
     }
   };
 
@@ -138,12 +154,35 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       const ext = file.name.split(".").pop() || "jpg";
       const path = `covers/${isbn}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
+      // Try upload — if bucket doesn't exist, try creating it first
+      let { error: uploadError } = await supabase.storage
         .from("book-covers")
         .upload(path, file, { upsert: true });
 
+      // If bucket not found, try to create it and retry
+      if (uploadError && (uploadError.message?.includes("not found") || uploadError.message?.includes("Bucket"))) {
+        console.warn("Bucket book-covers not found, attempting to create...", uploadError.message);
+        const { error: createError } = await supabase.storage.createBucket("book-covers", {
+          public: true,
+          fileSizeLimit: 5 * 1024 * 1024,
+          allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+        });
+        if (createError && !createError.message?.includes("already exists")) {
+          console.error("Failed to create bucket:", createError);
+          toast("Erreur : bucket de stockage non configuré. Voir la console.", "error");
+          setUploadingCover(false);
+          return;
+        }
+        // Retry upload
+        const retry = await supabase.storage
+          .from("book-covers")
+          .upload(path, file, { upsert: true });
+        uploadError = retry.error;
+      }
+
       if (uploadError) {
-        toast("Erreur lors de l'upload", "error");
+        console.error("Upload error:", uploadError);
+        toast(`Erreur upload : ${uploadError.message}`, "error");
         setUploadingCover(false);
         return;
       }
@@ -159,7 +198,8 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         onUpdated();
         toast("Couverture mise à jour", "success");
       }
-    } catch {
+    } catch (err) {
+      console.error("Cover upload exception:", err);
       toast("Erreur lors de l'upload", "error");
     }
     setUploadingCover(false);
@@ -212,6 +252,25 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           </div>
         )}
         <h1 className="text-lg sm:text-xl font-bold text-center text-text-primary px-2">{book.title}</h1>
+
+        {/* Wishlist toggle */}
+        <button
+          onClick={handleToggleWishlist}
+          className="mt-2 flex items-center gap-1.5 text-sm font-medium transition-all active:scale-90"
+        >
+          <svg
+            className={`w-5 h-5 transition-colors ${isWishlist ? "text-status-error" : "text-text-muted"}`}
+            fill={isWishlist ? "currentColor" : "none"}
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+          </svg>
+          <span className={isWishlist ? "text-status-error" : "text-text-tertiary"}>
+            {isWishlist ? "Dans ma wishlist" : "Ajouter aux souhaits"}
+          </span>
+        </button>
 
         {/* Cover photo upload */}
         <label className="mt-2 flex items-center gap-1.5 text-sm text-brand-orange font-medium cursor-pointer active:opacity-60 transition-opacity">

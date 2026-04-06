@@ -9,6 +9,9 @@ import { BottomSheet } from "./BottomSheet";
 import { LibrarySkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
 import { hapticLight } from "@interfaces/utils/haptics";
+import { BookStackIllustration, ScanIllustration } from "./Illustrations";
+import { ShareCollection } from "./ShareCollection";
+import { LazyImage } from "./LazyImage";
 
 interface LibraryProps {
   refreshKey: number;
@@ -26,6 +29,7 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [globalQuery, setGlobalQuery] = useState("");
+  const [showShare, setShowShare] = useState(false);
   const { toast } = useToast();
 
   const allBooks = useMemo<ComicBook[]>(() => {
@@ -127,6 +131,10 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
     );
   }, [data, search]);
 
+  const wishlistBooks = useMemo(() => {
+    return allBooks.filter((b) => b.wishlist);
+  }, [allBooks]);
+
   if (loading) {
     return <LibrarySkeleton />;
   }
@@ -146,6 +154,17 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Share button */}
+          {allBooks.length > 0 && (
+            <button
+              onClick={() => setShowShare(true)}
+              className="w-11 h-11 rounded-full flex items-center justify-center bg-white shadow-card transition-all active:scale-90 border border-border"
+            >
+              <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+              </svg>
+            </button>
+          )}
           {/* Global search button */}
           {allBooks.length > 0 && (
             <button
@@ -172,41 +191,43 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
       <CollectionStats books={allBooks} categoryCount={data?.categories.length ?? 0} />
 
       {allBooks.length === 0 ? (
-        <div className="py-8 sm:py-12">
-          {/* Step 1 */}
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}>
-              <span className="text-lg font-bold text-white">1</span>
+        <div className="py-8 sm:py-12 text-center">
+          <BookStackIllustration className="w-32 h-32 mx-auto mb-4 opacity-90" />
+          <h2 className="text-lg font-bold text-text-primary mb-2">Votre bibliothèque est vide</h2>
+          <p className="text-text-tertiary text-sm mb-6 max-w-xs mx-auto">
+            Commencez par scanner un livre ou rechercher par titre pour l'ajouter à votre collection.
+          </p>
+
+          <div className="flex flex-col gap-4 max-w-xs mx-auto text-left">
+            <div className="flex items-center gap-3">
+              <ScanIllustration className="w-12 h-12 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-text-primary text-sm">Scannez un code-barres</h3>
+                <p className="text-xs text-text-tertiary">Pointez la caméra ou tapez l'ISBN</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-text-primary">Scannez un code-barres</h3>
-              <p className="text-sm text-text-tertiary mt-0.5">Pointez la caméra sur le code-barres du livre, ou tapez l'ISBN manuellement.</p>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-brand-amber/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-brand-amber" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-text-primary text-sm">Classez par catégorie</h3>
+                <p className="text-xs text-text-tertiary">BD, Romans, Mangas, et plus</p>
+              </div>
             </div>
-          </div>
-          {/* Step 2 */}
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}>
-              <span className="text-lg font-bold text-white">2</span>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-brand-teal/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-brand-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-text-primary text-sm">Notez et commentez</h3>
+                <p className="text-xs text-text-tertiary">Donnez votre avis sur chaque livre</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-text-primary">Classez par catégorie</h3>
-              <p className="text-sm text-text-tertiary mt-0.5">Créez vos catégories (BD, Romans, Mangas…) et rangez chaque livre dedans.</p>
-            </div>
-          </div>
-          {/* Step 3 */}
-          <div className="flex items-start gap-4 mb-8">
-            <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}>
-              <span className="text-lg font-bold text-white">3</span>
-            </div>
-            <div>
-              <h3 className="font-bold text-text-primary">Notez et commentez</h3>
-              <p className="text-sm text-text-tertiary mt-0.5">Donnez une note en étoiles et ajoutez votre avis sur chaque livre.</p>
-            </div>
-          </div>
-          {/* CTA */}
-          <div className="text-center">
-            <p className="text-text-muted text-sm mb-3">Votre collection est vide pour le moment.</p>
-            <p className="text-text-secondary font-medium">Scannez votre premier livre pour commencer !</p>
           </div>
         </div>
       ) : (
@@ -250,10 +271,10 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
                     className="card text-left active:scale-[0.98] transition-all duration-200 hover:shadow-float"
                   >
                     {books.length > 0 && books[0]!.coverUrl ? (
-                      <img
+                      <LazyImage
                         src={books[0]!.coverUrl}
                         alt={category.name}
-                        className="w-full h-28 sm:h-32 object-cover rounded-lg mb-2"
+                        className="w-full h-28 sm:h-32 rounded-lg mb-2"
                       />
                     ) : (
                       <div className="w-full h-28 sm:h-32 bg-surface-subtle rounded-lg mb-2 flex items-center justify-center">
@@ -269,6 +290,27 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
                   </button>
                 ))}
               </div>
+
+              {/* Wishlist */}
+              {wishlistBooks.length > 0 && !search.trim() && (
+                <div className="mt-4">
+                  <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide mb-2 px-1">
+                    Liste de souhaits
+                  </h2>
+                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3 scrollbar-hide">
+                    {wishlistBooks.map((book) => (
+                      <div key={book.isbn} className="flex-shrink-0 w-20">
+                        {book.coverUrl ? (
+                          <img src={book.coverUrl} alt={book.title} className="w-20 h-28 object-cover rounded-lg shadow-card" loading="lazy" />
+                        ) : (
+                          <div className="w-20 h-28 bg-surface-subtle rounded-lg flex items-center justify-center text-text-muted text-xs">?</div>
+                        )}
+                        <p className="text-xs text-text-primary mt-1 truncate font-medium">{book.title}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Non classés */}
               {showUncategorized && data && (
@@ -350,6 +392,19 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
             </button>
           ))}
         </div>
+      </BottomSheet>
+
+      {/* Share bottom sheet */}
+      <BottomSheet
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        title="Partager & Exporter"
+      >
+        <ShareCollection
+          books={allBooks}
+          categoryCount={data?.categories.length ?? 0}
+          onClose={() => setShowShare(false)}
+        />
       </BottomSheet>
     </div>
     </PullToRefresh>
