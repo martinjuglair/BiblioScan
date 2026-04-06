@@ -8,19 +8,29 @@ interface LazyImageProps {
 }
 
 /**
- * Lazy-loaded image with blur-up placeholder.
- * Shows a shimmer placeholder until the image enters viewport and loads.
+ * In-memory set of URLs that have already been loaded successfully.
+ * Images in this set skip the shimmer/fade animation entirely.
+ */
+const loadedUrls = new Set<string>();
+
+/**
+ * Lazy-loaded image with shimmer placeholder and memory cache.
+ * - IntersectionObserver with 200px margin for early loading
+ * - Skips animation for previously loaded images (instant display)
+ * - Graceful error handling (hides broken images)
  */
 export function LazyImage({ src, alt, className = "", placeholderClassName }: LazyImageProps) {
-  const [loaded, setLoaded] = useState(false);
-  const [inView, setInView] = useState(false);
+  const alreadyCached = loadedUrls.has(src);
+  const [loaded, setLoaded] = useState(alreadyCached);
+  const [error, setError] = useState(false);
+  const [inView, setInView] = useState(alreadyCached); // Skip observer if cached
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (alreadyCached) return; // Already in memory, no need to observe
     const el = ref.current;
     if (!el) return;
 
-    // Use IntersectionObserver for lazy loading
     if ("IntersectionObserver" in window) {
       const observer = new IntersectionObserver(
         ([entry]) => {
@@ -29,19 +39,35 @@ export function LazyImage({ src, alt, className = "", placeholderClassName }: La
             observer.disconnect();
           }
         },
-        { rootMargin: "100px" }, // Start loading 100px before entering viewport
+        { rootMargin: "200px" }, // Start loading 200px before viewport
       );
       observer.observe(el);
       return () => observer.disconnect();
     } else {
-      // Fallback: load immediately
       setInView(true);
     }
-  }, []);
+  }, [alreadyCached]);
+
+  const handleLoad = () => {
+    loadedUrls.add(src);
+    setLoaded(true);
+  };
+
+  const handleError = () => {
+    setError(true);
+  };
+
+  if (error) {
+    return (
+      <div className={`bg-surface-subtle flex items-center justify-center text-text-muted text-xs ${className}`}>
+        ?
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className={`relative overflow-hidden ${className}`}>
-      {/* Shimmer placeholder */}
+      {/* Shimmer placeholder — hidden once loaded */}
       {!loaded && (
         <div
           className={`absolute inset-0 ${placeholderClassName ?? ""}`}
@@ -58,8 +84,9 @@ export function LazyImage({ src, alt, className = "", placeholderClassName }: La
         <img
           src={src}
           alt={alt}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
-          onLoad={() => setLoaded(true)}
+          className={`w-full h-full object-cover ${alreadyCached ? "" : "transition-opacity duration-200"} ${loaded ? "opacity-100" : "opacity-0"}`}
+          onLoad={handleLoad}
+          onError={handleError}
           loading="lazy"
           decoding="async"
         />

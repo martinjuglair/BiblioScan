@@ -255,85 +255,44 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
     });
   };
 
-  const handleSelectGoogle = async (item: GoogleBooksSearchResult, index: number) => {
-    const cleanIsbn = item.isbn?.replace(/[-\s]/g, "") ?? null;
+  const handleSelect = async (result: SearchResult, index: number) => {
+    const cleanIsbn = result.isbn?.replace(/[-\s]/g, "") ?? null;
 
     if (cleanIsbn) {
-      // Use the full lookup facade to get enriched data (BnF price, cover fallbacks)
-      setSelecting(index);
-      const lookupResult = await bookLookup.lookupByISBN(cleanIsbn);
-      setSelecting(null);
-
-      if (lookupResult.ok) {
-        onSelect(lookupResult.value);
-        return;
-      }
-    }
-
-    // Fallback: build from search result data directly
-    onSelect({
-      isbn: cleanIsbn ?? `NOISBN${Date.now()}`,
-      title: item.title,
-      authors: item.authors,
-      publisher: item.publisher,
-      publishedDate: item.publishedDate,
-      coverUrl: item.coverUrl ?? (cleanIsbn ? amazonCoverUrl(cleanIsbn) : null) ?? (cleanIsbn ? openLibraryCoverUrl(cleanIsbn) : null),
-      retailPrice: item.retailPrice,
-    });
-  };
-
-  const handleSelectBnf = async (item: BnfSearchResult, index: number) => {
-    const cleanIsbn = item.isbn?.replace(/[-\s]/g, "") ?? null;
-
-    if (cleanIsbn) {
+      // Use the full lookup facade to get enriched metadata + covers
       setSelecting(index);
       const lookupResult = await bookLookup.lookupByISBN(cleanIsbn);
       setSelecting(null);
 
       if (lookupResult.ok) {
         const data = lookupResult.value;
-        if (!data.retailPrice && item.price) {
-          data.retailPrice = item.price;
+        // Merge: keep the best cover (search result may have a good one already)
+        if (!data.coverUrl && result.coverUrl) {
+          data.coverUrl = result.coverUrl;
         }
-        if (!data.coverUrl && cleanIsbn) {
-          data.coverUrl = amazonCoverUrl(cleanIsbn) ?? openLibraryCoverUrl(cleanIsbn);
+        // Merge: keep the best price (BnF search results often have price)
+        if (!data.retailPrice && result.price) {
+          data.retailPrice = result.price;
+        }
+        // Merge: fill missing authors
+        if ((!data.authors || data.authors.length === 0) && result.authors.length > 0) {
+          data.authors = result.authors;
         }
         onSelect(data);
         return;
       }
     }
 
+    // Fallback: use search result data directly
     onSelect({
       isbn: cleanIsbn ?? `NOISBN${Date.now()}`,
-      title: item.title,
-      authors: item.authors,
-      publisher: item.publisher,
-      publishedDate: item.publishedDate,
-      coverUrl: (cleanIsbn ? amazonCoverUrl(cleanIsbn) : null) ?? (cleanIsbn ? openLibraryCoverUrl(cleanIsbn) : null),
-      retailPrice: item.price,
+      title: result.title,
+      authors: result.authors,
+      publisher: result.publisher,
+      publishedDate: result.publishedDate,
+      coverUrl: result.coverUrl ?? (cleanIsbn ? amazonCoverUrl(cleanIsbn) : null),
+      retailPrice: result.price,
     });
-  };
-
-  const handleSelectGcd = (item: GcdSearchResult) => {
-    onSelect({
-      isbn: `NOISBN${Date.now()}`,
-      title: item.title,
-      authors: [],
-      publisher: item.publisher,
-      publishedDate: item.publicationDate,
-      coverUrl: item.coverUrl,
-      retailPrice: null,
-    });
-  };
-
-  const handleSelect = async (result: SearchResult, index: number) => {
-    if (result.source === "google" && result.googleData) {
-      await handleSelectGoogle(result.googleData, index);
-    } else if (result.source === "bnf" && result.bnfData) {
-      await handleSelectBnf(result.bnfData, index);
-    } else if (result.source === "gcd" && result.gcdData) {
-      handleSelectGcd(result.gcdData);
-    }
   };
 
   const sourceLabel = (source: string) => {
