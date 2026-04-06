@@ -6,6 +6,19 @@ import { z } from "zod";
 
 const GOOGLE_BOOKS_API = "https://www.googleapis.com/books/v1/volumes";
 
+/**
+ * Upgrade Google Books cover thumbnail URL to higher quality.
+ * Default zoom=1 gives ~128px wide. zoom=2 gives ~300px, zoom=3 gives ~400px.
+ * Also removes edge=curl effect.
+ */
+function upgradeCoverUrl(url: string | null): string | null {
+  if (!url) return null;
+  let upgraded = url.replace(/&zoom=\d/, "&zoom=2");
+  if (!upgraded.includes("zoom=")) upgraded += "&zoom=2";
+  upgraded = upgraded.replace(/&edge=curl/, "");
+  return upgraded;
+}
+
 const SingleVolumeSchema = z.object({
   saleInfo: z
     .object({
@@ -64,10 +77,11 @@ export class GoogleBooksService implements IBookLookupService {
         const info = item.volumeInfo;
         const sale = item.saleInfo;
 
-        const coverUrl =
+        const coverUrl = upgradeCoverUrl(
           info.imageLinks?.thumbnail?.replace("http://", "https://") ??
           info.imageLinks?.smallThumbnail?.replace("http://", "https://") ??
-          null;
+          null
+        );
 
         // Extract ISBN-13 or ISBN-10
         const isbn13 = info.industryIdentifiers?.find((id) => id.type === "ISBN_13");

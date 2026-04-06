@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
-import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository } from "@infrastructure/container";
+import { ReadingGroup } from "@domain/entities/ReadingGroup";
+import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, readingGroupRepository } from "@infrastructure/container";
 import { CoverLightbox } from "./CoverLightbox";
+import { BottomSheet } from "./BottomSheet";
 import { BookDetailSkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
 import { supabase } from "@infrastructure/supabase/client";
@@ -41,6 +43,11 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   // Lightbox state
   const [showLightbox, setShowLightbox] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+
+  // Share to group state
+  const [showShareGroup, setShowShareGroup] = useState(false);
+  const [myGroups, setMyGroups] = useState<ReadingGroup[]>([]);
+  const [sharingToGroup, setSharingToGroup] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -203,6 +210,33 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       toast("Erreur lors de l'upload", "error");
     }
     setUploadingCover(false);
+  };
+
+  const handleOpenShareGroup = async () => {
+    hapticLight();
+    setShowShareGroup(true);
+    const result = await readingGroupRepository.findMyGroups();
+    if (result.ok) setMyGroups(result.value);
+  };
+
+  const handleShareToGroup = async (groupId: string) => {
+    if (!book) return;
+    setSharingToGroup(groupId);
+    const result = await readingGroupRepository.shareBook(
+      groupId,
+      book.isbn,
+      book.title,
+      book.coverUrl,
+      book.comment,
+    );
+    setSharingToGroup(null);
+    if (result.ok) {
+      hapticMedium();
+      toast("Livre partagé dans le groupe !", "success");
+      setShowShareGroup(false);
+    } else {
+      toast("Erreur lors du partage", "error");
+    }
   };
 
   const handleDelete = async () => {
@@ -391,12 +425,64 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         </div>
       )}
 
+      {/* Share to group */}
+      {!editing && (
+        <button
+          onClick={handleOpenShareGroup}
+          className="w-full mt-4 py-3 rounded-pill bg-brand-teal/10 text-brand-teal font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+          </svg>
+          Partager dans un groupe
+        </button>
+      )}
+
       <button
         onClick={handleDelete}
-        className="w-full mt-6 py-3 rounded-pill bg-status-error-bg text-status-error font-semibold transition-all duration-200 active:scale-95"
+        className="w-full mt-4 py-3 rounded-pill bg-status-error-bg text-status-error font-semibold transition-all duration-200 active:scale-95 text-sm"
       >
         Supprimer ce livre
       </button>
+
+      {/* Share to group bottom sheet */}
+      <BottomSheet isOpen={showShareGroup} onClose={() => setShowShareGroup(false)} title="Partager dans un groupe">
+        <div className="pb-4">
+          {myGroups.length === 0 ? (
+            <p className="text-sm text-text-tertiary text-center py-4">
+              Vous n'êtes dans aucun groupe. Créez-en un depuis l'onglet Groupes !
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {myGroups.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => handleShareToGroup(g.id)}
+                  disabled={sharingToGroup !== null}
+                  className="flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-surface-subtle active:scale-[0.98] transition-all text-left"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-surface-subtle flex items-center justify-center text-xl flex-shrink-0">
+                    {g.emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-text-primary text-sm truncate">{g.name}</p>
+                    {g.description && (
+                      <p className="text-text-tertiary text-xs truncate">{g.description}</p>
+                    )}
+                  </div>
+                  {sharingToGroup === g.id ? (
+                    <div className="w-5 h-5 border-2 border-brand-amber border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 }

@@ -31,6 +31,37 @@ function openLibraryCoverUrl(isbn: string): string {
   return `https://covers.openlibrary.org/b/isbn/${isbn.replace(/[-\s]/g, "")}-M.jpg`;
 }
 
+/** Try to get a cover from OL search API for search results display */
+async function fetchOLCoverForResults(results: SearchResult[]): Promise<void> {
+  const needCover = results.filter((r) => !r.coverUrl && r.isbn);
+  if (needCover.length === 0) return;
+
+  // Batch: fetch cover_i for all ISBNs in one call
+  const isbns = needCover.map((r) => r.isbn!.replace(/[-\s]/g, "")).join(",");
+  try {
+    const res = await fetch(
+      `https://openlibrary.org/search.json?isbn=${isbns}&fields=isbn,cover_i&limit=${needCover.length}`
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    const docs = data?.docs as { isbn?: string[]; cover_i?: number }[] | undefined;
+    if (!docs) return;
+
+    for (const doc of docs) {
+      if (!doc.cover_i || !doc.isbn) continue;
+      const coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`;
+      for (const r of needCover) {
+        const cleanIsbn = r.isbn!.replace(/[-\s]/g, "");
+        if (doc.isbn.includes(cleanIsbn) && !r.coverUrl) {
+          r.coverUrl = coverUrl;
+        }
+      }
+    }
+  } catch {
+    // Silently fail
+  }
+}
+
 function googleToUnified(item: GoogleBooksSearchResult): SearchResult {
   return {
     source: "google",
@@ -53,7 +84,7 @@ function bnfToUnified(item: BnfSearchResult): SearchResult {
     publisher: item.publisher,
     publishedDate: item.publishedDate,
     isbn: item.isbn,
-    coverUrl: item.isbn ? openLibraryCoverUrl(item.isbn) : null,
+    coverUrl: null, // Will be filled by fetchOLCoverForResults
     price: item.price,
     bnfData: item,
   };
@@ -136,8 +167,16 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
       unified.push(...bnfResult.value.map(bnfToUnified));
     }
 
-    setResults(deduplicateResults(unified));
+    const deduped = deduplicateResults(unified);
+
+    // Try to fill missing covers from OL search API (best effort, async)
+    setResults(deduped);
     setLoading(false);
+
+    // Background enrichment for missing covers
+    fetchOLCoverForResults(deduped).then(() => {
+      setResults([...deduped]); // Trigger re-render with updated covers
+    });
   };
 
   const handleSelectGoogle = async (item: GoogleBooksSearchResult, index: number) => {

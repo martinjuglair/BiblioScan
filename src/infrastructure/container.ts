@@ -40,5 +40,8 @@ export const bnfSearchService = new BnfSearchService();
 import { GcdService } from "./services/GcdService";
 export const gcdService = new GcdService();
 
+import { SupabaseReadingGroupRepository } from "./repositories/SupabaseReadingGroupRepository";
+export const readingGroupRepository = new SupabaseReadingGroupRepository();
+
 // Expose category repository for BookDetail dropdown
 export { categoryRepository };

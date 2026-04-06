@@ -5,15 +5,18 @@ import { Scanner } from "@interfaces/components/Scanner";
 import { Library } from "@interfaces/components/Library";
 import { CategoryDetail } from "@interfaces/components/CategoryDetail";
 import { BookDetail } from "@interfaces/components/BookDetail";
+import { Groups } from "@interfaces/components/Groups";
+import { GroupDetail } from "@interfaces/components/GroupDetail";
 import { BottomNav } from "@interfaces/components/BottomNav";
 import { ToastProvider } from "@interfaces/components/Toast";
 
-type Tab = "scanner" | "library";
+type Tab = "scanner" | "library" | "groups";
 
 type View =
   | { screen: "main" }
   | { screen: "category"; categoryId: string | null }
-  | { screen: "book"; isbn: string; fromCategoryId: string | null };
+  | { screen: "book"; isbn: string; fromCategoryId: string | null }
+  | { screen: "group"; groupId: string };
 
 export default function App() {
   const { user, firstName, loading, error, signIn, signUp, signOut, updateFirstName } = useAuth();
@@ -119,6 +122,17 @@ export default function App() {
             setView({ screen: "category", categoryId: view.fromCategoryId });
           }}
           onUpdated={refresh}
+        />
+      )}
+
+      {tab === "groups" && view.screen === "main" && (
+        <Groups onSelectGroup={(groupId) => setView({ screen: "group", groupId })} />
+      )}
+
+      {tab === "groups" && view.screen === "group" && (
+        <GroupDetail
+          groupId={view.groupId}
+          onBack={() => setView({ screen: "main" })}
         />
       )}
 

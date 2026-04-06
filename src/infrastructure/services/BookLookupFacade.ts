@@ -4,29 +4,70 @@ import { Result } from "@domain/shared/Result";
 import { BnfService } from "./BnfPriceService";
 
 /**
- * Open Library Cover API — direct URL that returns an image (no API call needed).
- * Returns a 1x1 pixel if no cover exists, but still a valid URL for <img>.
- * We validate it with a HEAD request to confirm a real cover exists.
+ * Open Library Cover API — direct URL that returns an image.
+ * Returns a 1x1 pixel if no cover exists for that ISBN.
  */
 function openLibraryCoverUrl(isbn: string, size: "S" | "M" | "L" = "L"): string {
   return `https://covers.openlibrary.org/b/isbn/${isbn.replace(/[-\s]/g, "")}-${size}.jpg`;
 }
 
 /**
- * Check if an Open Library direct cover URL actually has a cover
- * (returns a 1x1 transparent pixel when no cover exists).
- * We do a HEAD request and check content-length > 1000 bytes.
+ * Validate an Open Library cover URL by fetching a small range of bytes.
+ * The 1x1 pixel placeholder is ~43 bytes. A real JPEG cover starts with FF D8.
+ *
+ * We use a GET with Range header instead of HEAD, because OL doesn't always
+ * return content-length on HEAD responses.
  */
 async function validateOpenLibraryCover(isbn: string): Promise<string | null> {
   try {
     const url = openLibraryCoverUrl(isbn, "L");
-    const response = await fetch(url, { method: "HEAD" });
-    if (!response.ok) return null;
 
-    const contentLength = response.headers.get("content-length");
-    // The 1x1 pixel placeholder is ~43 bytes; a real cover is typically > 1KB
-    if (contentLength && parseInt(contentLength, 10) > 1000) {
-      return url;
+    // Try HEAD first (cheapest)
+    const headRes = await fetch(url, { method: "HEAD" });
+    if (!headRes.ok) return null;
+
+    const contentLength = headRes.headers.get("content-length");
+    if (contentLength) {
+      // If we have content-length, use it
+      return parseInt(contentLength, 10) > 500 ? url : null;
+    }
+
+    // No content-length — fetch first 200 bytes to check if it's a real image
+    const rangeRes = await fetch(url, {
+      headers: { Range: "bytes=0-199" },
+    });
+
+    if (!rangeRes.ok && rangeRes.status !== 206) return null;
+
+    const buffer = await rangeRes.arrayBuffer();
+    // A real JPEG starts with FF D8 FF and is bigger than a tiny placeholder
+    if (buffer.byteLength > 100) {
+      const bytes = new Uint8Array(buffer);
+      if (bytes[0] === 0xFF && bytes[1] === 0xD8) {
+        return url;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Try to find a cover from the Open Library Search API using the cover_i field.
+ * This works when the ISBN-based cover URL fails but OL has the cover indexed differently.
+ */
+async function searchOpenLibraryCover(isbn: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://openlibrary.org/search.json?isbn=${isbn.replace(/[-\s]/g, "")}&fields=cover_i&limit=1`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const coverId = data?.docs?.[0]?.cover_i;
+    if (coverId && typeof coverId === "number") {
+      return `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
     }
     return null;
   } catch {
@@ -34,7 +75,7 @@ async function validateOpenLibraryCover(isbn: string): Promise<string | null> {
   }
 }
 
-/** Tries Google Books first, falls back to Open Library, then BnF. Enriches with BnF data and cover fallbacks. */
+/** Tries Google Books first, falls back to Open Library, then BnF. Enriches with cover fallbacks. */
 export class BookLookupFacade implements IBookLookupService {
   private readonly bnfService = new BnfService();
 
@@ -87,9 +128,14 @@ export class BookLookupFacade implements IBookLookupService {
       }
     }
 
-    // Last resort: Open Library direct Cover API (HEAD check)
+    // Fallback 1: Open Library direct Cover API (validated)
     if (!book.coverUrl) {
       book.coverUrl = await validateOpenLibraryCover(isbn);
+    }
+
+    // Fallback 2: Open Library Search API cover_i field
+    if (!book.coverUrl) {
+      book.coverUrl = await searchOpenLibraryCover(isbn);
     }
 
     // --- Enrich: price from BnF ---
