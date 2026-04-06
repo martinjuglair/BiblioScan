@@ -5,6 +5,8 @@ import {
   GroupMember,
   GroupBook,
   GroupReview,
+  GroupActivity,
+  GroupActivityType,
 } from "@domain/entities/ReadingGroup";
 
 function generateInviteCode(): string {
@@ -147,6 +149,10 @@ export class SupabaseReadingGroupRepository {
       }, { onConflict: "group_id,user_id" });
 
       if (error) return Result.fail(error.message);
+
+      // Log activity
+      await this.logActivity(groupId, user, "join", null, null, null);
+
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail(e instanceof Error ? e.message : "Erreur");
@@ -155,13 +161,16 @@ export class SupabaseReadingGroupRepository {
 
   async leaveGroup(groupId: string): Promise<Result<void>> {
     try {
-      const userId = await getUserId();
+      const user = await getUserMeta();
+
+      // Log activity BEFORE deleting membership (need to be a member to insert)
+      await this.logActivity(groupId, user, "leave", null, null, null);
 
       const { error } = await supabase
         .from("group_members")
         .delete()
         .eq("group_id", groupId)
-        .eq("user_id", userId);
+        .eq("user_id", user.id);
 
       if (error) return Result.fail(error.message);
       return Result.ok(undefined);
@@ -202,6 +211,7 @@ export class SupabaseReadingGroupRepository {
     title: string,
     coverUrl: string | null,
     noteText: string | null,
+    message: string | null = null,
   ): Promise<Result<void>> {
     try {
       const user = await getUserMeta();
@@ -220,6 +230,10 @@ export class SupabaseReadingGroupRepository {
       );
 
       if (error) return Result.fail(error.message);
+
+      // Log activity
+      await this.logActivity(groupId, user, "share_book", message, title, isbn);
+
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail(e instanceof Error ? e.message : "Erreur");
@@ -259,6 +273,7 @@ export class SupabaseReadingGroupRepository {
     isbn: string,
     rating: number,
     comment: string | null,
+    bookTitle: string | null = null,
   ): Promise<Result<void>> {
     try {
       const user = await getUserMeta();
@@ -276,6 +291,10 @@ export class SupabaseReadingGroupRepository {
       );
 
       if (error) return Result.fail(error.message);
+
+      // Log activity
+      await this.logActivity(groupId, user, "review", `${"★".repeat(rating)}${"☆".repeat(5 - rating)}${comment ? ` — ${comment}` : ""}`, bookTitle, isbn);
+
       return Result.ok(undefined);
     } catch (e) {
       return Result.fail(e instanceof Error ? e.message : "Erreur");
@@ -306,6 +325,59 @@ export class SupabaseReadingGroupRepository {
       );
     } catch (e) {
       return Result.fail(e instanceof Error ? e.message : "Erreur");
+    }
+  }
+
+  // ─── Activity ──────────────────────────────────────────
+
+  async getActivity(groupId: string, limit = 30): Promise<Result<GroupActivity[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("group_activity")
+        .select("*")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (error) return Result.fail(error.message);
+      return Result.ok(
+        (data ?? []).map((r) => ({
+          id: r.id,
+          groupId: r.group_id,
+          userId: r.user_id,
+          userName: r.user_name ?? null,
+          type: r.type as GroupActivityType,
+          message: r.message ?? null,
+          bookTitle: r.book_title ?? null,
+          bookIsbn: r.book_isbn ?? null,
+          createdAt: new Date(r.created_at),
+        })),
+      );
+    } catch (e) {
+      return Result.fail(e instanceof Error ? e.message : "Erreur");
+    }
+  }
+
+  private async logActivity(
+    groupId: string,
+    user: { id: string; firstName: string | null },
+    type: GroupActivityType,
+    message: string | null,
+    bookTitle: string | null,
+    bookIsbn: string | null,
+  ): Promise<void> {
+    try {
+      await supabase.from("group_activity").insert({
+        group_id: groupId,
+        user_id: user.id,
+        user_name: user.firstName,
+        type,
+        message,
+        book_title: bookTitle,
+        book_isbn: bookIsbn,
+      });
+    } catch {
+      // Activity logging is best-effort, don't fail the main operation
     }
   }
 

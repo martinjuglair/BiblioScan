@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { ReadingGroup, GroupMember, GroupBook, GroupReview } from "@domain/entities/ReadingGroup";
+import { ReadingGroup, GroupMember, GroupBook, GroupReview, GroupActivity } from "@domain/entities/ReadingGroup";
 import { readingGroupRepository } from "@infrastructure/container";
 import { BottomSheet } from "./BottomSheet";
 import { LazyImage } from "./LazyImage";
@@ -11,10 +11,52 @@ interface GroupDetailProps {
   onBack: () => void;
 }
 
+function timeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return "à l'instant";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `il y a ${minutes}min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `il y a ${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `il y a ${days}j`;
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
+const FALLBACK_CONFIG = {
+  icon: "M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z",
+  color: "text-text-muted",
+  label: (a: GroupActivity) => `${a.userName ?? "Quelqu'un"} a fait une action`,
+};
+
+const ACTIVITY_CONFIG: Record<string, { icon: string; color: string; label: (a: GroupActivity) => string }> = {
+  join: {
+    icon: "M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z",
+    color: "text-status-success",
+    label: (a) => `${a.userName ?? "Quelqu'un"} a rejoint le groupe`,
+  },
+  leave: {
+    icon: "M22 10.5h-6m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z",
+    color: "text-text-muted",
+    label: (a) => `${a.userName ?? "Quelqu'un"} a quitté le groupe`,
+  },
+  share_book: {
+    icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
+    color: "text-brand-amber",
+    label: (a) => `${a.userName ?? "Quelqu'un"} a partagé ${a.bookTitle ? `« ${a.bookTitle} »` : "un livre"}`,
+  },
+  review: {
+    icon: "M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z",
+    color: "text-brand-orange",
+    label: (a) => `${a.userName ?? "Quelqu'un"} a noté ${a.bookTitle ? `« ${a.bookTitle} »` : "un livre"}`,
+  },
+};
+
 export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
   const [group, setGroup] = useState<ReadingGroup | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [books, setBooks] = useState<GroupBook[]>([]);
+  const [activity, setActivity] = useState<GroupActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
@@ -27,10 +69,11 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
-    const [groupsResult, membersResult, booksResult] = await Promise.all([
+    const [groupsResult, membersResult, booksResult, activityResult] = await Promise.all([
       readingGroupRepository.findMyGroups(),
       readingGroupRepository.getMembers(groupId),
       readingGroupRepository.getGroupBooks(groupId),
+      readingGroupRepository.getActivity(groupId),
     ]);
 
     if (groupsResult.ok) {
@@ -38,6 +81,7 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
     }
     if (membersResult.ok) setMembers(membersResult.value);
     if (booksResult.ok) setBooks(booksResult.value);
+    if (activityResult.ok) setActivity(activityResult.value);
     setLoading(false);
   }, [groupId]);
 
@@ -57,16 +101,21 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
     if (!selectedIsbn || reviewRating === 0) return;
     hapticLight();
     setSavingReview(true);
+    const selectedBook = books.find((b) => b.isbn === selectedIsbn);
     const result = await readingGroupRepository.addReview(
       groupId,
       selectedIsbn,
       reviewRating,
       reviewComment.trim() || null,
+      selectedBook?.title ?? null,
     );
     setSavingReview(false);
     if (result.ok) {
       toast("Avis enregistré", "success");
       loadReviews(selectedIsbn);
+      // Refresh activity
+      const actResult = await readingGroupRepository.getActivity(groupId);
+      if (actResult.ok) setActivity(actResult.value);
     }
   };
 
@@ -164,6 +213,40 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
           <span className="text-sm font-semibold text-text-primary">Membres</span>
         </button>
       </div>
+
+      {/* Activity feed */}
+      {activity.length > 0 && (
+        <>
+          <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide mb-2">
+            Activité récente
+          </h2>
+          <div className="card mb-4 divide-y divide-border">
+            {activity.slice(0, 10).map((a) => {
+              const config = ACTIVITY_CONFIG[a.type] ?? FALLBACK_CONFIG;
+              return (
+                <div key={a.id} className="flex gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <div className={`w-8 h-8 rounded-full bg-surface-subtle flex items-center justify-center flex-shrink-0 ${config.color}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-text-primary leading-snug">
+                      {config.label(a)}
+                    </p>
+                    {a.message && (
+                      <p className="text-xs text-text-secondary mt-0.5 italic">
+                        « {a.message} »
+                      </p>
+                    )}
+                    <p className="text-[10px] text-text-muted mt-0.5">{timeAgo(a.createdAt)}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Shared books */}
       <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide mb-2">

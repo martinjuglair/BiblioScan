@@ -75,6 +75,24 @@ async function searchOpenLibraryCover(isbn: string): Promise<string | null> {
   }
 }
 
+/**
+ * Try a direct Google Books cover URL using the volumeId.
+ * This endpoint is reliable and doesn't count as API quota.
+ */
+async function googleBooksCoverById(volumeId: string): Promise<string | null> {
+  try {
+    const url = `https://books.google.com/books/content?id=${volumeId}&printsec=frontcover&img=1&zoom=2&source=gbs_api`;
+    const res = await fetch(url, { method: "HEAD" });
+    if (!res.ok) return null;
+    // Google returns a tiny 1x1 gif if no cover — check content-type
+    const ct = res.headers.get("content-type") ?? "";
+    if (ct.includes("image/gif")) return null; // placeholder
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 /** Tries Google Books first, falls back to Open Library, then BnF. Enriches with cover fallbacks. */
 export class BookLookupFacade implements IBookLookupService {
   private readonly bnfService = new BnfService();
@@ -128,12 +146,17 @@ export class BookLookupFacade implements IBookLookupService {
       }
     }
 
-    // Fallback 1: Open Library direct Cover API (validated)
+    // Fallback 1: Google Books direct cover by volumeId (no quota)
+    if (!book.coverUrl) {
+      book.coverUrl = await this.tryGoogleCoverFallback(isbn);
+    }
+
+    // Fallback 2: Open Library direct Cover API (validated)
     if (!book.coverUrl) {
       book.coverUrl = await validateOpenLibraryCover(isbn);
     }
 
-    // Fallback 2: Open Library Search API cover_i field
+    // Fallback 3: Open Library Search API cover_i field
     if (!book.coverUrl) {
       book.coverUrl = await searchOpenLibraryCover(isbn);
     }
@@ -171,5 +194,24 @@ export class BookLookupFacade implements IBookLookupService {
     }
 
     return Result.ok(book);
+  }
+
+  /**
+   * Quick Google Books search to grab a volumeId for direct cover URL.
+   * The direct cover endpoint doesn't count toward API quota.
+   */
+  private async tryGoogleCoverFallback(isbn: string): Promise<string | null> {
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&fields=items/id&maxResults=1`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      const volumeId = data?.items?.[0]?.id;
+      if (!volumeId) return null;
+      return googleBooksCoverById(volumeId);
+    } catch {
+      return null;
+    }
   }
 }

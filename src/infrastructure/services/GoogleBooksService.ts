@@ -141,10 +141,11 @@ export class GoogleBooksService implements IBookLookupService {
       const info = item.volumeInfo;
       let sale = item.saleInfo;
 
-      const coverUrl =
+      const coverUrl = upgradeCoverUrl(
         info.imageLinks?.thumbnail?.replace("http://", "https://") ??
         info.imageLinks?.smallThumbnail?.replace("http://", "https://") ??
-        null;
+        null
+      );
 
       // If no price in search result, try direct volume endpoint with country=FR
       if (!sale?.listPrice && !sale?.retailPrice && item.id) {

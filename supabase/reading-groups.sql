@@ -51,6 +51,18 @@ CREATE TABLE group_reviews (
   UNIQUE (group_id, isbn, user_id)
 );
 
+CREATE TABLE group_activity (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  group_id UUID NOT NULL REFERENCES reading_groups(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_name TEXT,
+  type TEXT NOT NULL CHECK (type IN ('join', 'leave', 'share_book', 'review')),
+  message TEXT,
+  book_title TEXT,
+  book_isbn TEXT,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 -- ============================================================
 -- 2. Enable RLS on all tables
 -- ============================================================
@@ -59,6 +71,7 @@ ALTER TABLE reading_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_activity ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- 3. Helper: security-definer function to get user's group ids
@@ -121,4 +134,13 @@ CREATE POLICY "Members can read reviews"
 CREATE POLICY "Users can manage own reviews"
   ON group_reviews FOR ALL
   USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- group_activity
+CREATE POLICY "Members can read activity"
+  ON group_activity FOR SELECT
+  USING (group_id IN (SELECT get_my_group_ids()));
+
+CREATE POLICY "Users can create activity"
+  ON group_activity FOR INSERT
   WITH CHECK (auth.uid() = user_id);

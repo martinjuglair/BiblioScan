@@ -48,6 +48,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [showShareGroup, setShowShareGroup] = useState(false);
   const [myGroups, setMyGroups] = useState<ReadingGroup[]>([]);
   const [sharingToGroup, setSharingToGroup] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -214,6 +215,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
   const handleOpenShareGroup = async () => {
     hapticLight();
+    setShareMessage("");
     setShowShareGroup(true);
     const result = await readingGroupRepository.findMyGroups();
     if (result.ok) setMyGroups(result.value);
@@ -228,6 +230,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       book.title,
       book.coverUrl,
       book.comment,
+      shareMessage.trim() || null,
     );
     setSharingToGroup(null);
     if (result.ok) {
@@ -447,13 +450,29 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
       {/* Share to group bottom sheet */}
       <BottomSheet isOpen={showShareGroup} onClose={() => setShowShareGroup(false)} title="Partager dans un groupe">
-        <div className="pb-4">
+        <div className="pb-4 space-y-3">
+          {/* Message input */}
+          <div>
+            <label className="text-sm text-text-secondary block mb-1 font-medium">
+              Message (optionnel)
+            </label>
+            <input
+              type="text"
+              value={shareMessage}
+              onChange={(e) => setShareMessage(e.target.value)}
+              placeholder="Essayez-le, il est trop bien !"
+              className="input-field"
+              maxLength={200}
+            />
+          </div>
+
           {myGroups.length === 0 ? (
             <p className="text-sm text-text-tertiary text-center py-4">
               Vous n'êtes dans aucun groupe. Créez-en un depuis l'onglet Groupes !
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-text-muted mb-1">Choisissez un groupe :</p>
               {myGroups.map((g) => (
                 <button
                   key={g.id}
@@ -473,8 +492,8 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                   {sharingToGroup === g.id ? (
                     <div className="w-5 h-5 border-2 border-brand-amber border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <svg className="w-4 h-4 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    <svg className="w-4 h-4 text-brand-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                   )}
                 </button>

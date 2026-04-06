@@ -38,3 +38,17 @@ export interface GroupReview {
   comment: string | null;
   createdAt: Date;
 }
+
+export type GroupActivityType = "join" | "leave" | "share_book" | "review";
+
+export interface GroupActivity {
+  id: string;
+  groupId: string;
+  userId: string;
+  userName: string | null;
+  type: GroupActivityType;
+  message: string | null;
+  bookTitle: string | null;
+  bookIsbn: string | null;
+  createdAt: Date;
+}
