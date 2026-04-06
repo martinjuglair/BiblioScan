@@ -26,72 +26,117 @@ interface SearchResult {
   gcdData?: GcdSearchResult;
 }
 
+/**
+ * Convert ISBN-13 to ISBN-10 (needed for Amazon cover URLs).
+ * ISBN-13 starting with 978: drop 978 prefix, take 9 digits, compute check digit.
+ */
+function isbn13to10(isbn13: string): string | null {
+  const clean = isbn13.replace(/[-\s]/g, "");
+  if (clean.length !== 13 || !clean.startsWith("978")) return null;
+  const base = clean.slice(3, 12); // 9 digits
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(base[i]!, 10) * (10 - i);
+  }
+  const remainder = (11 - (sum % 11)) % 11;
+  const check = remainder === 10 ? "X" : String(remainder);
+  return base + check;
+}
+
+/** Build Amazon cover URL from ISBN (very reliable for French books) */
+function amazonCoverUrl(isbn: string): string | null {
+  const clean = isbn.replace(/[-\s]/g, "");
+  let isbn10: string | null = null;
+  if (clean.length === 13) {
+    isbn10 = isbn13to10(clean);
+  } else if (clean.length === 10) {
+    isbn10 = clean;
+  }
+  if (!isbn10) return null;
+  return `https://images-na.ssl-images-amazon.com/images/P/${isbn10}.01.MZZZZZZZ.jpg`;
+}
+
 /** Build a direct Open Library cover URL from ISBN */
 function openLibraryCoverUrl(isbn: string): string {
   return `https://covers.openlibrary.org/b/isbn/${isbn.replace(/[-\s]/g, "")}-M.jpg`;
 }
 
-/** Build a Google Books cover URL from ISBN (search + direct cover endpoint) */
-async function fetchGoogleCover(isbn: string): Promise<string | null> {
+/**
+ * Try to get a validated cover for an ISBN.
+ * Returns the first URL that responds with a real image (not a tiny placeholder).
+ * Tries: Amazon → Open Library direct → OL Search API (cover_i)
+ */
+async function findCoverForIsbn(isbn: string): Promise<string | null> {
+  const clean = isbn.replace(/[-\s]/g, "");
+
+  // 1. Amazon — very reliable, fast, supports French ISBNs
+  const amzUrl = amazonCoverUrl(clean);
+  if (amzUrl) {
+    try {
+      const res = await fetch(amzUrl, { method: "HEAD" });
+      if (res.ok) {
+        const cl = res.headers.get("content-length");
+        // Amazon returns a tiny 1x1 GIF (~43 bytes) for missing covers
+        if (cl && parseInt(cl, 10) > 1000) return amzUrl;
+      }
+    } catch { /* continue */ }
+  }
+
+  // 2. Open Library direct cover URL — validate it's not a 1x1 pixel
+  try {
+    const olUrl = openLibraryCoverUrl(clean);
+    const res = await fetch(olUrl, { method: "HEAD" });
+    if (res.ok) {
+      const cl = res.headers.get("content-length");
+      if (cl && parseInt(cl, 10) > 500) return olUrl;
+      // No content-length? Try Range request
+      if (!cl) {
+        const rangeRes = await fetch(olUrl, { headers: { Range: "bytes=0-3" } });
+        if (rangeRes.ok || rangeRes.status === 206) {
+          const buf = await rangeRes.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          // JPEG starts with FF D8, real cover
+          if (bytes[0] === 0xFF && bytes[1] === 0xD8) return olUrl;
+        }
+      }
+    }
+  } catch { /* continue */ }
+
+  // 3. OL Search API — cover_i field
   try {
     const res = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&fields=items/id,items/volumeInfo/imageLinks&maxResults=1`
+      `https://openlibrary.org/search.json?isbn=${clean}&fields=cover_i&limit=1`
     );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const item = data?.items?.[0];
-    if (!item) return null;
-
-    // Try imageLinks first
-    const thumbnail = item.volumeInfo?.imageLinks?.thumbnail ?? item.volumeInfo?.imageLinks?.smallThumbnail;
-    if (thumbnail) {
-      return thumbnail.replace("http://", "https://").replace(/&zoom=\d/, "&zoom=2");
+    if (res.ok) {
+      const data = await res.json();
+      const coverId = data?.docs?.[0]?.cover_i;
+      if (coverId && typeof coverId === "number") {
+        return `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`;
+      }
     }
+  } catch { /* continue */ }
 
-    // Fallback to direct cover endpoint
-    if (item.id) {
-      return `https://books.google.com/books/content?id=${item.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 /**
- * Enrich results missing covers. Strategy:
- * 1. Immediately set OL direct cover URL (works for most known books)
- * 2. In background, try Google Books for remaining without covers
+ * Background enrichment: find real covers for all results that need one.
  */
 async function enrichCovers(results: SearchResult[], onUpdate: () => void): Promise<void> {
-  // Step 1: Set OL direct cover URL for all results with ISBN but no cover
+  const toEnrich = results.filter((r) => r.isbn && !r.coverUrl);
+  if (toEnrich.length === 0) return;
+
   let changed = false;
-  for (const r of results) {
-    if (!r.coverUrl && r.isbn) {
-      r.coverUrl = openLibraryCoverUrl(r.isbn);
+  const promises = toEnrich.map(async (r) => {
+    const cover = await findCoverForIsbn(r.isbn!);
+    if (cover) {
+      r.coverUrl = cover;
       changed = true;
-    }
-  }
-  if (changed) onUpdate();
-
-  // Step 2: For each result, try to validate OL cover and fallback to Google
-  // OL returns a 1x1 pixel for unknown ISBNs — the <img> onError will hide it
-  // But let's also try Google covers in background for better quality
-  const needBetterCover = results.filter(
-    (r) => r.isbn && r.coverUrl?.includes("covers.openlibrary.org/b/isbn/")
-  );
-
-  const promises = needBetterCover.map(async (r) => {
-    const googleCover = await fetchGoogleCover(r.isbn!);
-    if (googleCover) {
-      r.coverUrl = googleCover;
     }
   });
 
-  if (promises.length > 0) {
-    await Promise.allSettled(promises);
-    onUpdate();
-  }
+  await Promise.allSettled(promises);
+  if (changed) onUpdate();
 }
 
 function googleToUnified(item: GoogleBooksSearchResult): SearchResult {
@@ -116,7 +161,7 @@ function bnfToUnified(item: BnfSearchResult): SearchResult {
     publisher: item.publisher,
     publishedDate: item.publishedDate,
     isbn: item.isbn,
-    coverUrl: null, // Will be filled by fetchOLCoverForResults
+    coverUrl: null, // Will be enriched by enrichCovers (Amazon → OL validated → OL search)
     price: item.price,
     bnfData: item,
   };
@@ -232,7 +277,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
       authors: item.authors,
       publisher: item.publisher,
       publishedDate: item.publishedDate,
-      coverUrl: item.coverUrl ?? (cleanIsbn ? openLibraryCoverUrl(cleanIsbn) : null),
+      coverUrl: item.coverUrl ?? (cleanIsbn ? amazonCoverUrl(cleanIsbn) : null) ?? (cleanIsbn ? openLibraryCoverUrl(cleanIsbn) : null),
       retailPrice: item.retailPrice,
     });
   };
@@ -251,7 +296,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
           data.retailPrice = item.price;
         }
         if (!data.coverUrl && cleanIsbn) {
-          data.coverUrl = openLibraryCoverUrl(cleanIsbn);
+          data.coverUrl = amazonCoverUrl(cleanIsbn) ?? openLibraryCoverUrl(cleanIsbn);
         }
         onSelect(data);
         return;
@@ -264,7 +309,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
       authors: item.authors,
       publisher: item.publisher,
       publishedDate: item.publishedDate,
-      coverUrl: cleanIsbn ? openLibraryCoverUrl(cleanIsbn) : null,
+      coverUrl: (cleanIsbn ? amazonCoverUrl(cleanIsbn) : null) ?? (cleanIsbn ? openLibraryCoverUrl(cleanIsbn) : null),
       retailPrice: item.price,
     });
   };

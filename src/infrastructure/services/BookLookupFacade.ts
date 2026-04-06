@@ -93,6 +93,43 @@ async function googleBooksCoverById(volumeId: string): Promise<string | null> {
   }
 }
 
+/**
+ * Convert ISBN-13 to ISBN-10 (needed for Amazon cover URLs).
+ */
+function isbn13to10(isbn13: string): string | null {
+  const clean = isbn13.replace(/[-\s]/g, "");
+  if (clean.length !== 13 || !clean.startsWith("978")) return null;
+  const base = clean.slice(3, 12);
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(base[i]!, 10) * (10 - i);
+  }
+  const remainder = (11 - (sum % 11)) % 11;
+  const check = remainder === 10 ? "X" : String(remainder);
+  return base + check;
+}
+
+/**
+ * Try Amazon cover URL — very reliable for French/European books.
+ * Validates that the response is a real image (not a 1x1 placeholder).
+ */
+async function amazonCover(isbn: string): Promise<string | null> {
+  try {
+    const clean = isbn.replace(/[-\s]/g, "");
+    const isbn10 = clean.length === 13 ? isbn13to10(clean) : clean.length === 10 ? clean : null;
+    if (!isbn10) return null;
+
+    const url = `https://images-na.ssl-images-amazon.com/images/P/${isbn10}.01.LZZZZZZZ.jpg`;
+    const res = await fetch(url, { method: "HEAD" });
+    if (!res.ok) return null;
+    const cl = res.headers.get("content-length");
+    if (cl && parseInt(cl, 10) > 1000) return url;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** Tries Google Books first, falls back to Open Library, then BnF. Enriches with cover fallbacks. */
 export class BookLookupFacade implements IBookLookupService {
   private readonly bnfService = new BnfService();
@@ -146,17 +183,22 @@ export class BookLookupFacade implements IBookLookupService {
       }
     }
 
-    // Fallback 1: Google Books direct cover by volumeId (no quota)
+    // Fallback 1: Amazon cover (very reliable for French books)
+    if (!book.coverUrl) {
+      book.coverUrl = await amazonCover(isbn);
+    }
+
+    // Fallback 2: Google Books direct cover by volumeId (no quota)
     if (!book.coverUrl) {
       book.coverUrl = await this.tryGoogleCoverFallback(isbn);
     }
 
-    // Fallback 2: Open Library direct Cover API (validated)
+    // Fallback 3: Open Library direct Cover API (validated)
     if (!book.coverUrl) {
       book.coverUrl = await validateOpenLibraryCover(isbn);
     }
 
-    // Fallback 3: Open Library Search API cover_i field
+    // Fallback 4: Open Library Search API cover_i field
     if (!book.coverUrl) {
       book.coverUrl = await searchOpenLibraryCover(isbn);
     }
