@@ -1,8 +1,10 @@
 -- Reading Groups feature
 -- Run this in Supabase SQL Editor
+-- If re-running, drop existing tables first:
+-- DROP TABLE IF EXISTS group_reviews, group_books, group_members, reading_groups CASCADE;
 
 -- ============================================================
--- 1. Create all tables first (no policies yet)
+-- 1. Create all tables
 -- ============================================================
 
 CREATE TABLE reading_groups (
@@ -59,60 +61,62 @@ ALTER TABLE group_books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_reviews ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- 3. Policies (now all tables exist, cross-references are safe)
+-- 3. Helper: security-definer function to get user's group ids
+--    This avoids infinite recursion when group_members policies
+--    need to query group_members itself.
 -- ============================================================
 
--- reading_groups policies
-CREATE POLICY "Members can read groups"
+CREATE OR REPLACE FUNCTION get_my_group_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT group_id FROM group_members WHERE user_id = auth.uid();
+$$;
+
+-- ============================================================
+-- 4. Policies
+-- ============================================================
+
+-- reading_groups
+CREATE POLICY "Anyone can find by invite code"
   ON reading_groups FOR SELECT
-  USING (
-    id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
-  );
+  USING (true);
 
 CREATE POLICY "Creator can manage groups"
   ON reading_groups FOR ALL
   USING (auth.uid() = created_by)
   WITH CHECK (auth.uid() = created_by);
 
-CREATE POLICY "Anyone can find by invite code"
-  ON reading_groups FOR SELECT
-  USING (true);
-
--- group_members policies
+-- group_members: use security-definer function to avoid recursion
 CREATE POLICY "Members can read group members"
   ON group_members FOR SELECT
-  USING (
-    group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
-  );
+  USING (group_id IN (SELECT get_my_group_ids()));
 
 CREATE POLICY "Users can join/leave"
   ON group_members FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- group_books policies
+-- group_books
 CREATE POLICY "Members can read group books"
   ON group_books FOR SELECT
-  USING (
-    group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
-  );
+  USING (group_id IN (SELECT get_my_group_ids()));
 
 CREATE POLICY "Members can share books"
   ON group_books FOR INSERT
-  WITH CHECK (
-    group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
-  );
+  WITH CHECK (group_id IN (SELECT get_my_group_ids()));
 
 CREATE POLICY "Sharers can update their shares"
   ON group_books FOR UPDATE
   USING (auth.uid() = shared_by);
 
--- group_reviews policies
+-- group_reviews
 CREATE POLICY "Members can read reviews"
   ON group_reviews FOR SELECT
-  USING (
-    group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
-  );
+  USING (group_id IN (SELECT get_my_group_ids()));
 
 CREATE POLICY "Users can manage own reviews"
   ON group_reviews FOR ALL
