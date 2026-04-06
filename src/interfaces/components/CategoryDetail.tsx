@@ -1,10 +1,14 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary, deleteCategory, deleteBook, updateBook, categoryRepository } from "@infrastructure/container";
 import { Category } from "@domain/entities/Category";
 import { PullToRefresh } from "./PullToRefresh";
 import { BottomSheet } from "./BottomSheet";
+import { CategoryDetailSkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
+import { hapticMedium, hapticError } from "@interfaces/utils/haptics";
+
+type BookSortOption = "title" | "added" | "rating";
 
 interface CategoryDetailProps {
   categoryId: string | null;
@@ -23,6 +27,9 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
   // Swipe state
   const [swipedIsbn, setSwipedIsbn] = useState<string | null>(null);
   const [swipeDelta, setSwipeDelta] = useState(0);
+
+  // Sort
+  const [bookSort, setBookSort] = useState<BookSortOption>("title");
 
   // Bottom sheet for move category
   const [moveBookIsbn, setMoveBookIsbn] = useState<string | null>(null);
@@ -52,11 +59,28 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
     loadData();
   }, [categoryId, refreshKey, loadData]);
 
+  const sortedBooks = useMemo(() => {
+    const sorted = [...books];
+    switch (bookSort) {
+      case "title":
+        sorted.sort((a, b) => a.title.localeCompare(b.title, "fr"));
+        break;
+      case "added":
+        sorted.sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime());
+        break;
+      case "rating":
+        sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+        break;
+    }
+    return sorted;
+  }, [books, bookSort]);
+
   const handleRefresh = async () => {
     await loadData();
   };
 
   const handleDeleteBook = async (isbn: string) => {
+    hapticError();
     const book = books.find((b) => b.isbn === isbn);
     const result = await deleteBook.execute(isbn);
     if (result.ok) {
@@ -68,6 +92,7 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
   };
 
   const handleMoveBook = async (isbn: string, newCategoryId: string | null) => {
+    hapticMedium();
     const book = books.find((b) => b.isbn === isbn);
     const result = await updateBook.execute(isbn, { categoryId: newCategoryId });
     if (result.ok) {
@@ -91,11 +116,7 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin w-8 h-8 border-2 border-brand-amber border-t-transparent rounded-full" />
-      </div>
-    );
+    return <CategoryDetailSkeleton />;
   }
 
   return (
@@ -109,10 +130,33 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
         </button>
 
         <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-1">{categoryName}</h1>
-        <p className="text-text-tertiary text-sm mb-4">
+        <p className="text-text-tertiary text-sm mb-3">
           {books.length} livre{books.length > 1 ? "s" : ""}
           {books.length > 0 && <span className="text-text-muted ml-2">· Glissez pour agir</span>}
         </p>
+
+        {/* Sort bar */}
+        {books.length > 1 && (
+          <div className="flex gap-1.5 mb-3">
+            {([
+              ["title", "A-Z"],
+              ["added", "Récent"],
+              ["rating", "Note"],
+            ] as [BookSortOption, string][]).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setBookSort(key)}
+                className={`px-3 py-1.5 rounded-pill text-xs font-semibold transition-all duration-200 ${
+                  bookSort === key
+                    ? "bg-brand-amber text-text-primary shadow-sm"
+                    : "bg-surface-subtle text-text-tertiary"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {books.length === 0 ? (
           <div className="text-center py-12 text-text-tertiary">
@@ -121,7 +165,7 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {books.map((book) => (
+            {sortedBooks.map((book) => (
               <SwipeableBookCard
                 key={book.isbn}
                 book={book}

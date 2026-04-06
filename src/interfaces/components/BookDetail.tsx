@@ -3,8 +3,10 @@ import { ComicBook } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
 import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository } from "@infrastructure/container";
 import { CoverLightbox } from "./CoverLightbox";
+import { BookDetailSkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
 import { supabase } from "@infrastructure/supabase/client";
+import { hapticLight, hapticMedium, hapticError } from "@interfaces/utils/haptics";
 
 interface BookDetailProps {
   isbn: string;
@@ -80,6 +82,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
     setSaving(false);
     if (result.ok) {
+      hapticLight();
       setBook(result.value);
       setEditing(false);
       onUpdated();
@@ -88,6 +91,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   };
 
   const handleCategoryChange = async (newCategoryId: string | null) => {
+    hapticMedium();
     setCategoryId(newCategoryId);
     setSavingCategory(true);
     const result = await updateBook.execute(isbn, { categoryId: newCategoryId });
@@ -101,6 +105,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
   const handleSaveReview = async () => {
     if (!book) return;
+    hapticLight();
     setSavingReview(true);
     const result = await updateBook.execute(isbn, {
       rating,
@@ -162,16 +167,13 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
   const handleDelete = async () => {
     if (!confirm("Supprimer ce livre de votre collection ?")) return;
+    hapticError();
     const result = await deleteBook.execute(isbn);
     if (result.ok) onDeleted();
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin w-8 h-8 border-2 border-brand-amber border-t-transparent rounded-full" />
-      </div>
-    );
+    return <BookDetailSkeleton />;
   }
 
   if (!book) {

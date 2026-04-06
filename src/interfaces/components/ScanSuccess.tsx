@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { hapticSuccess } from "@interfaces/utils/haptics";
 
 interface ScanSuccessProps {
   title: string;
@@ -25,8 +26,9 @@ function useConfettiParticles(count: number) {
 export function ScanSuccess({ title, coverUrl, onDone }: ScanSuccessProps) {
   const particles = useConfettiParticles(24);
 
-  // Auto-dismiss after 1.5s
+  // Haptic + auto-dismiss after 1.5s
   useEffect(() => {
+    hapticSuccess();
     const timer = setTimeout(onDone, 1500);
     return () => clearTimeout(timer);
   }, [onDone]);

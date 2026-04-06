@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary, createCategory } from "@infrastructure/container";
 import { CategorizedLibrary } from "@application/use-cases/GetCategorizedLibrary";
@@ -6,7 +6,9 @@ import { CollectionStats } from "./CollectionStats";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 import { PullToRefresh } from "./PullToRefresh";
 import { BottomSheet } from "./BottomSheet";
+import { LibrarySkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
+import { hapticLight } from "@interfaces/utils/haptics";
 
 interface LibraryProps {
   refreshKey: number;
@@ -48,6 +50,7 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
     setShowCreateModal(false);
     const result = await createCategory.execute(name);
     if (result.ok) {
+      hapticLight();
       toast(`Catégorie "${name}" créée`, "success");
       const refreshResult = await getCategorizedLibrary.execute();
       if (refreshResult.ok) setData(refreshResult.value);
@@ -125,11 +128,7 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
   }, [data, search]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin w-8 h-8 border-2 border-brand-amber border-t-transparent rounded-full" />
-      </div>
-    );
+    return <LibrarySkeleton />;
   }
 
   if (error) {
@@ -140,7 +139,12 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
     <PullToRefresh onRefresh={handleRefresh}>
     <div className="px-3 sm:px-4 py-4">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Ma Collection</h1>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Ma Collection</h1>
+          {allBooks.length > 0 && (
+            <AnimatedCounter count={allBooks.length} label={allBooks.length > 1 ? "livres" : "livre"} />
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {/* Global search button */}
           {allBooks.length > 0 && (
@@ -349,5 +353,34 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
       </BottomSheet>
     </div>
     </PullToRefresh>
+  );
+}
+
+/** Animated book counter — pops when value changes */
+function AnimatedCounter({ count, label }: { count: number; label: string }) {
+  const prevCount = useRef(count);
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    if (count !== prevCount.current) {
+      prevCount.current = count;
+      setAnimate(true);
+      const timer = setTimeout(() => setAnimate(false), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [count]);
+
+  return (
+    <p className="text-text-tertiary text-sm mt-0.5">
+      <span
+        className={`inline-block font-bold text-brand-orange transition-transform duration-300 ${
+          animate ? "scale-125" : "scale-100"
+        }`}
+        style={{ transformOrigin: "left center" }}
+      >
+        {count}
+      </span>{" "}
+      {label}
+    </p>
   );
 }
