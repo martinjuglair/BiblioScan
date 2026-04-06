@@ -12,6 +12,7 @@ export interface UpdateBookInput {
   comment?: string | null;
   categoryId?: string | null;
   wishlist?: boolean;
+  isRead?: boolean;
 }
 
 export class UpdateBook {
@@ -42,6 +43,7 @@ export class UpdateBook {
       comment: input.comment,
       categoryId: input.categoryId,
       wishlist: input.wishlist,
+      isRead: input.isRead,
     });
 
     const saveResult = await this.repository.update(updated);

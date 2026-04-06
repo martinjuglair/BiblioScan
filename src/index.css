@@ -95,6 +95,11 @@
   100% { background-position: -200% 0; }
 }
 
+@keyframes sparkle-burst {
+  0% { opacity: 1; transform: rotate(inherit) translateY(-2px) scale(1); }
+  100% { opacity: 0; transform: rotate(inherit) translateY(-14px) scale(0); }
+}
+
 @layer utilities {
   .scrollbar-hide {
     scrollbar-width: none;

@@ -5,6 +5,7 @@ import { Category } from "@domain/entities/Category";
 import { PullToRefresh } from "./PullToRefresh";
 import { BottomSheet } from "./BottomSheet";
 import { CategoryDetailSkeleton } from "./Skeleton";
+import { ReadToggle } from "./ReadToggle";
 import { useToast } from "./Toast";
 import { hapticMedium, hapticError } from "@interfaces/utils/haptics";
 import { LazyImage } from "./LazyImage";
@@ -60,21 +61,23 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
     loadData();
   }, [categoryId, refreshKey, loadData]);
 
-  const sortedBooks = useMemo(() => {
-    const sorted = [...books];
+  const sortFn = useCallback((a: ComicBook, b: ComicBook) => {
     switch (bookSort) {
-      case "title":
-        sorted.sort((a, b) => a.title.localeCompare(b.title, "fr"));
-        break;
-      case "added":
-        sorted.sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime());
-        break;
-      case "rating":
-        sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-        break;
+      case "title": return a.title.localeCompare(b.title, "fr");
+      case "added": return b.addedAt.getTime() - a.addedAt.getTime();
+      case "rating": return (b.rating ?? 0) - (a.rating ?? 0);
+      default: return 0;
     }
-    return sorted;
-  }, [books, bookSort]);
+  }, [bookSort]);
+
+  const unreadBooks = useMemo(
+    () => [...books.filter((b) => !b.isRead)].sort(sortFn),
+    [books, sortFn],
+  );
+  const readBooks = useMemo(
+    () => [...books.filter((b) => b.isRead)].sort(sortFn),
+    [books, sortFn],
+  );
 
   const handleRefresh = async () => {
     await loadData();
@@ -104,6 +107,14 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
       toast(`"${book?.title}" déplacé vers ${targetName}`, "success");
     }
     setMoveBookIsbn(null);
+  };
+
+  const handleToggleRead = async (isbn: string, newVal: boolean) => {
+    const result = await updateBook.execute(isbn, { isRead: newVal });
+    if (result.ok) {
+      setBooks((prev) => prev.map((b) => (b.isbn === isbn ? result.value : b)));
+      toast(newVal ? "Marqué comme lu ✓" : "Marqué comme à lire", "success");
+    }
   };
 
   const handleDeleteCategory = async () => {
@@ -165,34 +176,78 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
             <p className="text-xs mt-1">Assignez des livres depuis leur page de détail.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {sortedBooks.map((book) => (
-              <SwipeableBookCard
-                key={book.isbn}
-                book={book}
-                isActive={swipedIsbn === book.isbn}
-                delta={swipedIsbn === book.isbn ? swipeDelta : 0}
-                onSwipeStart={() => {
-                  setSwipedIsbn(book.isbn);
-                  setSwipeDelta(0);
-                }}
-                onDrag={(d) => setSwipeDelta(d)}
-                onRelease={() => {
-                  if (swipeDelta < -80) {
-                    handleDeleteBook(book.isbn);
-                  } else if (swipeDelta > 80) {
-                    setMoveBookIsbn(book.isbn);
-                    setSwipedIsbn(null);
-                    setSwipeDelta(0);
-                  } else {
-                    setSwipedIsbn(null);
-                    setSwipeDelta(0);
-                  }
-                }}
-                onTap={() => onSelectBook(book.isbn)}
-              />
-            ))}
-          </div>
+          <>
+            {/* À lire section */}
+            {unreadBooks.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-brand-amber" />
+                  <h2 className="text-sm font-semibold text-text-secondary">
+                    À lire
+                    <span className="text-text-muted font-normal ml-1.5">({unreadBooks.length})</span>
+                  </h2>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {unreadBooks.map((book) => (
+                    <SwipeableBookCard
+                      key={book.isbn}
+                      book={book}
+                      isActive={swipedIsbn === book.isbn}
+                      delta={swipedIsbn === book.isbn ? swipeDelta : 0}
+                      onSwipeStart={() => { setSwipedIsbn(book.isbn); setSwipeDelta(0); }}
+                      onDrag={(d) => setSwipeDelta(d)}
+                      onRelease={() => {
+                        if (swipeDelta < -80) handleDeleteBook(book.isbn);
+                        else if (swipeDelta > 80) { setMoveBookIsbn(book.isbn); setSwipedIsbn(null); setSwipeDelta(0); }
+                        else { setSwipedIsbn(null); setSwipeDelta(0); }
+                      }}
+                      onTap={() => onSelectBook(book.isbn)}
+                      onToggleRead={(val) => handleToggleRead(book.isbn, val)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lus section */}
+            {readBooks.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-status-success" />
+                  <h2 className="text-sm font-semibold text-text-secondary">
+                    Lus
+                    <span className="text-text-muted font-normal ml-1.5">({readBooks.length})</span>
+                  </h2>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {readBooks.map((book) => (
+                    <SwipeableBookCard
+                      key={book.isbn}
+                      book={book}
+                      isActive={swipedIsbn === book.isbn}
+                      delta={swipedIsbn === book.isbn ? swipeDelta : 0}
+                      onSwipeStart={() => { setSwipedIsbn(book.isbn); setSwipeDelta(0); }}
+                      onDrag={(d) => setSwipeDelta(d)}
+                      onRelease={() => {
+                        if (swipeDelta < -80) handleDeleteBook(book.isbn);
+                        else if (swipeDelta > 80) { setMoveBookIsbn(book.isbn); setSwipedIsbn(null); setSwipeDelta(0); }
+                        else { setSwipedIsbn(null); setSwipeDelta(0); }
+                      }}
+                      onTap={() => onSelectBook(book.isbn)}
+                      onToggleRead={(val) => handleToggleRead(book.isbn, val)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Show all-read or all-unread state */}
+            {unreadBooks.length === 0 && readBooks.length > 0 && (
+              <div className="text-center py-3 mb-2">
+                <p className="text-sm text-status-success font-medium">🎉 Tous les livres sont lus !</p>
+              </div>
+            )}
+          </>
         )}
 
         {categoryId !== null && (
@@ -246,6 +301,7 @@ function SwipeableBookCard({
   onDrag,
   onRelease,
   onTap,
+  onToggleRead,
 }: {
   book: ComicBook;
   isActive: boolean;
@@ -254,6 +310,7 @@ function SwipeableBookCard({
   onDrag: (delta: number) => void;
   onRelease: () => void;
   onTap: () => void;
+  onToggleRead: (isRead: boolean) => void;
 }) {
   const startX = useRef(0);
   const startY = useRef(0);
@@ -365,9 +422,9 @@ function SwipeableBookCard({
             </div>
           )}
         </div>
-        <svg className="w-4 h-4 text-text-muted self-center flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
+        <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+          <ReadToggle isRead={book.isRead} onChange={onToggleRead} />
+        </div>
       </div>
     </div>
   );

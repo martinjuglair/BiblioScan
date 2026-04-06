@@ -22,6 +22,7 @@ interface ComicBookRow {
   comment: string | null;
   category_id: string | null;
   wishlist: boolean;
+  is_read: boolean;
   added_at: string;
 }
 
@@ -49,6 +50,7 @@ function rowToEntity(row: ComicBookRow): ComicBook {
     comment: row.comment ?? null,
     categoryId: row.category_id ?? null,
     wishlist: row.wishlist ?? false,
+    isRead: row.is_read ?? false,
     addedAt: new Date(row.added_at),
   });
 }
@@ -77,6 +79,7 @@ function entityToRow(book: ComicBook, userId: string): ComicBookRow {
     comment: persistence.comment ?? null,
     category_id: persistence.categoryId ?? null,
     wishlist: persistence.wishlist ?? false,
+    is_read: persistence.isRead ?? false,
     added_at: persistence.addedAt,
   };
 }
