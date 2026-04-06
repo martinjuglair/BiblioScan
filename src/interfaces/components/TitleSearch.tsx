@@ -31,34 +31,66 @@ function openLibraryCoverUrl(isbn: string): string {
   return `https://covers.openlibrary.org/b/isbn/${isbn.replace(/[-\s]/g, "")}-M.jpg`;
 }
 
-/** Try to get a cover from OL search API for search results display */
-async function fetchOLCoverForResults(results: SearchResult[]): Promise<void> {
-  const needCover = results.filter((r) => !r.coverUrl && r.isbn);
-  if (needCover.length === 0) return;
-
-  // Batch: fetch cover_i for all ISBNs in one call
-  const isbns = needCover.map((r) => r.isbn!.replace(/[-\s]/g, "")).join(",");
+/** Build a Google Books cover URL from ISBN (search + direct cover endpoint) */
+async function fetchGoogleCover(isbn: string): Promise<string | null> {
   try {
     const res = await fetch(
-      `https://openlibrary.org/search.json?isbn=${isbns}&fields=isbn,cover_i&limit=${needCover.length}`
+      `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&fields=items/id,items/volumeInfo/imageLinks&maxResults=1`
     );
-    if (!res.ok) return;
+    if (!res.ok) return null;
     const data = await res.json();
-    const docs = data?.docs as { isbn?: string[]; cover_i?: number }[] | undefined;
-    if (!docs) return;
+    const item = data?.items?.[0];
+    if (!item) return null;
 
-    for (const doc of docs) {
-      if (!doc.cover_i || !doc.isbn) continue;
-      const coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`;
-      for (const r of needCover) {
-        const cleanIsbn = r.isbn!.replace(/[-\s]/g, "");
-        if (doc.isbn.includes(cleanIsbn) && !r.coverUrl) {
-          r.coverUrl = coverUrl;
-        }
-      }
+    // Try imageLinks first
+    const thumbnail = item.volumeInfo?.imageLinks?.thumbnail ?? item.volumeInfo?.imageLinks?.smallThumbnail;
+    if (thumbnail) {
+      return thumbnail.replace("http://", "https://").replace(/&zoom=\d/, "&zoom=2");
     }
+
+    // Fallback to direct cover endpoint
+    if (item.id) {
+      return `https://books.google.com/books/content?id=${item.id}&printsec=frontcover&img=1&zoom=1&source=gbs_api`;
+    }
+    return null;
   } catch {
-    // Silently fail
+    return null;
+  }
+}
+
+/**
+ * Enrich results missing covers. Strategy:
+ * 1. Immediately set OL direct cover URL (works for most known books)
+ * 2. In background, try Google Books for remaining without covers
+ */
+async function enrichCovers(results: SearchResult[], onUpdate: () => void): Promise<void> {
+  // Step 1: Set OL direct cover URL for all results with ISBN but no cover
+  let changed = false;
+  for (const r of results) {
+    if (!r.coverUrl && r.isbn) {
+      r.coverUrl = openLibraryCoverUrl(r.isbn);
+      changed = true;
+    }
+  }
+  if (changed) onUpdate();
+
+  // Step 2: For each result, try to validate OL cover and fallback to Google
+  // OL returns a 1x1 pixel for unknown ISBNs — the <img> onError will hide it
+  // But let's also try Google covers in background for better quality
+  const needBetterCover = results.filter(
+    (r) => r.isbn && r.coverUrl?.includes("covers.openlibrary.org/b/isbn/")
+  );
+
+  const promises = needBetterCover.map(async (r) => {
+    const googleCover = await fetchGoogleCover(r.isbn!);
+    if (googleCover) {
+      r.coverUrl = googleCover;
+    }
+  });
+
+  if (promises.length > 0) {
+    await Promise.allSettled(promises);
+    onUpdate();
   }
 }
 
@@ -169,12 +201,11 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
 
     const deduped = deduplicateResults(unified);
 
-    // Try to fill missing covers from OL search API (best effort, async)
     setResults(deduped);
     setLoading(false);
 
-    // Background enrichment for missing covers
-    fetchOLCoverForResults(deduped).then(() => {
+    // Background enrichment: OL direct covers immediately, then Google covers
+    enrichCovers(deduped, () => {
       setResults([...deduped]); // Trigger re-render with updated covers
     });
   };
@@ -319,7 +350,15 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
                     alt=""
                     className="w-12 h-16 object-cover rounded-lg flex-shrink-0 bg-surface-subtle"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                      const img = e.currentTarget as HTMLImageElement;
+                      // Replace with placeholder on load error or tiny placeholder image
+                      const parent = img.parentElement;
+                      if (parent) {
+                        const div = document.createElement("div");
+                        div.className = "w-12 h-16 bg-surface-subtle rounded-lg flex-shrink-0 flex items-center justify-center text-text-muted text-xs";
+                        div.textContent = "?";
+                        parent.replaceChild(div, img);
+                      }
                     }}
                   />
                 ) : (
