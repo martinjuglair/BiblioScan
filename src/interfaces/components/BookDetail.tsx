@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
 import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository } from "@infrastructure/container";
+import { CoverLightbox } from "./CoverLightbox";
+import { useToast } from "./Toast";
+import { supabase } from "@infrastructure/supabase/client";
 
 interface BookDetailProps {
   isbn: string;
@@ -29,6 +32,11 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
+
+  // Lightbox state
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     Promise.all([
@@ -75,6 +83,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       setBook(result.value);
       setEditing(false);
       onUpdated();
+      toast("Modifications enregistrées", "success");
     }
   };
 
@@ -86,6 +95,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     if (result.ok) {
       setBook(result.value);
       onUpdated();
+      toast("Catégorie mise à jour", "success");
     }
   };
 
@@ -100,7 +110,54 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     if (result.ok) {
       setBook(result.value);
       onUpdated();
+      toast("Avis enregistré", "success");
     }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !book) return;
+
+    // Validate file
+    if (!file.type.startsWith("image/")) {
+      toast("Veuillez sélectionner une image", "error");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast("L'image doit faire moins de 5 Mo", "error");
+      return;
+    }
+
+    setUploadingCover(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `covers/${isbn}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("book-covers")
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) {
+        toast("Erreur lors de l'upload", "error");
+        setUploadingCover(false);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("book-covers")
+        .getPublicUrl(path);
+
+      const coverUrl = urlData.publicUrl;
+      const result = await updateBook.execute(isbn, { coverUrl });
+      if (result.ok) {
+        setBook(result.value);
+        onUpdated();
+        toast("Couverture mise à jour", "success");
+      }
+    } catch {
+      toast("Erreur lors de l'upload", "error");
+    }
+    setUploadingCover(false);
   };
 
   const handleDelete = async () => {
@@ -132,18 +189,54 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
       <div className="flex flex-col items-center mb-4 sm:mb-6">
         {book.coverUrl ? (
-          <img
-            src={book.coverUrl}
-            alt={book.title}
-            className="w-28 h-40 min-[360px]:w-36 min-[360px]:h-52 sm:w-40 sm:h-60 object-cover rounded-card shadow-hero mb-3 sm:mb-4"
-          />
+          <button
+            onClick={() => setShowLightbox(true)}
+            className="relative group active:scale-95 transition-transform"
+          >
+            <img
+              src={book.coverUrl}
+              alt={book.title}
+              className="w-28 h-40 min-[360px]:w-36 min-[360px]:h-52 sm:w-40 sm:h-60 object-cover rounded-card shadow-hero mb-3 sm:mb-4"
+            />
+            <div className="absolute inset-0 mb-3 sm:mb-4 rounded-card bg-black/0 group-active:bg-black/10 transition-colors flex items-center justify-center">
+              <svg className="w-8 h-8 text-white opacity-0 group-active:opacity-80 transition-opacity drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
+              </svg>
+            </div>
+          </button>
         ) : (
           <div className="w-28 h-40 min-[360px]:w-36 min-[360px]:h-52 sm:w-40 sm:h-60 bg-surface-subtle rounded-card flex items-center justify-center text-text-muted text-sm mb-3 sm:mb-4">
             Pas de couverture
           </div>
         )}
         <h1 className="text-lg sm:text-xl font-bold text-center text-text-primary px-2">{book.title}</h1>
+
+        {/* Cover photo upload */}
+        <label className="mt-2 flex items-center gap-1.5 text-sm text-brand-orange font-medium cursor-pointer active:opacity-60 transition-opacity">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          {uploadingCover ? "Upload..." : book.coverUrl ? "Changer la couverture" : "Ajouter une photo"}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleCoverUpload}
+            className="hidden"
+            disabled={uploadingCover}
+          />
+        </label>
       </div>
+
+      {/* Cover lightbox */}
+      {showLightbox && book.coverUrl && (
+        <CoverLightbox
+          imageUrl={book.coverUrl}
+          alt={book.title}
+          onClose={() => setShowLightbox(false)}
+        />
+      )}
 
       {editing ? (
         <EditForm

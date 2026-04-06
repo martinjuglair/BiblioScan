@@ -1,20 +1,19 @@
 import { useState } from "react";
 import { ComicBookCreateInput } from "@domain/entities/ComicBook";
-import { bnfSearchService, bookLookup, gcdService } from "@infrastructure/container";
+import { bnfSearchService, bookLookup, gcdService, googleBooksSearch } from "@infrastructure/container";
 import { BnfSearchResult } from "@infrastructure/services/BnfSearchService";
 import { GcdSearchResult } from "@infrastructure/services/GcdService";
+import { GoogleBooksSearchResult } from "@infrastructure/services/GoogleBooksService";
 
 interface TitleSearchProps {
   onSelect: (data: ComicBookCreateInput) => void;
   onManualEntry: () => void;
 }
 
-/** Unified result type for both BnF and GCD results */
+/** Unified result type for all search sources */
 interface SearchResult {
-  source: "bnf" | "gcd";
+  source: "google" | "bnf" | "gcd";
   title: string;
-  seriesName: string | null;
-  issueNumber: string | null;
   authors: string[];
   publisher: string;
   publishedDate: string;
@@ -22,21 +21,34 @@ interface SearchResult {
   coverUrl: string | null;
   price: { amount: number; currency: string } | null;
   // Original data for selection handling
+  googleData?: GoogleBooksSearchResult;
   bnfData?: BnfSearchResult;
   gcdData?: GcdSearchResult;
 }
 
-/** Build a direct Open Library cover URL from ISBN (no API call needed) */
+/** Build a direct Open Library cover URL from ISBN */
 function openLibraryCoverUrl(isbn: string): string {
   return `https://covers.openlibrary.org/b/isbn/${isbn.replace(/[-\s]/g, "")}-M.jpg`;
+}
+
+function googleToUnified(item: GoogleBooksSearchResult): SearchResult {
+  return {
+    source: "google",
+    title: item.title,
+    authors: item.authors,
+    publisher: item.publisher,
+    publishedDate: item.publishedDate,
+    isbn: item.isbn,
+    coverUrl: item.coverUrl,
+    price: item.retailPrice,
+    googleData: item,
+  };
 }
 
 function bnfToUnified(item: BnfSearchResult): SearchResult {
   return {
     source: "bnf",
     title: item.title,
-    seriesName: item.seriesName,
-    issueNumber: item.volumeNumber?.toString() ?? null,
     authors: item.authors,
     publisher: item.publisher,
     publishedDate: item.publishedDate,
@@ -51,8 +63,6 @@ function gcdToUnified(item: GcdSearchResult): SearchResult {
   return {
     source: "gcd",
     title: item.title,
-    seriesName: item.seriesName,
-    issueNumber: item.issueNumber,
     authors: [],
     publisher: item.publisher,
     publishedDate: item.publicationDate,
@@ -61,6 +71,30 @@ function gcdToUnified(item: GcdSearchResult): SearchResult {
     price: null,
     gcdData: item,
   };
+}
+
+/** Deduplicate results by ISBN — keeps the one with the best cover */
+function deduplicateResults(results: SearchResult[]): SearchResult[] {
+  const seen = new Map<string, SearchResult>();
+  const output: SearchResult[] = [];
+
+  for (const r of results) {
+    if (r.isbn) {
+      const cleanIsbn = r.isbn.replace(/[-\s]/g, "");
+      const existing = seen.get(cleanIsbn);
+      if (existing) {
+        // Merge: prefer the one with cover, enrich with price/authors from the other
+        if (!existing.coverUrl && r.coverUrl) existing.coverUrl = r.coverUrl;
+        if (!existing.price && r.price) existing.price = r.price;
+        if (existing.authors.length === 0 && r.authors.length > 0) existing.authors = r.authors;
+        continue;
+      }
+      seen.set(cleanIsbn, r);
+    }
+    output.push(r);
+  }
+
+  return output;
 }
 
 export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
@@ -75,26 +109,62 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
     setLoading(true);
     setSearched(true);
 
-    // Query BnF and GCD in parallel
-    const [bnfResult, gcdResult] = await Promise.all([
-      bnfSearchService.searchByTitle(query.trim()),
-      gcdService.searchByTitle(query.trim()),
+    // Query all 3 sources in parallel — each with a 8s timeout
+    const withTimeout = <T,>(promise: Promise<T>, fallback: T): Promise<T> =>
+      Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), 8000))]);
+
+    const [googleResult, bnfResult, gcdResult] = await Promise.all([
+      withTimeout(googleBooksSearch.searchByTitle(query.trim()), { ok: false as const, error: "timeout" }),
+      withTimeout(bnfSearchService.searchByTitle(query.trim()), { ok: false as const, error: "timeout" }),
+      withTimeout(gcdService.searchByTitle(query.trim()), { ok: false as const, error: "timeout" }),
     ]);
 
     const unified: SearchResult[] = [];
 
-    // GCD results first (periodicals with covers)
+    // Google Books first (best covers + fuzzy search)
+    if (googleResult.ok) {
+      unified.push(...googleResult.value.map(googleToUnified));
+    }
+
+    // GCD results (periodicals with covers)
     if (gcdResult.ok) {
       unified.push(...gcdResult.value.map(gcdToUnified));
     }
 
-    // Then BnF results
+    // BnF results (old/French books with price data)
     if (bnfResult.ok) {
       unified.push(...bnfResult.value.map(bnfToUnified));
     }
 
-    setResults(unified);
+    setResults(deduplicateResults(unified));
     setLoading(false);
+  };
+
+  const handleSelectGoogle = async (item: GoogleBooksSearchResult, index: number) => {
+    const cleanIsbn = item.isbn?.replace(/[-\s]/g, "") ?? null;
+
+    if (cleanIsbn) {
+      // Use the full lookup facade to get enriched data (BnF price, cover fallbacks)
+      setSelecting(index);
+      const lookupResult = await bookLookup.lookupByISBN(cleanIsbn);
+      setSelecting(null);
+
+      if (lookupResult.ok) {
+        onSelect(lookupResult.value);
+        return;
+      }
+    }
+
+    // Fallback: build from search result data directly
+    onSelect({
+      isbn: cleanIsbn ?? `NOISBN${Date.now()}`,
+      title: item.title,
+      authors: item.authors,
+      publisher: item.publisher,
+      publishedDate: item.publishedDate,
+      coverUrl: item.coverUrl ?? (cleanIsbn ? openLibraryCoverUrl(cleanIsbn) : null),
+      retailPrice: item.retailPrice,
+    });
   };
 
   const handleSelectBnf = async (item: BnfSearchResult, index: number) => {
@@ -110,7 +180,6 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
         if (!data.retailPrice && item.price) {
           data.retailPrice = item.price;
         }
-        // Fallback: if lookup returned no cover, use Open Library thumbnail
         if (!data.coverUrl && cleanIsbn) {
           data.coverUrl = openLibraryCoverUrl(cleanIsbn);
         }
@@ -119,7 +188,6 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
       }
     }
 
-    // Fallback: no ISBN or lookup failed — use Open Library cover if possible
     onSelect({
       isbn: cleanIsbn ?? `NOISBN${Date.now()}`,
       title: item.title,
@@ -144,10 +212,21 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
   };
 
   const handleSelect = async (result: SearchResult, index: number) => {
-    if (result.source === "bnf" && result.bnfData) {
+    if (result.source === "google" && result.googleData) {
+      await handleSelectGoogle(result.googleData, index);
+    } else if (result.source === "bnf" && result.bnfData) {
       await handleSelectBnf(result.bnfData, index);
     } else if (result.source === "gcd" && result.gcdData) {
       handleSelectGcd(result.gcdData);
+    }
+  };
+
+  const sourceLabel = (source: string) => {
+    switch (source) {
+      case "google": return { text: "Google", bg: "bg-brand-amber/15 text-brand-amber" };
+      case "bnf": return { text: "BnF", bg: "bg-brand-teal/10 text-brand-teal" };
+      case "gcd": return { text: "GCD", bg: "bg-brand-purple/10 text-brand-purple" };
+      default: return { text: source, bg: "bg-surface-subtle text-text-muted" };
     }
   };
 
@@ -158,7 +237,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ex: Journal de Mickey 1, Spirou 42..."
+          placeholder="Titre, auteur, ou les deux..."
           className="input-field flex-1"
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSearch();
@@ -186,70 +265,63 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
 
       {!loading && results.length > 0 && (
         <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto">
-          {results.map((item, i) => (
-            <button
-              key={`${item.source}-${i}-${item.title}`}
-              onClick={() => handleSelect(item, i)}
-              disabled={selecting !== null}
-              className="card text-left active:scale-[0.98] transition-all duration-200 hover:shadow-float flex gap-3 items-start"
-            >
-              {item.coverUrl ? (
-                <img
-                  src={item.coverUrl}
-                  alt=""
-                  className="w-12 h-16 object-cover rounded-lg flex-shrink-0 bg-surface-subtle"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              ) : (
-                <div className="w-12 h-16 bg-surface-subtle rounded-lg flex-shrink-0 flex items-center justify-center text-text-muted text-xs">
-                  ?
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="font-semibold text-sm leading-tight text-text-primary truncate">{item.title}</h3>
-                  <span className={`text-[11px] px-1.5 py-0.5 rounded-pill font-medium flex-shrink-0 ${
-                    item.source === "gcd"
-                      ? "bg-brand-purple/10 text-brand-purple"
-                      : "bg-brand-teal/10 text-brand-teal"
-                  }`}>
-                    {item.source === "gcd" ? "GCD" : "BnF"}
-                  </span>
-                </div>
-                {item.seriesName && (
-                  <p className="text-brand-orange text-xs font-medium">
-                    {item.seriesName}
-                    {item.issueNumber ? ` — n°${item.issueNumber}` : ""}
-                  </p>
-                )}
-                <p className="text-text-tertiary text-xs truncate">
-                  {item.authors.length > 0 ? item.authors.join(", ") : item.publisher || "Éditeur inconnu"}
-                  {item.authors.length > 0 && item.publisher ? ` · ${item.publisher}` : ""}
-                </p>
-                <div className="flex justify-between items-center mt-1">
-                  <p className="text-text-muted text-xs">{item.publishedDate}</p>
-                  {item.price && (
-                    <p className="text-brand-orange text-xs font-semibold">
-                      {item.price.amount.toFixed(2)} €
-                    </p>
-                  )}
-                  {item.source === "bnf" && !item.isbn && (
-                    <span className="text-xs bg-status-warning-bg text-status-warning px-2 py-0.5 rounded-pill font-medium">
-                      Sans ISBN
-                    </span>
-                  )}
-                </div>
-                {selecting === i && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <div className="animate-spin w-3 h-3 border border-brand-amber border-t-transparent rounded-full" />
-                    <span className="text-xs text-text-tertiary">Chargement...</span>
+          {results.map((item, i) => {
+            const badge = sourceLabel(item.source);
+            return (
+              <button
+                key={`${item.source}-${i}-${item.title}`}
+                onClick={() => handleSelect(item, i)}
+                disabled={selecting !== null}
+                className="card text-left active:scale-[0.98] transition-all duration-200 hover:shadow-float flex gap-3 items-start"
+              >
+                {item.coverUrl ? (
+                  <img
+                    src={item.coverUrl}
+                    alt=""
+                    className="w-12 h-16 object-cover rounded-lg flex-shrink-0 bg-surface-subtle"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-12 h-16 bg-surface-subtle rounded-lg flex-shrink-0 flex items-center justify-center text-text-muted text-xs">
+                    ?
                   </div>
                 )}
-              </div>
-            </button>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-semibold text-sm leading-tight text-text-primary truncate">{item.title}</h3>
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded-pill font-medium flex-shrink-0 ${badge.bg}`}>
+                      {badge.text}
+                    </span>
+                  </div>
+                  <p className="text-text-tertiary text-xs truncate">
+                    {item.authors.length > 0 ? item.authors.join(", ") : item.publisher || "Éditeur inconnu"}
+                    {item.authors.length > 0 && item.publisher ? ` · ${item.publisher}` : ""}
+                  </p>
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-text-muted text-xs">{item.publishedDate}</p>
+                    {item.price && (
+                      <p className="text-brand-orange text-xs font-semibold">
+                        {item.price.amount.toFixed(2)} €
+                      </p>
+                    )}
+                    {item.source === "bnf" && !item.isbn && (
+                      <span className="text-xs bg-status-warning-bg text-status-warning px-2 py-0.5 rounded-pill font-medium">
+                        Sans ISBN
+                      </span>
+                    )}
+                  </div>
+                  {selecting === i && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <div className="animate-spin w-3 h-3 border border-brand-amber border-t-transparent rounded-full" />
+                      <span className="text-xs text-text-tertiary">Chargement...</span>
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
           <button onClick={onManualEntry} className="text-text-tertiary text-sm text-center py-3 font-medium">
             Pas trouvé ? Saisir manuellement
           </button>

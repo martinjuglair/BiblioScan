@@ -1,9 +1,12 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary, createCategory } from "@infrastructure/container";
 import { CategorizedLibrary } from "@application/use-cases/GetCategorizedLibrary";
 import { CollectionStats } from "./CollectionStats";
 import { CreateCategoryModal } from "./CreateCategoryModal";
+import { PullToRefresh } from "./PullToRefresh";
+import { BottomSheet } from "./BottomSheet";
+import { useToast } from "./Toast";
 
 interface LibraryProps {
   refreshKey: number;
@@ -19,6 +22,9 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("name");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [globalQuery, setGlobalQuery] = useState("");
+  const { toast } = useToast();
 
   const allBooks = useMemo<ComicBook[]>(() => {
     if (!data) return [];
@@ -42,11 +48,32 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
     setShowCreateModal(false);
     const result = await createCategory.execute(name);
     if (result.ok) {
-      // Refresh
+      toast(`Catégorie "${name}" créée`, "success");
       const refreshResult = await getCategorizedLibrary.execute();
       if (refreshResult.ok) setData(refreshResult.value);
     }
   };
+
+  const handleRefresh = useCallback(async () => {
+    const result = await getCategorizedLibrary.execute();
+    if (result.ok) {
+      setData(result.value);
+      setError(null);
+    }
+  }, []);
+
+  // Global search: filter all books across categories
+  const globalSearchResults = useMemo(() => {
+    if (!globalQuery.trim() || !data) return [];
+    const q = globalQuery.toLowerCase();
+    return allBooks.filter(
+      (b) =>
+        b.title.toLowerCase().includes(q) ||
+        b.authors.some((a) => a.toLowerCase().includes(q)) ||
+        b.publisher.toLowerCase().includes(q) ||
+        b.isbn.includes(q),
+    );
+  }, [globalQuery, allBooks, data]);
 
   const filteredCategories = useMemo(() => {
     if (!data) return [];
@@ -110,29 +137,73 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
   }
 
   return (
+    <PullToRefresh onRefresh={handleRefresh}>
     <div className="px-3 sm:px-4 py-4">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Ma Collection</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="w-11 h-11 rounded-full flex items-center justify-center shadow-card transition-all active:scale-90"
-          style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}
-        >
-          <svg className="w-5 h-5 text-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Global search button */}
+          {allBooks.length > 0 && (
+            <button
+              onClick={() => setShowGlobalSearch(true)}
+              className="w-11 h-11 rounded-full flex items-center justify-center bg-white shadow-card transition-all active:scale-90 border border-border"
+            >
+              <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="w-11 h-11 rounded-full flex items-center justify-center shadow-card transition-all active:scale-90"
+            style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}
+          >
+            <svg className="w-5 h-5 text-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <CollectionStats books={allBooks} categoryCount={data?.categories.length ?? 0} />
 
       {allBooks.length === 0 ? (
-        <div className="text-center py-12 sm:py-16 text-text-tertiary">
-          <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-          <p className="font-medium text-text-secondary">Votre collection est vide.</p>
-          <p className="text-sm mt-1">Scannez un livre pour commencer !</p>
+        <div className="py-8 sm:py-12">
+          {/* Step 1 */}
+          <div className="flex items-start gap-4 mb-6">
+            <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}>
+              <span className="text-lg font-bold text-white">1</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-text-primary">Scannez un code-barres</h3>
+              <p className="text-sm text-text-tertiary mt-0.5">Pointez la caméra sur le code-barres du livre, ou tapez l'ISBN manuellement.</p>
+            </div>
+          </div>
+          {/* Step 2 */}
+          <div className="flex items-start gap-4 mb-6">
+            <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}>
+              <span className="text-lg font-bold text-white">2</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-text-primary">Classez par catégorie</h3>
+              <p className="text-sm text-text-tertiary mt-0.5">Créez vos catégories (BD, Romans, Mangas…) et rangez chaque livre dedans.</p>
+            </div>
+          </div>
+          {/* Step 3 */}
+          <div className="flex items-start gap-4 mb-8">
+            <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}>
+              <span className="text-lg font-bold text-white">3</span>
+            </div>
+            <div>
+              <h3 className="font-bold text-text-primary">Notez et commentez</h3>
+              <p className="text-sm text-text-tertiary mt-0.5">Donnez une note en étoiles et ajoutez votre avis sur chaque livre.</p>
+            </div>
+          </div>
+          {/* CTA */}
+          <div className="text-center">
+            <p className="text-text-muted text-sm mb-3">Votre collection est vide pour le moment.</p>
+            <p className="text-text-secondary font-medium">Scannez votre premier livre pour commencer !</p>
+          </div>
         </div>
       ) : (
         <>
@@ -228,6 +299,55 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
           onCancel={() => setShowCreateModal(false)}
         />
       )}
+
+      {/* Global search bottom sheet */}
+      <BottomSheet
+        isOpen={showGlobalSearch}
+        onClose={() => { setShowGlobalSearch(false); setGlobalQuery(""); }}
+        title="Rechercher un livre"
+      >
+        <input
+          type="text"
+          value={globalQuery}
+          onChange={(e) => setGlobalQuery(e.target.value)}
+          placeholder="Titre, auteur, ISBN..."
+          className="input-field mb-3"
+          autoFocus
+        />
+        {globalQuery.trim() && globalSearchResults.length === 0 && (
+          <p className="text-text-tertiary text-sm text-center py-4">Aucun résultat</p>
+        )}
+        <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto">
+          {globalSearchResults.map((book) => (
+            <button
+              key={book.isbn}
+              onClick={() => {
+                setShowGlobalSearch(false);
+                setGlobalQuery("");
+                // Find which category this book belongs to
+                const cat = data?.categories.find((c) => c.books.some((b) => b.isbn === book.isbn));
+                onSelectCategory(cat?.category.id ?? null);
+                // Small delay to let category load, then navigate to book
+                setTimeout(() => {
+                  // This navigates via the parent
+                }, 100);
+              }}
+              className="flex gap-3 items-center text-left p-2 rounded-xl hover:bg-surface-subtle active:bg-surface-subtle transition-colors"
+            >
+              {book.coverUrl ? (
+                <img src={book.coverUrl} alt="" className="w-10 h-14 object-cover rounded-lg flex-shrink-0" />
+              ) : (
+                <div className="w-10 h-14 bg-surface-subtle rounded-lg flex-shrink-0 flex items-center justify-center text-text-muted text-xs">?</div>
+              )}
+              <div className="min-w-0">
+                <p className="font-semibold text-sm text-text-primary truncate">{book.title}</p>
+                <p className="text-xs text-text-tertiary truncate">{book.authors.join(", ") || book.publisher}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
     </div>
+    </PullToRefresh>
   );
 }

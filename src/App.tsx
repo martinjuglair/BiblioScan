@@ -6,6 +6,7 @@ import { Library } from "@interfaces/components/Library";
 import { CategoryDetail } from "@interfaces/components/CategoryDetail";
 import { BookDetail } from "@interfaces/components/BookDetail";
 import { BottomNav } from "@interfaces/components/BottomNav";
+import { ToastProvider } from "@interfaces/components/Toast";
 
 type Tab = "scanner" | "library";
 
@@ -53,6 +54,7 @@ export default function App() {
 
   // Authenticated → main app
   return (
+    <ToastProvider>
     <div className="min-h-screen pb-20 max-w-lg mx-auto px-safe">
       {/* Sign out button */}
       <div className="flex justify-end p-3">
@@ -100,5 +102,6 @@ export default function App() {
 
       <BottomNav active={tab} onChange={handleTabChange} />
     </div>
+    </ToastProvider>
   );
 }

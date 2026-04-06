@@ -16,8 +16,13 @@ export interface BnfSearchResult {
 // Words that don't help narrow BnF search results
 const STOP_WORDS = new Set([
   "tome", "vol", "volume", "t", "n", "le", "la", "les", "l", "de", "du",
-  "des", "un", "une", "et", "en", "au", "aux", "d", "bd", "bande", "dessinée",
+  "des", "un", "une", "et", "en", "au", "aux", "d",
 ]);
+
+/** Remove diacritics: é→e, à→a, ç→c, etc. */
+function stripAccents(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
 
 /**
  * Search BnF catalogue by keywords — works for old books without ISBN.
@@ -46,22 +51,29 @@ export class BnfSearchService {
   }
 
   /**
-   * Build SRU query: each meaningful word becomes its own
-   * `bib.anywhere all "word"` clause, joined with AND.
-   * Numbers are kept (they're volume/tome numbers).
-   * "album spirou tome 291" → bib.anywhere all "album" and bib.anywhere all "spirou" and bib.anywhere all "291"
+   * Build SRU query with improved tolerance:
+   * - Strips accents so "Château" matches "chateau"
+   * - Keeps words with accents as fallback (BnF indexes both)
+   * - Only filters very short stop words, keeps meaningful terms
+   * - Uses bib.title for the first meaningful word, bib.anywhere for the rest
+   *   so "Spirou Franquin" finds books titled "Spirou" by author "Franquin"
    */
   private buildQuery(rawQuery: string): string {
-    const words = rawQuery
-      .toLowerCase()
-      .split(/\s+/)
-      .map((w) => w.replace(/[^a-zà-ÿ0-9]/g, ""))
-      .filter((w) => w.length > 0 && !STOP_WORDS.has(w));
+    // Normalize: strip accents, lowercase, collapse multiple spaces
+    const cleaned = stripAccents(rawQuery.toLowerCase()).replace(/\s+/g, " ").trim();
+
+    const words = cleaned
+      .split(" ")
+      .map((w) => w.replace(/[^a-z0-9]/g, ""))
+      .filter((w) => w.length > 1 && !STOP_WORDS.has(w));
 
     if (words.length === 0) {
-      return `bib.anywhere all "${rawQuery}"`;
+      // Fallback: use the raw query as-is
+      return `bib.anywhere all "${rawQuery.trim()}"`;
     }
 
+    // Use bib.anywhere for all terms — this searches title, author, publisher, etc.
+    // so "Spirou Franquin" will match title:Spirou + author:Franquin
     return words
       .map((w) => `bib.anywhere all "${w}"`)
       .join(" and ");

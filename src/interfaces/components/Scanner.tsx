@@ -6,6 +6,7 @@ import { triggerScanFeedback } from "@interfaces/hooks/useScanFeedback";
 import { BookPreview } from "./BookPreview";
 import { TitleSearch } from "./TitleSearch";
 import { ManualEntry } from "./ManualEntry";
+import { ScanSuccess } from "./ScanSuccess";
 
 interface ScannerProps {
   onBookAdded: () => void;
@@ -18,6 +19,7 @@ type ScanState =
   | { step: "preview"; data: ComicBookCreateInput }
   | { step: "titleSearch" }
   | { step: "manualEntry" }
+  | { step: "success"; title: string; coverUrl: string | null }
   | { step: "error"; message: string };
 
 export function Scanner({ onBookAdded }: ScannerProps) {
@@ -53,8 +55,7 @@ export function Scanner({ onBookAdded }: ScannerProps) {
   const handleConfirm = async (data: ComicBookCreateInput) => {
     const result = await scanComicBook.confirm(data);
     if (result.ok) {
-      setState({ step: "idle" });
-      setManualIsbn("");
+      setState({ step: "success", title: data.title, coverUrl: data.coverUrl });
       onBookAdded();
     } else {
       setState({ step: "error", message: result.error });
@@ -189,6 +190,18 @@ export function Scanner({ onBookAdded }: ScannerProps) {
           data={state.data}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
+        />
+      )}
+
+      {/* Success animation */}
+      {state.step === "success" && (
+        <ScanSuccess
+          title={state.title}
+          coverUrl={state.coverUrl}
+          onDone={() => {
+            setState({ step: "idle" });
+            setManualIsbn("");
+          }}
         />
       )}
 

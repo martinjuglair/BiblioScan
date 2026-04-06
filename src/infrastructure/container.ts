@@ -22,8 +22,9 @@ const googleBooks = new GoogleBooksService();
 const openLibrary = new OpenLibraryService();
 const lookupFacade = new BookLookupFacade(googleBooks, openLibrary);
 
-// Exposed for cover lookup from title search
+// Exposed for cover lookup and title search
 export const bookLookup = lookupFacade;
+export const googleBooksSearch = googleBooks;
 
 // Use cases
 export const scanComicBook = new ScanComicBook(lookupFacade, repository);
