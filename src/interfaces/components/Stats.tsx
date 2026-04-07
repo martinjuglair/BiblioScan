@@ -47,15 +47,15 @@ const LEVEL_ICONS: Record<string, string> = {
 };
 
 // --- Badges ---
-interface Badge {
+interface BadgeDef {
   id: string;
   name: string;
   description: string;
   emoji: string;
-  check: (books: ComicBook[]) => boolean;
+  check: (books: ComicBook[], streakData?: { current: number; best: number; total: number }) => boolean;
 }
 
-const BADGES: Badge[] = [
+const BADGES: BadgeDef[] = [
   { id: "first", name: "Premier pas", description: "Ajouter votre 1er livre", emoji: "\ud83d\udcda", check: (b) => b.length >= 1 },
   { id: "ten", name: "Beau début", description: "10 livres dans la collection", emoji: "\ud83c\udf1f", check: (b) => b.length >= 10 },
   { id: "fifty", name: "Collectionneur", description: "50 livres collectionnés", emoji: "\ud83c\udfc6", check: (b) => b.length >= 50 },
@@ -64,60 +64,88 @@ const BADGES: Badge[] = [
   { id: "critic", name: "Critique littéraire", description: "Noter 10 livres", emoji: "\u2b50", check: (b) => b.filter((x) => x.rating).length >= 10 },
   { id: "top", name: "Coup de coeur", description: "Donner un 5/5", emoji: "\u2764\ufe0f", check: (b) => b.some((x) => x.rating === 5) },
   { id: "diverse", name: "Éclectique", description: "5 éditeurs différents", emoji: "\ud83c\udf0d", check: (b) => new Set(b.map((x) => x.publisher).filter(Boolean)).size >= 5 },
+  { id: "streak3", name: "Régulier", description: "3 jours de lecture d'affilée", emoji: "\ud83d\udd25", check: (_b, s) => (s?.best ?? 0) >= 3 },
+  { id: "streak7", name: "Semaine parfaite", description: "7 jours de lecture consécutifs", emoji: "\ud83c\udf1f", check: (_b, s) => (s?.best ?? 0) >= 7 },
+  { id: "streak30", name: "Inarrêtable", description: "30 jours de lecture d'affilée", emoji: "\ud83d\udc8e", check: (_b, s) => (s?.best ?? 0) >= 30 },
 ];
 
-// --- Streak calculation ---
-function computeStreak(books: ComicBook[]): { current: number; best: number } {
-  const readDates = books
-    .filter((b) => b.readAt)
-    .map((b) => {
-      const d = b.readAt!;
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    });
+// --- Daily reading log (localStorage) ---
+const LOG_KEY = "biblioscan-reading-log";
 
-  if (readDates.length === 0) return { current: 0, best: 0 };
+function getReadingLog(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(LOG_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
 
-  const uniqueDays = [...new Set(readDates)].sort((a, b) => b - a);
+function saveReadingLog(log: string[]) {
+  localStorage.setItem(LOG_KEY, JSON.stringify(log));
+}
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function hasLoggedToday(log: string[]): boolean {
+  return log.includes(todayKey());
+}
+
+function logToday(log: string[]): string[] {
+  const key = todayKey();
+  if (log.includes(key)) return log;
+  const updated = [...log, key];
+  saveReadingLog(updated);
+  return updated;
+}
+
+function computeStreak(log: string[]): { current: number; best: number; total: number } {
+  if (log.length === 0) return { current: 0, best: 0, total: 0 };
+
   const DAY = 86400000;
+  const toMs = (s: string) => {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(y!, m! - 1, d!).getTime();
+  };
 
-  // Current streak: consecutive days from today backwards (allow 1 day gap)
+  const sorted = [...new Set(log)].sort().reverse();
+  const total = sorted.length;
+
+  // Current streak: consecutive days from today/yesterday backwards
   const today = new Date();
   const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const latestMs = toMs(sorted[0]!);
 
   let current = 0;
-  let checkDay = todayMs;
-  // Allow starting from today or yesterday
-  if (uniqueDays[0] === todayMs || uniqueDays[0] === todayMs - DAY) {
-    checkDay = uniqueDays[0]!;
-  } else {
-    return computeBest(uniqueDays, DAY);
-  }
-
-  for (const day of uniqueDays) {
-    if (day === checkDay) {
-      current++;
-      checkDay -= DAY;
-    } else if (day < checkDay) {
-      break;
+  if (latestMs === todayMs || latestMs === todayMs - DAY) {
+    let checkDay = latestMs;
+    for (const day of sorted) {
+      const dayMs = toMs(day);
+      if (dayMs === checkDay) {
+        current++;
+        checkDay -= DAY;
+      } else if (dayMs < checkDay) {
+        break;
+      }
     }
   }
 
-  const best = Math.max(current, computeBest(uniqueDays, DAY).best);
-  return { current, best };
-}
-
-function computeBest(sortedDays: number[], DAY: number): { current: number; best: number } {
+  // Best streak
   let best = 1;
   let streak = 1;
-  for (let i = 0; i < sortedDays.length - 1; i++) {
-    if (sortedDays[i]! - sortedDays[i + 1]! === DAY) {
+  const ascending = [...sorted].reverse();
+  for (let i = 1; i < ascending.length; i++) {
+    if (toMs(ascending[i]!) - toMs(ascending[i - 1]!) === DAY) {
       streak++;
       best = Math.max(best, streak);
     } else {
       streak = 1;
     }
   }
-  return { current: 0, best };
+
+  return { current, best: Math.max(best, current), total };
 }
 
 // --- Reading history by month ---
@@ -157,6 +185,8 @@ export function Stats() {
   const [goal, setGoal] = useState(getGoal);
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState("");
+  const [readingLog, setReadingLog] = useState(getReadingLog);
+  const [justLogged, setJustLogged] = useState(false);
 
   const load = useCallback(async () => {
     const result = await getCategorizedLibrary.execute();
@@ -191,12 +221,13 @@ export function Stats() {
     ? ((readCount - level.min) / (nextLevel.min - level.min)) * 100
     : 100;
 
-  // Streak
-  const streak = useMemo(() => computeStreak(books), [books]);
+  // Streak (from daily reading log)
+  const streak = useMemo(() => computeStreak(readingLog), [readingLog]);
+  const loggedToday = hasLoggedToday(readingLog);
 
   // Badges
-  const earnedBadges = useMemo(() => BADGES.filter((b) => b.check(books)), [books]);
-  const lockedBadges = useMemo(() => BADGES.filter((b) => !b.check(books)), [books]);
+  const earnedBadges = useMemo(() => BADGES.filter((b) => b.check(books, streak)), [books, streak]);
+  const lockedBadges = useMemo(() => BADGES.filter((b) => !b.check(books, streak)), [books, streak]);
 
   // Reading history
   const history = useMemo(() => getReadingHistory(books), [books]);
@@ -307,16 +338,54 @@ export function Stats() {
             )}
           </div>
 
-          {/* Streak */}
+          {/* Streak + daily check-in */}
           <div className="card text-center py-3">
             <div className="text-2xl mb-1">{streak.current > 0 ? "\ud83d\udd25" : "\u2744\ufe0f"}</div>
             <span className="text-xl font-bold text-text-primary">{streak.current}</span>
             <p className="text-[11px] text-text-tertiary">jour{streak.current > 1 ? "s" : ""} de suite</p>
-            {streak.best > 0 && (
-              <p className="text-[10px] text-text-muted mt-0.5">Record : {streak.best} jour{streak.best > 1 ? "s" : ""}</p>
+            {streak.best > streak.current && (
+              <p className="text-[10px] text-text-muted mt-0.5">Record : {streak.best} j</p>
             )}
+            <p className="text-[10px] text-text-muted">{streak.total} jour{streak.total > 1 ? "s" : ""} au total</p>
           </div>
         </div>
+
+        {/* Daily reading check-in button */}
+        <button
+          onClick={() => {
+            if (!loggedToday) {
+              hapticSuccess();
+              setReadingLog(logToday(readingLog));
+              setJustLogged(true);
+              setTimeout(() => setJustLogged(false), 2000);
+            }
+          }}
+          disabled={loggedToday}
+          className={`w-full mb-3 py-3.5 rounded-card font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
+            loggedToday
+              ? "bg-status-success/10 text-status-success border border-status-success/20"
+              : "active:scale-[0.97] shadow-card text-white"
+          }`}
+          style={!loggedToday ? {
+            background: "linear-gradient(135deg, #FFAF36 0%, #F66236 100%)",
+          } : undefined}
+        >
+          {loggedToday ? (
+            <>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              {justLogged ? "C'est noté !" : "Lu aujourd'hui"}
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              J'ai lu aujourd'hui
+            </>
+          )}
+        </button>
 
         {/* Goal edit modal */}
         {editingGoal && (
