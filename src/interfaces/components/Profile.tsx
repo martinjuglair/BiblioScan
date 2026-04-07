@@ -38,7 +38,7 @@ export function Profile({ email, firstName, onUpdateFirstName, onSignOut }: Prof
       <div className="flex flex-col items-center mb-6">
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-hero"
-          style={{ background: "linear-gradient(135deg, #FFAF36 0%, #F66236 100%)" }}
+          style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%)" }}
         >
           {(firstName ?? email)[0]?.toUpperCase() ?? "?"}
         </div>

@@ -130,7 +130,7 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="px-3 sm:px-4 py-4">
-        <button onClick={onBack} className="text-brand-orange font-medium mb-3 sm:mb-4 flex items-center gap-1 min-h-[44px]">
+        <button onClick={onBack} className="text-brand-grape font-medium mb-3 sm:mb-4 flex items-center gap-1 min-h-[44px]">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
@@ -156,7 +156,7 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
                 onClick={() => setBookSort(key)}
                 className={`px-3 py-1.5 rounded-pill text-xs font-semibold transition-all duration-200 ${
                   bookSort === key
-                    ? "bg-brand-amber text-text-primary shadow-sm"
+                    ? "bg-brand-grape text-white shadow-sm"
                     : "bg-surface-subtle text-text-tertiary"
                 }`}
               >
@@ -213,7 +213,7 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
           <button
             onClick={() => moveBookIsbn && handleMoveBook(moveBookIsbn, null)}
             className={`text-left px-4 py-3 rounded-xl transition-colors active:bg-surface-subtle ${
-              categoryId === null ? "bg-brand-amber/10 font-semibold text-brand-amber" : "hover:bg-surface-subtle"
+              categoryId === null ? "bg-brand-grape/10 font-semibold text-brand-lemon" : "hover:bg-surface-subtle"
             }`}
           >
             Non classés
@@ -301,7 +301,7 @@ function SwipeableBookCard({
       <div className="absolute inset-0 flex">
         {/* Right action (swipe right = move) */}
         <div
-          className="flex items-center justify-start pl-4 bg-brand-teal text-white flex-1"
+          className="flex items-center justify-start pl-4 bg-brand-mint text-white flex-1"
           style={{ opacity: showMove ? 1 : 0 }}
         >
           <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -353,7 +353,7 @@ function SwipeableBookCard({
               {[1, 2, 3, 4, 5].map((s) => (
                 <svg
                   key={s}
-                  className={`w-3.5 h-3.5 ${s <= book.rating! ? "text-brand-amber" : "text-border"}`}
+                  className={`w-3.5 h-3.5 ${s <= book.rating! ? "text-brand-lemon" : "text-border"}`}
                   fill={s <= book.rating! ? "currentColor" : "none"}
                   viewBox="0 0 24 24"
                   stroke="currentColor"

@@ -310,7 +310,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         </button>
 
         {/* Cover photo upload */}
-        <label className="mt-2 flex items-center gap-1.5 text-sm text-brand-orange font-medium cursor-pointer active:opacity-60 transition-opacity">
+        <label className="mt-2 flex items-center gap-1.5 text-sm text-brand-grape font-medium cursor-pointer active:opacity-60 transition-opacity">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -378,7 +378,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
           <button
             onClick={() => setEditing(true)}
-            className="w-full py-2.5 rounded-pill bg-brand-amber/10 text-brand-amber font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-pill bg-brand-grape/10 text-brand-grape font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -400,7 +400,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                 className="p-1.5 transition-transform active:scale-90"
               >
                 <svg
-                  className={`w-7 h-7 sm:w-8 sm:h-8 ${star <= (rating ?? 0) ? "text-brand-amber" : "text-border-strong"}`}
+                  className={`w-7 h-7 sm:w-8 sm:h-8 ${star <= (rating ?? 0) ? "text-brand-lemon" : "text-border-strong"}`}
                   fill={star <= (rating ?? 0) ? "currentColor" : "none"}
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -421,7 +421,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           <button
             onClick={handleSaveReview}
             disabled={savingReview}
-            className="w-full py-2.5 rounded-pill bg-brand-amber/10 text-brand-amber font-semibold transition-all duration-200 active:scale-95"
+            className="w-full py-2.5 rounded-pill bg-brand-grape/10 text-brand-grape font-semibold transition-all duration-200 active:scale-95"
           >
             {savingReview ? "..." : "Enregistrer mon avis"}
           </button>
@@ -432,7 +432,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       {!editing && (
         <button
           onClick={handleOpenShareGroup}
-          className="w-full mt-4 py-3 rounded-pill bg-brand-teal/10 text-brand-teal font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
+          className="w-full mt-4 py-3 rounded-pill bg-brand-sky/10 text-brand-sky font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
@@ -490,9 +490,9 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                     )}
                   </div>
                   {sharingToGroup === g.id ? (
-                    <div className="w-5 h-5 border-2 border-brand-amber border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-brand-grape border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <svg className="w-4 h-4 text-brand-teal flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-4 h-4 text-brand-mint flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                   )}
@@ -508,7 +508,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="text-brand-orange font-medium mb-3 sm:mb-4 flex items-center gap-1 min-h-[44px]">
+    <button onClick={onClick} className="text-brand-grape font-medium mb-3 sm:mb-4 flex items-center gap-1 min-h-[44px]">
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
       </svg>

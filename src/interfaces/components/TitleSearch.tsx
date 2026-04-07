@@ -297,9 +297,9 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
 
   const sourceLabel = (source: string) => {
     switch (source) {
-      case "google": return { text: "Google", bg: "bg-brand-amber/15 text-brand-amber" };
-      case "bnf": return { text: "BnF", bg: "bg-brand-teal/10 text-brand-teal" };
-      case "gcd": return { text: "GCD", bg: "bg-brand-purple/10 text-brand-purple" };
+      case "google": return { text: "Google", bg: "bg-brand-grape/15 text-brand-grape" };
+      case "bnf": return { text: "BnF", bg: "bg-brand-mint/10 text-brand-mint" };
+      case "gcd": return { text: "GCD", bg: "bg-brand-sky/10 text-brand-sky" };
       default: return { text: source, bg: "bg-surface-subtle text-text-muted" };
     }
   };
@@ -324,7 +324,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
 
       {loading && (
         <div className="flex justify-center py-6">
-          <div className="animate-spin w-8 h-8 border-2 border-brand-amber border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-2 border-brand-grape border-t-transparent rounded-full" />
         </div>
       )}
 
@@ -384,7 +384,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
                   <div className="flex justify-between items-center mt-1">
                     <p className="text-text-muted text-xs">{item.publishedDate}</p>
                     {item.price && (
-                      <p className="text-brand-orange text-xs font-semibold">
+                      <p className="text-brand-grape text-xs font-semibold">
                         {item.price.amount.toFixed(2)} €
                       </p>
                     )}
@@ -396,7 +396,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
                   </div>
                   {selecting === i && (
                     <div className="flex items-center gap-1 mt-1">
-                      <div className="animate-spin w-3 h-3 border border-brand-amber border-t-transparent rounded-full" />
+                      <div className="animate-spin w-3 h-3 border border-brand-grape border-t-transparent rounded-full" />
                       <span className="text-xs text-text-tertiary">Chargement...</span>
                     </div>
                   )}

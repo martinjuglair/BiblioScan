@@ -90,7 +90,7 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
           }}
         >
           <div
-            className="w-6 h-6 border-2 border-brand-amber border-t-transparent rounded-full"
+            className="w-6 h-6 border-2 border-brand-grape border-t-transparent rounded-full"
             style={{
               opacity: Math.min(pullDistance / THRESHOLD, 1),
               transform: refreshing

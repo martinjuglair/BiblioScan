@@ -107,9 +107,9 @@ export function Groups({ onSelectGroup }: GroupsProps) {
           <button
             onClick={() => setShowCreate(true)}
             className="w-11 h-11 rounded-full flex items-center justify-center shadow-card transition-all active:scale-90"
-            style={{ background: "linear-gradient(62deg, #FFAF36 0%, #FFC536 100%)" }}
+            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)" }}
           >
-            <svg className="w-5 h-5 text-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
           </button>
@@ -168,7 +168,7 @@ export function Groups({ onSelectGroup }: GroupsProps) {
                   key={e}
                   onClick={() => setEmoji(e)}
                   className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${
-                    emoji === e ? "bg-brand-amber/20 scale-110 shadow-sm" : "bg-surface-subtle"
+                    emoji === e ? "bg-brand-grape/20 scale-110 shadow-sm" : "bg-surface-subtle"
                   }`}
                 >
                   {e}

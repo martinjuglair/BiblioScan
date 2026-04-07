@@ -128,8 +128,8 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
         onClick={handleShare}
         className="card flex items-center gap-3 active:scale-[0.98] transition-all"
       >
-        <div className="w-11 h-11 rounded-xl bg-brand-amber/10 flex items-center justify-center flex-shrink-0">
-          <svg className="w-5 h-5 text-brand-amber" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="w-11 h-11 rounded-xl bg-brand-grape/10 flex items-center justify-center flex-shrink-0">
+          <svg className="w-5 h-5 text-brand-grape" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
           </svg>
         </div>
@@ -146,8 +146,8 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
         onClick={handleExportCSV}
         className="card flex items-center gap-3 active:scale-[0.98] transition-all"
       >
-        <div className="w-11 h-11 rounded-xl bg-brand-teal/10 flex items-center justify-center flex-shrink-0">
-          <svg className="w-5 h-5 text-brand-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="w-11 h-11 rounded-xl bg-brand-mint/10 flex items-center justify-center flex-shrink-0">
+          <svg className="w-5 h-5 text-brand-mint" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
           </svg>
         </div>
@@ -200,16 +200,16 @@ async function generatePDF(
   const readCount = books.filter((b) => b.isRead).length;
 
   // Colors
-  const orange = [255, 175, 54] as const;
+  const grape = [139, 92, 246] as const;
   const dark = [30, 30, 30] as const;
   const gray = [120, 120, 120] as const;
   const lightGray = [200, 200, 200] as const;
 
   // === COVER PAGE ===
-  // Orange gradient header bar
-  doc.setFillColor(255, 175, 54);
+  // Grape gradient header bar
+  doc.setFillColor(139, 92, 246);
   doc.rect(0, 0, pageW, 60, "F");
-  doc.setFillColor(246, 98, 54);
+  doc.setFillColor(244, 114, 182);
   doc.rect(0, 50, pageW, 10, "F");
 
   // Title
@@ -237,7 +237,7 @@ async function generatePDF(
   statsRow.forEach((stat, i) => {
     const x = margin + i * (boxW + 3);
     doc.roundedRect(x, y, boxW, 22, 3, 3, "FD");
-    doc.setTextColor(...orange);
+    doc.setTextColor(...grape);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text(stat.value, x + boxW / 2, y + 10, { align: "center" });
@@ -294,7 +294,7 @@ async function generatePDF(
   y = margin;
 
   // Section header
-  doc.setFillColor(255, 175, 54);
+  doc.setFillColor(139, 92, 246);
   doc.rect(0, 0, pageW, 8, "F");
 
   doc.setTextColor(...dark);
@@ -315,7 +315,7 @@ async function generatePDF(
     // Page break check
     if (y + rowH > pageH - 15) {
       doc.addPage();
-      doc.setFillColor(255, 175, 54);
+      doc.setFillColor(139, 92, 246);
       doc.rect(0, 0, pageW, 4, "F");
       y = 15;
     }
@@ -364,7 +364,7 @@ async function generatePDF(
     // Rating stars (right side)
     if (book.rating) {
       const ratingX = pageW - margin - 20;
-      doc.setTextColor(...orange);
+      doc.setTextColor(...grape);
       doc.setFontSize(8);
       const stars = "\u2605".repeat(book.rating) + "\u2606".repeat(5 - book.rating);
       doc.text(stars, ratingX, y + 5);

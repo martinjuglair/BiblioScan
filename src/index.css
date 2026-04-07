@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -30,23 +30,24 @@
 
 @layer components {
   .btn-primary {
-    background: linear-gradient(62deg, #FFAF36 0%, #FFC536 100%);
-    @apply text-text-primary font-semibold py-2.5 px-4 sm:py-3 sm:px-6 rounded-pill
+    background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+    @apply text-white font-semibold py-2.5 px-4 sm:py-3 sm:px-6 rounded-[16px]
            active:scale-95 transition-all duration-200 text-sm sm:text-base;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
   }
   .btn-primary:hover {
-    background: linear-gradient(62deg, #FF9F26 0%, #FFB526 100%);
+    background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%);
   }
   .btn-primary:disabled {
     @apply opacity-40 active:scale-100;
   }
 
   .btn-secondary {
-    @apply bg-white border border-border text-text-primary font-semibold py-2.5 px-4 sm:py-3 sm:px-6 rounded-pill
+    @apply bg-surface-subtle border border-border-strong text-brand-grape font-semibold py-2.5 px-4 sm:py-3 sm:px-6 rounded-[16px]
            active:scale-95 transition-all duration-200 text-sm sm:text-base;
   }
   .btn-secondary:hover {
-    @apply border-border-strong;
+    @apply bg-surface-input;
   }
 
   .card {
@@ -54,14 +55,14 @@
   }
 
   .input-field {
-    @apply w-full bg-white border border-border rounded-pill px-4 py-2.5 sm:px-5 sm:py-3
+    @apply w-full bg-white border border-border rounded-[14px] px-4 py-2.5 sm:px-5 sm:py-3
            text-text-primary text-base sm:text-sm font-sans
            outline-none transition-colors duration-200
            placeholder:text-text-tertiary;
     /* 16px minimum prevents iOS auto-zoom on focus */
   }
   .input-field:focus {
-    @apply border-brand-amber ring-2 ring-brand-amber/20;
+    @apply border-brand-grape ring-2 ring-brand-grape/20;
   }
 
   .input-rect {
@@ -72,7 +73,7 @@
     /* 16px minimum prevents iOS auto-zoom on focus */
   }
   .input-rect:focus {
-    @apply border-brand-amber ring-2 ring-brand-amber/20;
+    @apply border-brand-grape ring-2 ring-brand-grape/20;
   }
 
   /* Select elements also need 16px to prevent zoom */
@@ -100,6 +101,18 @@
   100% { opacity: 0; transform: rotate(inherit) translateY(-14px) scale(0); }
 }
 
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translateY(300px) rotate(720deg) scale(0); opacity: 0; }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 @layer utilities {
   .scrollbar-hide {
     scrollbar-width: none;
@@ -114,7 +127,7 @@
     -webkit-backdrop-filter: blur(16px);
   }
   .gradient-text {
-    background: linear-gradient(90deg, #FEB900 0%, #FD7030 33%, #FDAA9A 67%, #B7D5D5 100%);
+    background: linear-gradient(90deg, #8B5CF6 0%, #F472B6 50%, #34D399 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

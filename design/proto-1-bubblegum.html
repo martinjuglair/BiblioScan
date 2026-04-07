@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BiblioScan — Bubblegum</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --grape: #8B5CF6;
+    --grape-light: #A78BFA;
+    --bubblegum: #F472B6;
+    --mint: #34D399;
+    --lemon: #FBBF24;
+    --sky: #38BDF8;
+    --bg: #FEFBFF;
+    --card: #FFFFFF;
+    --subtle: #F5F3FF;
+    --input: #EDE9FE;
+    --text-primary: #1E1B4B;
+    --text-secondary: #6B7280;
+    --text-tertiary: #9CA3AF;
+    --border: #E5E7EB;
+    --border-strong: #C4B5FD;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #1a1a2e;
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: var(--bg);
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 25px 80px rgba(139,92,246,0.3), 0 0 0 1px rgba(139,92,246,0.1);
+    flex-shrink: 0;
+  }
+
+  .screen {
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 80px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .screen::-webkit-scrollbar { display: none; }
+
+  /* Header */
+  .header {
+    padding: 56px 20px 16px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .header-title { font-size: 26px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; }
+  .header-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+  .header-sub span { color: var(--grape); font-weight: 700; }
+  .header-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .header-btn {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--subtle);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); font-size: 16px; border: none; cursor: pointer;
+  }
+
+  /* Filter pills */
+  .filters { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 20px; }
+  .pill {
+    padding: 8px 18px; border-radius: 100px; font-size: 14px; font-weight: 600;
+    border: none; cursor: pointer; transition: all 0.2s;
+  }
+  .pill.active { background: var(--grape); color: white; box-shadow: 0 4px 14px rgba(139,92,246,0.3); }
+  .pill:not(.active) { background: var(--subtle); color: var(--grape); }
+
+  /* Category cards */
+  .categories { padding: 0 20px; display: flex; flex-direction: column; gap: 14px; }
+  .cat-card {
+    background: var(--card); border-radius: 20px;
+    box-shadow: 0 2px 12px rgba(139,92,246,0.08);
+    padding: 16px; cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .cat-card:active { transform: scale(0.98); box-shadow: 0 1px 6px rgba(139,92,246,0.05); }
+  .cat-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .cat-name { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+  .cat-count { font-size: 13px; color: var(--text-secondary); font-weight: 600; }
+  .cat-covers { display: flex; gap: 8px; overflow: hidden; }
+  .cat-cover {
+    width: 52px; height: 72px; border-radius: 8px; flex-shrink: 0;
+    object-fit: cover;
+  }
+  .cat-card.uncategorized { background: var(--subtle); }
+  .cat-card.uncategorized .cat-name { color: var(--text-secondary); }
+
+  /* Add button */
+  .add-cat {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px; border-radius: 20px; border: 2px dashed var(--border-strong);
+    color: var(--grape); font-size: 15px; font-weight: 600;
+    background: transparent; cursor: pointer; width: 100%;
+    transition: background 0.2s;
+  }
+  .add-cat:hover { background: var(--subtle); }
+
+  /* Stats screen */
+  .level-card {
+    margin: 0 20px 20px;
+    background: linear-gradient(135deg, var(--grape), var(--bubblegum));
+    border-radius: 20px; padding: 24px; color: white;
+    box-shadow: 0 8px 30px rgba(139,92,246,0.25);
+  }
+  .level-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.8; }
+  .level-name { font-size: 28px; font-weight: 800; margin: 4px 0 16px; }
+  .xp-bar { height: 10px; background: rgba(255,255,255,0.25); border-radius: 100px; overflow: hidden; }
+  .xp-fill { height: 100%; background: var(--mint); border-radius: 100px; width: 60%; transition: width 1s ease; }
+  .xp-label { font-size: 12px; margin-top: 6px; opacity: 0.8; text-align: right; font-weight: 600; }
+
+  /* Streak */
+  .streak-section { padding: 0 20px; margin-bottom: 20px; }
+  .streak-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .streak-fire { font-size: 28px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+  .streak-num { font-size: 24px; font-weight: 800; color: var(--text-primary); }
+  .streak-label { font-size: 14px; color: var(--text-secondary); }
+
+  .read-btn {
+    width: 100%; padding: 16px; border-radius: 16px; border: none;
+    font-family: 'Nunito'; font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: all 0.3s;
+  }
+  .read-btn.available {
+    background: linear-gradient(135deg, var(--bubblegum), var(--grape));
+    color: white; box-shadow: 0 4px 20px rgba(244,114,182,0.3);
+  }
+  .read-btn.done {
+    background: var(--mint); color: white;
+    box-shadow: 0 4px 20px rgba(52,211,153,0.3);
+  }
+
+  /* Week dots */
+  .week { display: flex; justify-content: space-between; padding: 0 20px; margin-bottom: 24px; }
+  .day { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .day-label { font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+  .day-dot { width: 28px; height: 28px; border-radius: 50%; }
+  .day-dot.active { background: var(--grape); box-shadow: 0 0 10px rgba(139,92,246,0.3); }
+  .day-dot.inactive { background: var(--input); }
+
+  /* Goal ring */
+  .goal-section { text-align: center; padding: 0 20px; margin-bottom: 24px; }
+  .goal-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; }
+  .goal-ring { position: relative; width: 120px; height: 120px; margin: 0 auto 12px; }
+  .goal-ring svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+  .goal-ring .bg { fill: none; stroke: var(--input); stroke-width: 10; }
+  .goal-ring .fill { fill: none; stroke: var(--lemon); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 314; stroke-dashoffset: 62.8; transition: stroke-dashoffset 1.5s ease; }
+  .goal-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .goal-num { font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+  .goal-of { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .goal-pct { font-size: 13px; color: var(--lemon); font-weight: 700; }
+
+  /* Badges */
+  .badges-section { padding: 0 20px; margin-bottom: 24px; }
+  .badges-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; }
+  .badges-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .badge-card {
+    border-radius: 16px; padding: 16px 8px; text-align: center;
+    transition: transform 0.2s;
+  }
+  .badge-card.unlocked {
+    background: linear-gradient(135deg, rgba(244,114,182,0.1), rgba(251,191,36,0.1));
+    border: 1.5px solid rgba(244,114,182,0.3);
+  }
+  .badge-card.locked {
+    background: var(--subtle); border: 1.5px solid var(--border);
+    opacity: 0.5;
+  }
+  .badge-icon { font-size: 28px; margin-bottom: 6px; }
+  .badge-name { font-size: 11px; font-weight: 700; color: var(--text-primary); }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+    background: white; box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    border-radius: 20px 20px 0 0;
+    display: flex; align-items: center; justify-content: space-around;
+    padding-bottom: 16px;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--text-tertiary); font-size: 10px; font-weight: 600;
+    cursor: pointer; transition: color 0.2s; background: none; border: none;
+    font-family: 'Nunito';
+  }
+  .nav-item.active { color: var(--grape); }
+  .nav-icon { font-size: 22px; }
+  .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--grape); opacity: 0; transition: opacity 0.2s; }
+  .nav-item.active .nav-dot { opacity: 1; }
+
+  /* Confetti */
+  .confetti-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 999; }
+  .confetti {
+    position: absolute; width: 8px; height: 8px; border-radius: 50%;
+    animation: confetti-fall 1.5s ease-out forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translateY(400px) rotate(720deg) scale(0); opacity: 0; }
+  }
+
+  /* Book detail */
+  .book-card {
+    background: white; border-radius: 20px; padding: 16px;
+    box-shadow: 0 2px 12px rgba(139,92,246,0.08);
+    display: flex; gap: 14px; margin-bottom: 12px;
+    transition: transform 0.2s;
+  }
+  .book-card:active { transform: scale(0.98); }
+  .book-cover {
+    width: 64px; height: 90px; border-radius: 10px; object-fit: cover; flex-shrink: 0;
+    box-shadow: 2px 3px 8px rgba(139,92,246,0.15);
+  }
+  .book-info { flex: 1; min-width: 0; }
+  .book-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .book-author { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+  .book-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .book-badge {
+    padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700;
+  }
+  .book-badge.read { background: rgba(52,211,153,0.15); color: var(--mint); }
+  .book-badge.unread { background: rgba(139,92,246,0.1); color: var(--grape); }
+  .book-stars { font-size: 12px; color: var(--lemon); }
+
+  /* Swipe to read */
+  .swipe-track {
+    height: 36px; background: var(--subtle); border-radius: 100px;
+    position: relative; overflow: hidden; width: 110px;
+  }
+  .swipe-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--grape), var(--mint));
+    border-radius: 100px; width: 0; transition: width 0.3s;
+  }
+  .swipe-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; cursor: grab;
+    transition: left 0.3s;
+  }
+  .swipe-label {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 11px; font-weight: 700; color: var(--text-tertiary);
+  }
+
+  /* Section title */
+  .section-title {
+    font-size: 20px; font-weight: 800; color: var(--text-primary);
+    padding: 0 20px; margin-bottom: 16px; letter-spacing: -0.01em;
+  }
+
+  /* Page label */
+  .page-label {
+    text-align: center; padding: 8px; background: var(--grape);
+    color: white; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  /* Tabs for switching screens */
+  .screen-tabs {
+    display: flex; gap: 0; margin: 0 auto 0; justify-content: center;
+    background: rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .screen-tab {
+    padding: 10px 20px; font-family: 'Nunito'; font-size: 14px; font-weight: 700;
+    border: none; cursor: pointer; color: rgba(255,255,255,0.5);
+    background: transparent; transition: all 0.2s;
+  }
+  .screen-tab.active { background: var(--grape); color: white; }
+
+  h1.demo-title {
+    font-family: 'Nunito'; color: white; text-align: center;
+    font-size: 36px; font-weight: 800; margin-bottom: 8px;
+  }
+  p.demo-sub {
+    font-family: 'Nunito'; color: rgba(255,255,255,0.6); text-align: center;
+    font-size: 16px; margin-bottom: 32px;
+  }
+
+  /* Color swatches */
+  .swatches { display: flex; gap: 12px; justify-content: center; margin-bottom: 40px; flex-wrap: wrap; }
+  .swatch {
+    width: 56px; height: 56px; border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 4px; font-family: 'Nunito'; font-size: 8px; color: white;
+    font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+
+<div style="width:100%; text-align:center;">
+  <h1 class="demo-title">Bubblegum</h1>
+  <p class="demo-sub">Pétillant & Ludique — Nunito · Violet · Rond</p>
+  <div class="swatches">
+    <div class="swatch" style="background:#8B5CF6">Grape</div>
+    <div class="swatch" style="background:#F472B6">Pink</div>
+    <div class="swatch" style="background:#34D399">Mint</div>
+    <div class="swatch" style="background:#FBBF24">Lemon</div>
+    <div class="swatch" style="background:#38BDF8">Sky</div>
+  </div>
+</div>
+
+<div style="display:flex; gap:32px; justify-content:center; flex-wrap:wrap;">
+
+<!-- PHONE 1: Collection -->
+<div class="phone">
+  <div class="page-label">Collection</div>
+  <div class="screen">
+    <div class="header">
+      <div>
+        <div class="header-title">Ma collection</div>
+        <div class="header-sub">42 BD · <span>Niveau 3</span> 🟣</div>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn">🔍</button>
+        <button class="header-btn">🔔</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="pill active">Tous</button>
+      <button class="pill">À lire</button>
+      <button class="pill">Lus</button>
+    </div>
+
+    <div class="categories">
+      <div class="cat-card">
+        <div class="cat-card-header">
+          <span class="cat-name">📚 Marvel</span>
+          <span class="cat-count">12 BD →</span>
+        </div>
+        <div class="cat-covers">
+          <div class="cat-cover" style="background: linear-gradient(135deg, #e74c3c, #c0392b);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #2980b9, #3498db);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #f39c12, #e67e22);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #27ae60, #2ecc71);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);"></div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-card-header">
+          <span class="cat-name">📚 Manga</span>
+          <span class="cat-count">8 BD →</span>
+        </div>
+        <div class="cat-covers">
+          <div class="cat-cover" style="background: linear-gradient(135deg, #1abc9c, #16a085);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #e74c3c, #e91e63);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #3f51b5, #5c6bc0);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #ff9800, #ff5722);"></div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-card-header">
+          <span class="cat-name">📚 Franco-belge</span>
+          <span class="cat-count">17 BD →</span>
+        </div>
+        <div class="cat-covers">
+          <div class="cat-cover" style="background: linear-gradient(135deg, #00bcd4, #0097a7);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #ff5722, #d84315);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #4caf50, #388e3c);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #ffc107, #ff8f00);"></div>
+        </div>
+      </div>
+
+      <div class="cat-card uncategorized">
+        <div class="cat-card-header">
+          <span class="cat-name">📦 Non classés</span>
+          <span class="cat-count">5 BD →</span>
+        </div>
+      </div>
+
+      <button class="add-cat">+ Nouvelle catégorie</button>
+    </div>
+
+    <div style="height: 20px;"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span>Accueil<div class="nav-dot"></div></button>
+    <button class="nav-item active"><span class="nav-icon">📚</span>Collection<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">📷</span>Scanner<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">📊</span>Stats<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span>Réglages<div class="nav-dot"></div></button>
+  </div>
+</div>
+
+<!-- PHONE 2: Stats -->
+<div class="phone">
+  <div class="page-label">Stats & Gamification</div>
+  <div class="screen">
+    <div class="header">
+      <div>
+        <div class="header-title">Mes stats</div>
+      </div>
+    </div>
+
+    <div class="level-card">
+      <div class="level-label">Niveau 3</div>
+      <div class="level-name">Passionné 🔥</div>
+      <div class="xp-bar"><div class="xp-fill"></div></div>
+      <div class="xp-label">12 / 20 BD lues</div>
+    </div>
+
+    <div class="streak-section">
+      <div class="streak-row">
+        <span class="streak-fire">🔥</span>
+        <span class="streak-num">5</span>
+        <span class="streak-label">jours d'affilée</span>
+      </div>
+
+      <button class="read-btn available" onclick="this.classList.remove('available');this.classList.add('done');this.innerHTML='✓ Lu aujourd\'hui !';triggerConfetti(this);">
+        J'ai lu aujourd'hui !
+      </button>
+    </div>
+
+    <div class="week">
+      <div class="day"><span class="day-label">L</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">M</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">M</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">J</span><div class="day-dot inactive"></div></div>
+      <div class="day"><span class="day-label">V</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">S</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">D</span><div class="day-dot inactive"></div></div>
+    </div>
+
+    <div class="goal-section">
+      <div class="goal-title">Objectif mensuel</div>
+      <div class="goal-ring">
+        <svg viewBox="0 0 120 120">
+          <circle class="bg" cx="60" cy="60" r="50"/>
+          <circle class="fill" cx="60" cy="60" r="50"/>
+        </svg>
+        <div class="goal-center">
+          <div class="goal-num">12</div>
+          <div class="goal-of">/15</div>
+        </div>
+      </div>
+      <div class="goal-pct">80% complété !</div>
+    </div>
+
+    <div class="badges-section">
+      <div class="badges-title">Badges</div>
+      <div class="badges-grid">
+        <div class="badge-card unlocked"><div class="badge-icon">🏆</div><div class="badge-name">Collectionneur 50</div></div>
+        <div class="badge-card unlocked"><div class="badge-icon">⭐</div><div class="badge-name">Critique</div></div>
+        <div class="badge-card unlocked"><div class="badge-icon">🔥</div><div class="badge-name">5 jours streak</div></div>
+        <div class="badge-card unlocked"><div class="badge-icon">📚</div><div class="badge-name">Rat de biblio</div></div>
+        <div class="badge-card locked"><div class="badge-icon">🔒</div><div class="badge-name">???</div></div>
+        <div class="badge-card locked"><div class="badge-icon">🔒</div><div class="badge-name">???</div></div>
+      </div>
+    </div>
+
+    <div style="height: 20px;"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span>Accueil<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">📚</span>Collection<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">📷</span>Scanner<div class="nav-dot"></div></button>
+    <button class="nav-item active"><span class="nav-icon">📊</span>Stats<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span>Réglages<div class="nav-dot"></div></button>
+  </div>
+</div>
+
+<!-- PHONE 3: Book detail -->
+<div class="phone">
+  <div class="page-label">Détail catégorie</div>
+  <div class="screen">
+    <div class="header">
+      <div>
+        <div class="header-title">📚 Marvel</div>
+        <div class="header-sub">12 BD</div>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn">←</button>
+      </div>
+    </div>
+
+    <div style="padding: 0 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #e74c3c, #c0392b);"></div>
+        <div class="book-info">
+          <div class="book-title">Spider-Man : Blue</div>
+          <div class="book-author">Jeph Loeb, Tim Sale</div>
+          <div class="book-meta">
+            <span class="book-badge read">✓ Lu</span>
+            <span class="book-stars">★★★★★</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #2980b9, #3498db);"></div>
+        <div class="book-info">
+          <div class="book-title">Captain America : Winter Soldier</div>
+          <div class="book-author">Ed Brubaker</div>
+          <div class="book-meta">
+            <span class="book-badge read">✓ Lu</span>
+            <span class="book-stars">★★★★☆</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #f39c12, #e67e22);"></div>
+        <div class="book-info">
+          <div class="book-title">Wolverine : Old Man Logan</div>
+          <div class="book-author">Mark Millar</div>
+          <div class="book-meta">
+            <span class="book-badge unread">À lire</span>
+          </div>
+          <div style="margin-top: 8px;">
+            <div class="swipe-track">
+              <div class="swipe-fill"></div>
+              <div class="swipe-thumb">→</div>
+              <div class="swipe-label">Lu !</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #27ae60, #2ecc71);"></div>
+        <div class="book-info">
+          <div class="book-title">Hulk : Gris</div>
+          <div class="book-author">Jeph Loeb</div>
+          <div class="book-meta">
+            <span class="book-badge unread">À lire</span>
+          </div>
+          <div style="margin-top: 8px;">
+            <div class="swipe-track">
+              <div class="swipe-fill"></div>
+              <div class="swipe-thumb">→</div>
+              <div class="swipe-label">Lu !</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);"></div>
+        <div class="book-info">
+          <div class="book-title">Hawkeye : Ma vie est une arme</div>
+          <div class="book-author">Matt Fraction</div>
+          <div class="book-meta">
+            <span class="book-badge read">✓ Lu</span>
+            <span class="book-stars">★★★★★</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #e91e63, #c2185b);"></div>
+        <div class="book-info">
+          <div class="book-title">Daredevil : Born Again</div>
+          <div class="book-author">Frank Miller</div>
+          <div class="book-meta">
+            <span class="book-badge read">✓ Lu</span>
+            <span class="book-stars">★★★★★</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 20px;"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span>Accueil<div class="nav-dot"></div></button>
+    <button class="nav-item active"><span class="nav-icon">📚</span>Collection<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">📷</span>Scanner<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">📊</span>Stats<div class="nav-dot"></div></button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span>Réglages<div class="nav-dot"></div></button>
+  </div>
+</div>
+
+</div>
+
+<script>
+function triggerConfetti(btn) {
+  const rect = btn.getBoundingClientRect();
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+  document.body.appendChild(container);
+  const colors = ['#8B5CF6','#F472B6','#34D399','#FBBF24','#38BDF8'];
+  for (let i = 0; i < 30; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = (rect.left + rect.width/2 + (Math.random()-0.5)*200) + 'px';
+    c.style.top = (rect.top - 20) + 'px';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDelay = (Math.random()*0.3) + 's';
+    c.style.width = (6 + Math.random()*6) + 'px';
+    c.style.height = c.style.width;
+    container.appendChild(c);
+  }
+  setTimeout(() => container.remove(), 2000);
+}
+
+// Interactive pills
+document.querySelectorAll('.filters').forEach(group => {
+  group.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+    });
+  });
+});
+
+// Interactive nav
+document.querySelectorAll('.bottom-nav').forEach(nav => {
+  nav.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      nav.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+});
+</script>
+
+</body>
+</html>

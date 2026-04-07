@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BiblioScan — Neon</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --electric: #6366F1;
+    --electric-light: #818CF8;
+    --lime: #84CC16;
+    --hot-pink: #EC4899;
+    --cyan: #22D3EE;
+    --amber: #F59E0B;
+    --bg: #0F172A;
+    --card: #1E293B;
+    --elevated: #334155;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-tertiary: #64748B;
+    --border: #334155;
+    --border-strong: #475569;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: #06091a;
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: var(--bg);
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 60px rgba(99,102,241,0.2), 0 0 0 1px rgba(99,102,241,0.15);
+    flex-shrink: 0;
+  }
+
+  .screen {
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 80px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .screen::-webkit-scrollbar { display: none; }
+
+  /* Header */
+  .header {
+    padding: 56px 20px 12px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .header-title { font-size: 26px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
+  .header-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; font-weight: 500; }
+  .header-sub span { color: var(--lime); font-weight: 700; }
+  .header-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .header-btn {
+    width: 36px; height: 36px; border-radius: 12px; background: var(--card);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); font-size: 16px; border: 1px solid var(--border); cursor: pointer;
+  }
+
+  /* Filter pills */
+  .filters { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 20px; }
+  .pill {
+    padding: 8px 18px; border-radius: 100px; font-size: 14px; font-weight: 600;
+    border: none; cursor: pointer; transition: all 0.2s; font-family: 'Space Grotesk';
+  }
+  .pill.active {
+    background: var(--electric); color: white;
+    box-shadow: 0 0 20px rgba(99,102,241,0.3), 0 0 60px rgba(99,102,241,0.1);
+  }
+  .pill:not(.active) { background: var(--card); color: var(--text-secondary); border: 1px solid var(--border); }
+
+  /* Category cards */
+  .categories { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+  .cat-card {
+    background: var(--card); border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 16px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .cat-card:hover, .cat-card:active {
+    border-color: rgba(99,102,241,0.4);
+    box-shadow: 0 0 20px rgba(99,102,241,0.1);
+  }
+  .cat-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .cat-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+  .cat-count { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+  .cat-covers { display: flex; gap: 8px; overflow: hidden; }
+  .cat-cover {
+    width: 50px; height: 70px; border-radius: 8px; flex-shrink: 0;
+  }
+  .cat-card.uncategorized { border-style: dashed; }
+
+  .add-cat {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px; border-radius: 16px; border: 1.5px dashed var(--border-strong);
+    color: var(--electric-light); font-size: 15px; font-weight: 600;
+    background: transparent; cursor: pointer; width: 100%; font-family: 'Space Grotesk';
+  }
+
+  /* Level card */
+  .level-card {
+    margin: 0 20px 20px;
+    background: linear-gradient(135deg, var(--electric), var(--cyan));
+    border-radius: 16px; padding: 24px; color: white;
+    box-shadow: 0 0 30px rgba(99,102,241,0.3);
+    position: relative; overflow: hidden;
+  }
+  .level-card::after {
+    content: ''; position: absolute; top: -50%; right: -50%;
+    width: 100%; height: 100%; border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+  }
+  .level-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.7; }
+  .level-name { font-size: 28px; font-weight: 700; margin: 4px 0 16px; }
+  .xp-bar { height: 10px; background: rgba(255,255,255,0.2); border-radius: 100px; overflow: hidden; }
+  .xp-fill {
+    height: 100%; border-radius: 100px; width: 60%;
+    background: var(--lime);
+    box-shadow: 0 0 12px rgba(132,204,22,0.5);
+  }
+  .xp-label { font-size: 12px; margin-top: 6px; opacity: 0.7; text-align: right; font-weight: 600; }
+
+  /* Streak */
+  .streak-section { padding: 0 20px; margin-bottom: 20px; }
+  .streak-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .streak-fire { font-size: 28px; animation: glow-pulse 2s infinite; }
+  @keyframes glow-pulse {
+    0%,100% { filter: drop-shadow(0 0 4px rgba(132,204,22,0.3)); }
+    50% { filter: drop-shadow(0 0 12px rgba(132,204,22,0.6)); }
+  }
+  .streak-num { font-size: 24px; font-weight: 700; color: var(--text-primary); }
+  .streak-label { font-size: 14px; color: var(--text-secondary); }
+
+  .read-btn {
+    width: 100%; padding: 16px; border-radius: 14px; border: none;
+    font-family: 'Space Grotesk'; font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: all 0.3s;
+  }
+  .read-btn.available {
+    background: linear-gradient(135deg, var(--lime), var(--cyan));
+    color: var(--bg);
+    box-shadow: 0 0 20px rgba(132,204,22,0.3);
+  }
+  .read-btn.done {
+    background: var(--elevated); color: var(--text-secondary);
+    box-shadow: none;
+  }
+
+  /* Week */
+  .week { display: flex; justify-content: space-between; padding: 0 20px; margin-bottom: 24px; }
+  .day { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .day-label { font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+  .day-dot { width: 28px; height: 28px; border-radius: 50%; }
+  .day-dot.active {
+    background: var(--lime);
+    box-shadow: 0 0 12px rgba(132,204,22,0.4);
+  }
+  .day-dot.inactive { background: var(--elevated); }
+
+  /* Goal */
+  .goal-section { text-align: center; padding: 0 20px; margin-bottom: 24px; }
+  .goal-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; }
+  .goal-ring { position: relative; width: 120px; height: 120px; margin: 0 auto 12px; }
+  .goal-ring svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+  .goal-ring .bg { fill: none; stroke: var(--elevated); stroke-width: 10; }
+  .goal-ring .fill {
+    fill: none; stroke: var(--amber); stroke-width: 10; stroke-linecap: round;
+    stroke-dasharray: 314; stroke-dashoffset: 62.8;
+    filter: drop-shadow(0 0 8px rgba(245,158,11,0.4));
+  }
+  .goal-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .goal-num { font-size: 28px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .goal-of { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .goal-pct { font-size: 13px; color: var(--amber); font-weight: 700; }
+
+  /* Badges */
+  .badges-section { padding: 0 20px; margin-bottom: 24px; }
+  .badges-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; }
+  .badges-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .badge-card { border-radius: 14px; padding: 16px 8px; text-align: center; }
+  .badge-card.unlocked {
+    background: linear-gradient(135deg, rgba(236,72,153,0.15), rgba(245,158,11,0.15));
+    border: 1px solid rgba(236,72,153,0.3);
+    box-shadow: 0 0 12px rgba(236,72,153,0.1);
+  }
+  .badge-card.locked { background: var(--elevated); border: 1px solid var(--border); opacity: 0.4; }
+  .badge-icon { font-size: 28px; margin-bottom: 6px; }
+  .badge-name { font-size: 11px; font-weight: 700; color: var(--text-primary); }
+
+  /* History bars */
+  .history-section { padding: 0 20px; margin-bottom: 24px; }
+  .history-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; }
+  .history-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .history-month { font-size: 12px; font-weight: 600; color: var(--text-secondary); width: 32px; }
+  .history-bar-bg { flex: 1; height: 24px; background: var(--elevated); border-radius: 8px; overflow: hidden; position: relative; }
+  .history-bar-fill { height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--cyan), var(--electric)); box-shadow: 0 0 12px rgba(34,211,238,0.2); }
+  .history-val { font-size: 12px; font-weight: 700; color: var(--text-primary); width: 20px; text-align: right; }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+    background: var(--bg);
+    border-top: 1px solid var(--card);
+    display: flex; align-items: center; justify-content: space-around;
+    padding-bottom: 16px;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--text-tertiary); font-size: 10px; font-weight: 600;
+    cursor: pointer; background: none; border: none; font-family: 'Space Grotesk';
+    transition: color 0.2s;
+  }
+  .nav-item.active { color: var(--electric-light); }
+  .nav-icon { font-size: 22px; }
+  .nav-glow {
+    width: 20px; height: 3px; border-radius: 100px; margin-top: -2px;
+    background: transparent; transition: all 0.2s;
+  }
+  .nav-item.active .nav-glow {
+    background: var(--electric);
+    box-shadow: 0 0 10px rgba(99,102,241,0.5);
+  }
+
+  /* Book cards */
+  .book-card {
+    background: var(--card); border-radius: 16px; padding: 14px;
+    border: 1px solid var(--border);
+    display: flex; gap: 14px; margin-bottom: 10px;
+    transition: all 0.2s;
+  }
+  .book-card:active { border-color: rgba(99,102,241,0.3); }
+  .book-cover {
+    width: 58px; height: 82px; border-radius: 8px; flex-shrink: 0;
+  }
+  .book-info { flex: 1; min-width: 0; }
+  .book-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .book-author { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 400; }
+  .book-meta { display: flex; gap: 8px; align-items: center; }
+  .book-badge { padding: 3px 12px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+  .book-badge.read { background: rgba(132,204,22,0.15); color: var(--lime); }
+  .book-badge.unread { background: rgba(99,102,241,0.15); color: var(--electric-light); }
+  .book-stars { font-size: 12px; color: var(--amber); }
+
+  /* Swipe */
+  .swipe-track {
+    height: 36px; background: var(--elevated); border-radius: 100px;
+    position: relative; overflow: hidden; width: 110px;
+  }
+  .swipe-fill { position: absolute; left:0;top:0;bottom:0; background: linear-gradient(90deg, var(--electric), var(--lime)); border-radius: 100px; width: 0; }
+  .swipe-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--electric); box-shadow: 0 0 12px rgba(99,102,241,0.4);
+    display: flex; align-items: center; justify-content: center; font-size: 14px; color: white; cursor: grab;
+  }
+  .swipe-label { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+
+  .page-label {
+    text-align: center; padding: 8px; background: var(--electric);
+    color: white; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  h1.demo-title { font-family: 'Space Grotesk'; color: white; text-align: center; font-size: 36px; font-weight: 700; margin-bottom: 8px; }
+  p.demo-sub { font-family: 'Space Grotesk'; color: rgba(255,255,255,0.5); text-align: center; font-size: 16px; margin-bottom: 32px; }
+  .swatches { display: flex; gap: 12px; justify-content: center; margin-bottom: 40px; flex-wrap: wrap; }
+  .swatch {
+    width: 56px; height: 56px; border-radius: 14px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 4px; font-family: 'Space Grotesk'; font-size: 8px; color: white;
+    font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  /* Flash animation for badge unlock */
+  @keyframes flash-unlock {
+    0% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.1); filter: brightness(1.5); }
+    100% { transform: scale(1); filter: brightness(1); }
+  }
+  .badge-card.unlocked:hover { animation: flash-unlock 0.5s ease; }
+</style>
+</head>
+<body>
+
+<div style="width:100%; text-align:center;">
+  <h1 class="demo-title">Neon</h1>
+  <p class="demo-sub">Vibrant & Moderne — Space Grotesk · Indigo · Dark</p>
+  <div class="swatches">
+    <div class="swatch" style="background:#6366F1; box-shadow: 0 0 20px rgba(99,102,241,0.4);">Electric</div>
+    <div class="swatch" style="background:#84CC16; box-shadow: 0 0 20px rgba(132,204,22,0.4);">Lime</div>
+    <div class="swatch" style="background:#EC4899; box-shadow: 0 0 20px rgba(236,72,153,0.4);">Pink</div>
+    <div class="swatch" style="background:#22D3EE; box-shadow: 0 0 20px rgba(34,211,238,0.4);">Cyan</div>
+    <div class="swatch" style="background:#F59E0B; box-shadow: 0 0 20px rgba(245,158,11,0.4);">Amber</div>
+  </div>
+</div>
+
+<div style="display:flex; gap:32px; justify-content:center; flex-wrap:wrap;">
+
+<!-- PHONE 1: Collection -->
+<div class="phone">
+  <div class="page-label">Collection</div>
+  <div class="screen">
+    <div class="header">
+      <div>
+        <div class="header-title">Ma collection</div>
+        <div class="header-sub">42 BD · <span>Niv.3</span></div>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn">🔍</button>
+        <button class="header-btn">🔔</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="pill active">Tous</button>
+      <button class="pill">À lire</button>
+      <button class="pill">Lus</button>
+    </div>
+
+    <div class="categories">
+      <div class="cat-card">
+        <div class="cat-card-header">
+          <span class="cat-name">Marvel</span>
+          <span class="cat-count">12 →</span>
+        </div>
+        <div class="cat-covers">
+          <div class="cat-cover" style="background: linear-gradient(135deg, #e74c3c, #8B0000);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #2980b9, #1a5276);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #f39c12, #d35400);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #27ae60, #1e8449);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #8e44ad, #6c3483);"></div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-card-header">
+          <span class="cat-name">Manga</span>
+          <span class="cat-count">8 →</span>
+        </div>
+        <div class="cat-covers">
+          <div class="cat-cover" style="background: linear-gradient(135deg, #1abc9c, #0e6251);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #e74c3c, #922b21);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #3498db, #1a5276);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #e67e22, #a04000);"></div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-card-header">
+          <span class="cat-name">Franco-belge</span>
+          <span class="cat-count">17 →</span>
+        </div>
+        <div class="cat-covers">
+          <div class="cat-cover" style="background: linear-gradient(135deg, #00bcd4, #006064);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #ff5722, #bf360c);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #4caf50, #1b5e20);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #9c27b0, #4a148c);"></div>
+          <div class="cat-cover" style="background: linear-gradient(135deg, #ffc107, #ff6f00);"></div>
+        </div>
+      </div>
+
+      <div class="cat-card uncategorized">
+        <div class="cat-card-header">
+          <span class="cat-name" style="color:var(--text-secondary)">Non classés</span>
+          <span class="cat-count">5 →</span>
+        </div>
+      </div>
+
+      <button class="add-cat">+ Nouvelle catégorie</button>
+    </div>
+
+    <div style="height:20px;"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span>Accueil<div class="nav-glow"></div></button>
+    <button class="nav-item active"><span class="nav-icon">📚</span>Collection<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">📷</span>Scanner<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">📊</span>Stats<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span>Réglages<div class="nav-glow"></div></button>
+  </div>
+</div>
+
+<!-- PHONE 2: Stats -->
+<div class="phone">
+  <div class="page-label">Stats & Gamification</div>
+  <div class="screen">
+    <div class="header">
+      <div><div class="header-title">Mes stats</div></div>
+    </div>
+
+    <div class="level-card">
+      <div class="level-label">Niveau 3</div>
+      <div class="level-name">Passionné</div>
+      <div class="xp-bar"><div class="xp-fill"></div></div>
+      <div class="xp-label">12 / 20 BD lues</div>
+    </div>
+
+    <div class="streak-section">
+      <div class="streak-row">
+        <span class="streak-fire">🔥</span>
+        <span class="streak-num">5</span>
+        <span class="streak-label">jours d'affilée</span>
+      </div>
+      <button class="read-btn available" onclick="this.classList.remove('available');this.classList.add('done');this.innerHTML='✓ Lu aujourd\'hui';triggerFlash(this);">
+        J'ai lu aujourd'hui !
+      </button>
+    </div>
+
+    <div class="week">
+      <div class="day"><span class="day-label">L</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">M</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">M</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">J</span><div class="day-dot inactive"></div></div>
+      <div class="day"><span class="day-label">V</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">S</span><div class="day-dot active"></div></div>
+      <div class="day"><span class="day-label">D</span><div class="day-dot inactive"></div></div>
+    </div>
+
+    <div class="goal-section">
+      <div class="goal-title">Objectif mensuel</div>
+      <div class="goal-ring">
+        <svg viewBox="0 0 120 120">
+          <circle class="bg" cx="60" cy="60" r="50"/>
+          <circle class="fill" cx="60" cy="60" r="50"/>
+        </svg>
+        <div class="goal-center">
+          <div class="goal-num">12</div>
+          <div class="goal-of">/15</div>
+        </div>
+      </div>
+      <div class="goal-pct">80% complété</div>
+    </div>
+
+    <div class="badges-section">
+      <div class="badges-title">Badges</div>
+      <div class="badges-grid">
+        <div class="badge-card unlocked"><div class="badge-icon">🏆</div><div class="badge-name">Collectionneur 50</div></div>
+        <div class="badge-card unlocked"><div class="badge-icon">⭐</div><div class="badge-name">Critique</div></div>
+        <div class="badge-card unlocked"><div class="badge-icon">🔥</div><div class="badge-name">5j streak</div></div>
+        <div class="badge-card unlocked"><div class="badge-icon">📚</div><div class="badge-name">Rat de biblio</div></div>
+        <div class="badge-card locked"><div class="badge-icon">🔒</div><div class="badge-name">???</div></div>
+        <div class="badge-card locked"><div class="badge-icon">🔒</div><div class="badge-name">???</div></div>
+      </div>
+    </div>
+
+    <div class="history-section">
+      <div class="history-title">Historique</div>
+      <div class="history-row">
+        <span class="history-month">Avr</span>
+        <div class="history-bar-bg"><div class="history-bar-fill" style="width:80%"></div></div>
+        <span class="history-val">8</span>
+      </div>
+      <div class="history-row">
+        <span class="history-month">Mar</span>
+        <div class="history-bar-bg"><div class="history-bar-fill" style="width:60%"></div></div>
+        <span class="history-val">6</span>
+      </div>
+      <div class="history-row">
+        <span class="history-month">Fév</span>
+        <div class="history-bar-bg"><div class="history-bar-fill" style="width:50%"></div></div>
+        <span class="history-val">5</span>
+      </div>
+      <div class="history-row">
+        <span class="history-month">Jan</span>
+        <div class="history-bar-bg"><div class="history-bar-fill" style="width:30%"></div></div>
+        <span class="history-val">3</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span>Accueil<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">📚</span>Collection<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">📷</span>Scanner<div class="nav-glow"></div></button>
+    <button class="nav-item active"><span class="nav-icon">📊</span>Stats<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span>Réglages<div class="nav-glow"></div></button>
+  </div>
+</div>
+
+<!-- PHONE 3: Book list -->
+<div class="phone">
+  <div class="page-label">Détail catégorie</div>
+  <div class="screen">
+    <div class="header">
+      <div>
+        <div class="header-title">Marvel</div>
+        <div class="header-sub">12 BD</div>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn">←</button>
+      </div>
+    </div>
+
+    <div style="padding:0 20px; display:flex; flex-direction:column; gap:10px;">
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #e74c3c, #8B0000);"></div>
+        <div class="book-info">
+          <div class="book-title">Spider-Man : Blue</div>
+          <div class="book-author">Jeph Loeb, Tim Sale</div>
+          <div class="book-meta">
+            <span class="book-badge read">Lu</span>
+            <span class="book-stars">★★★★★</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #2980b9, #1a5276);"></div>
+        <div class="book-info">
+          <div class="book-title">Captain America : Winter Soldier</div>
+          <div class="book-author">Ed Brubaker</div>
+          <div class="book-meta">
+            <span class="book-badge read">Lu</span>
+            <span class="book-stars">★★★★☆</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #f39c12, #d35400);"></div>
+        <div class="book-info">
+          <div class="book-title">Wolverine : Old Man Logan</div>
+          <div class="book-author">Mark Millar</div>
+          <div class="book-meta">
+            <span class="book-badge unread">À lire</span>
+          </div>
+          <div style="margin-top:8px;">
+            <div class="swipe-track">
+              <div class="swipe-fill"></div>
+              <div class="swipe-thumb">→</div>
+              <div class="swipe-label">Lu !</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #27ae60, #1e8449);"></div>
+        <div class="book-info">
+          <div class="book-title">Hulk : Gris</div>
+          <div class="book-author">Jeph Loeb</div>
+          <div class="book-meta">
+            <span class="book-badge unread">À lire</span>
+          </div>
+          <div style="margin-top:8px;">
+            <div class="swipe-track">
+              <div class="swipe-fill"></div>
+              <div class="swipe-thumb">→</div>
+              <div class="swipe-label">Lu !</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #8e44ad, #6c3483);"></div>
+        <div class="book-info">
+          <div class="book-title">Hawkeye : Ma vie est une arme</div>
+          <div class="book-author">Matt Fraction</div>
+          <div class="book-meta">
+            <span class="book-badge read">Lu</span>
+            <span class="book-stars">★★★★★</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="book-card">
+        <div class="book-cover" style="background: linear-gradient(135deg, #e91e63, #880e4f);"></div>
+        <div class="book-info">
+          <div class="book-title">Daredevil : Born Again</div>
+          <div class="book-author">Frank Miller</div>
+          <div class="book-meta">
+            <span class="book-badge read">Lu</span>
+            <span class="book-stars">★★★★★</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-item"><span class="nav-icon">🏠</span>Accueil<div class="nav-glow"></div></button>
+    <button class="nav-item active"><span class="nav-icon">📚</span>Collection<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">📷</span>Scanner<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">📊</span>Stats<div class="nav-glow"></div></button>
+    <button class="nav-item"><span class="nav-icon">⚙️</span>Réglages<div class="nav-glow"></div></button>
+  </div>
+</div>
+
+</div>
+
+<script>
+function triggerFlash(btn) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(99,102,241,0.15);pointer-events:none;z-index:999;animation:flash 0.5s ease forwards;';
+  document.body.appendChild(overlay);
+  const style = document.createElement('style');
+  style.textContent = '@keyframes flash{0%{opacity:1}100%{opacity:0}}';
+  document.head.appendChild(style);
+  setTimeout(() => { overlay.remove(); style.remove(); }, 600);
+}
+
+document.querySelectorAll('.filters').forEach(group => {
+  group.querySelectorAll('.pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      group.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+    });
+  });
+});
+
+document.querySelectorAll('.bottom-nav').forEach(nav => {
+  nav.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      nav.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+});
+</script>
+
+</body>
+</html>

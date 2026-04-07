@@ -13,7 +13,7 @@ interface BottomNavProps {
 export function BottomNav({ active, onChange }: BottomNavProps) {
   const tabClass = (tab: Tab) =>
     `flex-1 flex flex-col items-center py-2 text-[10px] sm:text-[11px] font-medium transition-colors duration-200 min-h-[48px] justify-center ${
-      active === tab ? "text-brand-orange" : "text-text-tertiary"
+      active === tab ? "text-brand-grape" : "text-text-tertiary"
     }`;
 
   return (

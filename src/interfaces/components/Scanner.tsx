@@ -146,7 +146,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
       {showNamePrompt && !firstName && state.step === "idle" && (
         <div className="card w-full max-w-sm text-center space-y-3">
           <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #FFAF36 0%, #FFC536 50%, #F66236 100%)" }}>
+            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 50%, #F472B6 100%)" }}>
             <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
             </svg>
@@ -207,7 +207,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
               className="card text-center py-6 active:scale-[0.97] transition-all duration-200 hover:shadow-float group"
             >
               <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center transition-transform group-active:scale-90"
-                style={{ background: "linear-gradient(135deg, #FFAF36 0%, #FFC536 100%)" }}>
+                style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)" }}>
                 <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M3 17v2a2 2 0 002 2h2M17 21h2a2 2 0 002-2v-2" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 12h10" />
@@ -223,7 +223,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
               className="card text-center py-6 active:scale-[0.97] transition-all duration-200 hover:shadow-float group"
             >
               <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center transition-transform group-active:scale-90"
-                style={{ background: "linear-gradient(135deg, #F66236 0%, #F45C5A 100%)" }}>
+                style={{ background: "linear-gradient(135deg, #F472B6 0%, #EC4899 100%)" }}>
                 <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
@@ -288,7 +288,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
           muted
         />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-3/4 h-16 border-2 border-brand-amber rounded-lg opacity-80" />
+          <div className="w-3/4 h-16 border-2 border-brand-grape rounded-lg opacity-80" />
         </div>
         {/* Batch mode indicator */}
         {batchMode && isScanning && (
@@ -312,7 +312,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
       {/* Title search */}
       {state.step === "titleSearch" && (
         <>
-          <button onClick={handleCancel} className="text-brand-orange font-medium self-start flex items-center gap-1">
+          <button onClick={handleCancel} className="text-brand-grape font-medium self-start flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
@@ -328,7 +328,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
       {/* Manual entry */}
       {state.step === "manualEntry" && (
         <>
-          <button onClick={handleCancel} className="text-brand-orange font-medium self-start flex items-center gap-1">
+          <button onClick={handleCancel} className="text-brand-grape font-medium self-start flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
@@ -344,7 +344,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
       {/* Loading */}
       {state.step === "loading" && (
         <div className="card w-full max-w-sm text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-brand-amber border-t-transparent rounded-full mx-auto mb-3" />
+          <div className="animate-spin w-8 h-8 border-2 border-brand-grape border-t-transparent rounded-full mx-auto mb-3" />
           <p className="text-text-secondary text-sm">Recherche de l'ISBN {state.isbn}...</p>
         </div>
       )}

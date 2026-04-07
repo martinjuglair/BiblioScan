@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#FFB800" />
+    <meta name="theme-color" content="#8B5CF6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -15,27 +15,27 @@
         position: fixed; inset: 0; z-index: 9999;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
-        background: #F9F9F9;
+        background: #FEFBFF;
         transition: opacity 0.4s ease-out;
       }
       #splash.hide { opacity: 0; pointer-events: none; }
       #splash-logo {
         width: 80px; height: 80px;
-        border-radius: 16px;
-        background: linear-gradient(135deg, #FFAF36 0%, #FFC536 50%, #F66236 100%);
+        border-radius: 20px;
+        background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 50%, #F472B6 100%);
         display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.3);
         animation: splash-pulse 1.5s ease-in-out infinite;
       }
       #splash-logo svg { width: 40px; height: 40px; color: white; }
       #splash-text {
-        margin-top: 16px; font-family: 'Manrope', sans-serif;
-        font-size: 24px; font-weight: 800; color: #292935;
+        margin-top: 16px; font-family: 'Nunito', sans-serif;
+        font-size: 24px; font-weight: 800; color: #1E1B4B;
         letter-spacing: -0.02em;
       }
       #splash-sub {
-        margin-top: 4px; font-family: 'Manrope', sans-serif;
-        font-size: 13px; color: #8E8E93;
+        margin-top: 4px; font-family: 'Nunito', sans-serif;
+        font-size: 13px; color: #9CA3AF;
       }
       @keyframes splash-pulse {
         0%, 100% { transform: scale(1); }
