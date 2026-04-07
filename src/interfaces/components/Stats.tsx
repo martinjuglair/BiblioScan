@@ -3,11 +3,160 @@ import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary } from "@infrastructure/container";
 import { PullToRefresh } from "./PullToRefresh";
 import { LazyImage } from "./LazyImage";
+import { hapticSuccess } from "@interfaces/utils/haptics";
+
+// --- Reading Goal persistence (localStorage) ---
+const GOAL_KEY = "biblioscan-reading-goal";
+function getGoal(): number {
+  return parseInt(localStorage.getItem(GOAL_KEY) ?? "0", 10);
+}
+function setGoalStorage(n: number) {
+  localStorage.setItem(GOAL_KEY, String(n));
+}
+
+// --- Level system ---
+const LEVELS = [
+  { level: 1, name: "Curieux", min: 0, icon: "seed" },
+  { level: 2, name: "Lecteur", min: 5, icon: "sprout" },
+  { level: 3, name: "Passionné", min: 15, icon: "tree" },
+  { level: 4, name: "Dévoreur", min: 30, icon: "fire" },
+  { level: 5, name: "Bibliophile", min: 50, icon: "star" },
+  { level: 6, name: "Maître lecteur", min: 100, icon: "crown" },
+] as const;
+
+function getLevel(readCount: number) {
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (readCount >= LEVELS[i]!.min) return LEVELS[i]!;
+  }
+  return LEVELS[0]!;
+}
+
+function getNextLevel(readCount: number) {
+  const current = getLevel(readCount);
+  const idx = LEVELS.findIndex((l) => l.level === current.level);
+  return idx < LEVELS.length - 1 ? LEVELS[idx + 1]! : null;
+}
+
+const LEVEL_ICONS: Record<string, string> = {
+  seed: "\ud83c\udf31",
+  sprout: "\ud83c\udf3f",
+  tree: "\ud83c\udf33",
+  fire: "\ud83d\udd25",
+  star: "\u2b50",
+  crown: "\ud83d\udc51",
+};
+
+// --- Badges ---
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  check: (books: ComicBook[]) => boolean;
+}
+
+const BADGES: Badge[] = [
+  { id: "first", name: "Premier pas", description: "Ajouter votre 1er livre", emoji: "\ud83d\udcda", check: (b) => b.length >= 1 },
+  { id: "ten", name: "Beau début", description: "10 livres dans la collection", emoji: "\ud83c\udf1f", check: (b) => b.length >= 10 },
+  { id: "fifty", name: "Collectionneur", description: "50 livres collectionnés", emoji: "\ud83c\udfc6", check: (b) => b.length >= 50 },
+  { id: "reader5", name: "Lecteur assidu", description: "5 livres lus", emoji: "\ud83d\udcd6", check: (b) => b.filter((x) => x.isRead).length >= 5 },
+  { id: "reader20", name: "Rat de bibliothèque", description: "20 livres lus", emoji: "\ud83d\udc00", check: (b) => b.filter((x) => x.isRead).length >= 20 },
+  { id: "critic", name: "Critique littéraire", description: "Noter 10 livres", emoji: "\u2b50", check: (b) => b.filter((x) => x.rating).length >= 10 },
+  { id: "top", name: "Coup de coeur", description: "Donner un 5/5", emoji: "\u2764\ufe0f", check: (b) => b.some((x) => x.rating === 5) },
+  { id: "diverse", name: "Éclectique", description: "5 éditeurs différents", emoji: "\ud83c\udf0d", check: (b) => new Set(b.map((x) => x.publisher).filter(Boolean)).size >= 5 },
+];
+
+// --- Streak calculation ---
+function computeStreak(books: ComicBook[]): { current: number; best: number } {
+  const readDates = books
+    .filter((b) => b.readAt)
+    .map((b) => {
+      const d = b.readAt!;
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    });
+
+  if (readDates.length === 0) return { current: 0, best: 0 };
+
+  const uniqueDays = [...new Set(readDates)].sort((a, b) => b - a);
+  const DAY = 86400000;
+
+  // Current streak: consecutive days from today backwards (allow 1 day gap)
+  const today = new Date();
+  const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+  let current = 0;
+  let checkDay = todayMs;
+  // Allow starting from today or yesterday
+  if (uniqueDays[0] === todayMs || uniqueDays[0] === todayMs - DAY) {
+    checkDay = uniqueDays[0]!;
+  } else {
+    return computeBest(uniqueDays, DAY);
+  }
+
+  for (const day of uniqueDays) {
+    if (day === checkDay) {
+      current++;
+      checkDay -= DAY;
+    } else if (day < checkDay) {
+      break;
+    }
+  }
+
+  const best = Math.max(current, computeBest(uniqueDays, DAY).best);
+  return { current, best };
+}
+
+function computeBest(sortedDays: number[], DAY: number): { current: number; best: number } {
+  let best = 1;
+  let streak = 1;
+  for (let i = 0; i < sortedDays.length - 1; i++) {
+    if (sortedDays[i]! - sortedDays[i + 1]! === DAY) {
+      streak++;
+      best = Math.max(best, streak);
+    } else {
+      streak = 1;
+    }
+  }
+  return { current: 0, best };
+}
+
+// --- Reading history by month ---
+function getReadingHistory(books: ComicBook[]): { month: string; books: ComicBook[] }[] {
+  const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  const readBooks = books.filter((b) => b.readAt).sort((a, b) => b.readAt!.getTime() - a.readAt!.getTime());
+
+  const groups = new Map<string, ComicBook[]>();
+  for (const book of readBooks) {
+    const d = book.readAt!;
+    const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
+    const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(book);
+    // Store label on first entry
+    if (!groups.has(`label_${key}`)) groups.set(`label_${key}`, []);
+    groups.set(`label_${key}`, [{ label } as unknown as ComicBook]);
+  }
+
+  const result: { month: string; books: ComicBook[] }[] = [];
+  const seen = new Set<string>();
+  for (const book of readBooks) {
+    const d = book.readAt!;
+    const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
+    result.push({ month: label, books: groups.get(key)! });
+  }
+  return result;
+}
 
 export function Stats() {
   const [books, setBooks] = useState<ComicBook[]>([]);
   const [categoryCount, setCategoryCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [goal, setGoal] = useState(getGoal);
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalInput, setGoalInput] = useState("");
 
   const load = useCallback(async () => {
     const result = await getCategorizedLibrary.execute();
@@ -25,9 +174,43 @@ export function Stats() {
   useEffect(() => { load(); }, [load]);
 
   const stats = useMemo(() => computeStats(books, categoryCount), [books, categoryCount]);
-
   const readCount = useMemo(() => books.filter((b) => b.isRead).length, [books]);
   const readPercent = books.length > 0 ? Math.round((readCount / books.length) * 100) : 0;
+
+  // Year goal progress
+  const now = new Date();
+  const yearReadCount = useMemo(() =>
+    books.filter((b) => b.readAt && b.readAt.getFullYear() === now.getFullYear()).length,
+  [books, now]);
+  const goalPercent = goal > 0 ? Math.min(100, Math.round((yearReadCount / goal) * 100)) : 0;
+
+  // Level
+  const level = getLevel(readCount);
+  const nextLevel = getNextLevel(readCount);
+  const levelProgress = nextLevel
+    ? ((readCount - level.min) / (nextLevel.min - level.min)) * 100
+    : 100;
+
+  // Streak
+  const streak = useMemo(() => computeStreak(books), [books]);
+
+  // Badges
+  const earnedBadges = useMemo(() => BADGES.filter((b) => b.check(books)), [books]);
+  const lockedBadges = useMemo(() => BADGES.filter((b) => !b.check(books)), [books]);
+
+  // Reading history
+  const history = useMemo(() => getReadingHistory(books), [books]);
+
+  const handleSaveGoal = () => {
+    const n = parseInt(goalInput, 10);
+    if (n > 0) {
+      setGoal(n);
+      setGoalStorage(n);
+      hapticSuccess();
+    }
+    setEditingGoal(false);
+    setGoalInput("");
+  };
 
   if (loading) {
     return (
@@ -54,6 +237,109 @@ export function Stats() {
     <PullToRefresh onRefresh={load}>
       <div className="px-3 sm:px-4 py-4">
         <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">Statistiques</h1>
+
+        {/* Level card */}
+        <div className="card mb-3 relative overflow-hidden">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl">{LEVEL_ICONS[level.icon]}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-brand-orange uppercase">Niveau {level.level}</span>
+                <span className="text-sm font-bold text-text-primary">{level.name}</span>
+              </div>
+              {nextLevel ? (
+                <>
+                  <div className="h-2 bg-surface-subtle rounded-full overflow-hidden mt-1.5">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${levelProgress}%`,
+                        background: "linear-gradient(90deg, #FFAF36, #F66236)",
+                      }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-1">
+                    {readCount}/{nextLevel.min} livres lus pour "{nextLevel.name}" {LEVEL_ICONS[nextLevel.icon]}
+                  </p>
+                </>
+              ) : (
+                <p className="text-[10px] text-status-success font-semibold mt-1">Niveau maximum atteint !</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Reading goal + streak row */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {/* Annual goal */}
+          <div className="card text-center py-3" onClick={() => { setEditingGoal(true); setGoalInput(goal > 0 ? String(goal) : ""); }}>
+            {goal > 0 ? (
+              <>
+                <div className="relative w-14 h-14 mx-auto">
+                  <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+                    <circle cx="28" cy="28" r="23" fill="none" stroke="#F5F5F7" strokeWidth="4" />
+                    <circle
+                      cx="28" cy="28" r="23" fill="none"
+                      stroke={goalPercent >= 100 ? "#22C55E" : "#FFAF36"} strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 23}`}
+                      strokeDashoffset={`${2 * Math.PI * 23 * (1 - goalPercent / 100)}`}
+                      className="transition-all duration-700"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-sm font-bold text-text-primary">{yearReadCount}/{goal}</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-text-tertiary mt-1">
+                  Objectif {now.getFullYear()}
+                </p>
+                {goalPercent >= 100 && (
+                  <p className="text-[10px] text-status-success font-bold mt-0.5">Objectif atteint !</p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="text-2xl mb-1">{"\ud83c\udfaf"}</div>
+                <p className="text-xs text-brand-orange font-semibold">Fixer un objectif</p>
+                <p className="text-[10px] text-text-muted mt-0.5">Livres à lire en {now.getFullYear()}</p>
+              </>
+            )}
+          </div>
+
+          {/* Streak */}
+          <div className="card text-center py-3">
+            <div className="text-2xl mb-1">{streak.current > 0 ? "\ud83d\udd25" : "\u2744\ufe0f"}</div>
+            <span className="text-xl font-bold text-text-primary">{streak.current}</span>
+            <p className="text-[11px] text-text-tertiary">jour{streak.current > 1 ? "s" : ""} de suite</p>
+            {streak.best > 0 && (
+              <p className="text-[10px] text-text-muted mt-0.5">Record : {streak.best} jour{streak.best > 1 ? "s" : ""}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Goal edit modal */}
+        {editingGoal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setEditingGoal(false)}>
+            <div className="card w-72 text-center" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-bold text-text-primary mb-2">Objectif de lecture {now.getFullYear()}</h3>
+              <p className="text-xs text-text-tertiary mb-3">Combien de livres voulez-vous lire cette année ?</p>
+              <input
+                type="number"
+                value={goalInput}
+                onChange={(e) => setGoalInput(e.target.value)}
+                placeholder="Ex: 24"
+                className="input-field text-center text-lg mb-3"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveGoal(); }}
+              />
+              <div className="flex gap-2">
+                <button onClick={() => setEditingGoal(false)} className="btn-secondary flex-1 text-sm">Annuler</button>
+                <button onClick={handleSaveGoal} className="btn-primary flex-1 text-sm">Valider</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Reading progress ring */}
         <div className="card flex items-center gap-4 mb-3">
@@ -90,6 +376,27 @@ export function Stats() {
           </div>
         </div>
 
+        {/* Badges */}
+        <div className="card mb-3">
+          <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
+            Badges ({earnedBadges.length}/{BADGES.length})
+          </h3>
+          <div className="grid grid-cols-4 gap-2">
+            {earnedBadges.map((badge) => (
+              <div key={badge.id} className="text-center">
+                <div className="text-2xl mb-0.5">{badge.emoji}</div>
+                <p className="text-[10px] text-text-primary font-semibold leading-tight">{badge.name}</p>
+              </div>
+            ))}
+            {lockedBadges.map((badge) => (
+              <div key={badge.id} className="text-center opacity-30">
+                <div className="text-2xl mb-0.5 grayscale">{badge.emoji}</div>
+                <p className="text-[10px] text-text-muted leading-tight">{badge.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Main stats row */}
         <div className="grid grid-cols-3 gap-2 mb-3">
           <StatBadge value={stats.totalBooks} label="Livres" color="brand-orange" />
@@ -101,7 +408,7 @@ export function Stats() {
           />
         </div>
 
-        {/* Additional quick stats */}
+        {/* Quick stats */}
         <div className="grid grid-cols-2 gap-2 mb-3">
           {stats.avgPrice > 0 && (
             <div className="card text-center py-3">
@@ -157,7 +464,7 @@ export function Stats() {
           </div>
         )}
 
-        {/* Monthly additions chart */}
+        {/* Monthly additions */}
         {stats.monthlyData.length > 0 && (
           <div className="card mb-3">
             <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">Ajouts par mois</h3>
@@ -167,16 +474,12 @@ export function Stats() {
                 const height = (m.count / maxCount) * 100;
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] text-text-tertiary font-medium">
-                      {m.count > 0 ? m.count : ""}
-                    </span>
+                    <span className="text-[9px] text-text-tertiary font-medium">{m.count > 0 ? m.count : ""}</span>
                     <div
                       className="w-full rounded-t-sm transition-all duration-500"
                       style={{
                         height: `${Math.max(height, 4)}%`,
-                        background: m.count > 0
-                          ? "linear-gradient(180deg, #51B0B0, #51B0B0aa)"
-                          : "#F5F5F7",
+                        background: m.count > 0 ? "linear-gradient(180deg, #51B0B0, #51B0B0aa)" : "#F5F5F7",
                       }}
                     />
                     <span className="text-[9px] text-text-muted">{m.label}</span>
@@ -221,29 +524,28 @@ export function Stats() {
           </div>
         )}
 
-        {/* Recently read books */}
-        {readCount > 0 && (
+        {/* Reading history timeline */}
+        {history.length > 0 && (
           <div className="mb-3">
-            <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2 px-1">Livres lus récemment</h3>
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3 scrollbar-hide">
-              {books
-                .filter((b) => b.isRead)
-                .sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime())
-                .slice(0, 10)
-                .map((book) => (
-                  <div key={book.isbn} className="flex-shrink-0 w-20">
-                    {book.coverUrl ? (
-                      <LazyImage
-                        src={book.coverUrl}
-                        alt={book.title}
-                        className="w-20 h-28 rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-20 h-28 bg-surface-subtle rounded-lg flex items-center justify-center text-text-muted text-xs">?</div>
-                    )}
-                    <p className="text-xs text-text-primary mt-1 truncate font-medium">{book.title}</p>
+            <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2 px-1">Historique de lecture</h3>
+            <div className="space-y-3">
+              {history.slice(0, 4).map(({ month, books: monthBooks }) => (
+                <div key={month}>
+                  <p className="text-xs font-semibold text-text-secondary mb-1.5 px-1">{month}</p>
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 scrollbar-hide">
+                    {monthBooks.map((book) => (
+                      <div key={book.isbn} className="flex-shrink-0 w-16">
+                        {book.coverUrl ? (
+                          <LazyImage src={book.coverUrl} alt={book.title} className="w-16 h-22 rounded-lg" />
+                        ) : (
+                          <div className="w-16 h-22 bg-surface-subtle rounded-lg flex items-center justify-center text-text-muted text-xs">?</div>
+                        )}
+                        <p className="text-[10px] text-text-primary mt-0.5 truncate font-medium">{book.title}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           </div>
         )}

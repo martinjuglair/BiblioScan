@@ -17,6 +17,7 @@ export interface ComicBookProps {
   categoryId: string | null;
   wishlist: boolean;
   isRead: boolean;
+  readAt: Date | null;
   addedAt: Date;
 }
 
@@ -76,6 +77,9 @@ export class ComicBook {
   get isRead(): boolean {
     return this.props.isRead;
   }
+  get readAt(): Date | null {
+    return this.props.readAt;
+  }
   get addedAt(): Date {
     return this.props.addedAt;
   }
@@ -110,6 +114,7 @@ export class ComicBook {
         categoryId: input.categoryId ?? null,
         wishlist: false,
         isRead: false,
+        readAt: null,
         addedAt: new Date(),
       }),
     );
@@ -135,6 +140,12 @@ export class ComicBook {
     wishlist?: boolean;
     isRead?: boolean;
   }): ComicBook {
+    // Auto-set readAt when marking as read
+    let readAt = this.props.readAt;
+    if (updates.isRead !== undefined) {
+      readAt = updates.isRead ? (this.props.readAt ?? new Date()) : null;
+    }
+
     return new ComicBook({
       ...this.props,
       ...(updates.seriesName !== undefined && { seriesName: updates.seriesName }),
@@ -146,6 +157,7 @@ export class ComicBook {
       ...(updates.categoryId !== undefined && { categoryId: updates.categoryId }),
       ...(updates.wishlist !== undefined && { wishlist: updates.wishlist }),
       ...(updates.isRead !== undefined && { isRead: updates.isRead }),
+      readAt,
     });
   }
 
@@ -166,6 +178,7 @@ export class ComicBook {
       categoryId: this.categoryId,
       wishlist: this.wishlist,
       isRead: this.isRead,
+      readAt: this.readAt?.toISOString() ?? null,
       addedAt: this.addedAt.toISOString(),
     };
   }
@@ -187,5 +200,6 @@ export interface ComicBookRecord {
   categoryId: string | null;
   wishlist: boolean;
   isRead: boolean;
+  readAt: string | null;
   addedAt: string;
 }

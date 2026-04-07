@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { ComicBookCreateInput } from "@domain/entities/ComicBook";
-import { scanComicBook } from "@infrastructure/container";
+import { scanComicBook, categoryRepository, updateBook } from "@infrastructure/container";
+import { Category } from "@domain/entities/Category";
 import { useScanner } from "@interfaces/hooks/useScanner";
 import { triggerScanFeedback } from "@interfaces/hooks/useScanFeedback";
 import { BookPreview } from "./BookPreview";
@@ -29,6 +30,10 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
   const [manualIsbn, setManualIsbn] = useState("");
   const [batchMode, setBatchMode] = useState(false);
   const [batchCount, setBatchCount] = useState(0);
+  const [batchIsbns, setBatchIsbns] = useState<string[]>([]);
+  const [showBatchComplete, setShowBatchComplete] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [assigningCategory, setAssigningCategory] = useState(false);
 
   // First name prompt state
   const [showNamePrompt, setShowNamePrompt] = useState(!firstName);
@@ -65,6 +70,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
     if (result.ok) {
       setState({ step: "success", title: data.title, coverUrl: data.coverUrl });
       setBatchCount((c) => c + 1);
+      if (batchMode) setBatchIsbns((prev) => [...prev, data.isbn]);
       onBookAdded();
     } else {
       setState({ step: "error", message: result.error });
@@ -84,11 +90,39 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
 
   const handleCancel = () => {
     stop();
-    setState({ step: "idle" });
-    if (batchMode) {
+    if (batchMode && batchIsbns.length > 0) {
+      // Show batch complete screen with category assignment
+      setState({ step: "idle" });
       setBatchMode(false);
-      setBatchCount(0);
+      setShowBatchComplete(true);
+      categoryRepository.findAllByUser().then((r) => {
+        if (r.ok) setCategories(r.value);
+      });
+    } else {
+      setState({ step: "idle" });
+      if (batchMode) {
+        setBatchMode(false);
+        setBatchCount(0);
+        setBatchIsbns([]);
+      }
     }
+  };
+
+  const handleAssignCategory = async (categoryId: string | null) => {
+    if (!categoryId) {
+      // Skip — leave in "Non classés"
+      setShowBatchComplete(false);
+      setBatchIsbns([]);
+      return;
+    }
+    setAssigningCategory(true);
+    for (const isbn of batchIsbns) {
+      await updateBook.execute(isbn, { categoryId });
+    }
+    setAssigningCategory(false);
+    setShowBatchComplete(false);
+    setBatchIsbns([]);
+    onBookAdded();
   };
 
   const handleSaveName = async () => {
@@ -342,6 +376,45 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
           <button onClick={handleCancel} className="btn-primary mt-3 w-full">
             Réessayer
           </button>
+        </div>
+      )}
+
+      {/* Batch complete — category assignment */}
+      {showBatchComplete && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-t-2xl w-full max-w-lg p-4 pb-safe">
+            <div className="w-10 h-1 bg-border rounded-full mx-auto mb-4" />
+            <div className="text-center mb-4">
+              <div className="text-3xl mb-2">{"\ud83c\udf89"}</div>
+              <h2 className="text-lg font-bold text-text-primary">
+                {batchIsbns.length} livre{batchIsbns.length > 1 ? "s" : ""} ajouté{batchIsbns.length > 1 ? "s" : ""}
+              </h2>
+              <p className="text-sm text-text-tertiary mt-1">
+                Dans quelle catégorie les ranger ?
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto mb-3">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => handleAssignCategory(cat.id)}
+                  disabled={assigningCategory}
+                  className="text-left px-4 py-3 rounded-xl hover:bg-surface-subtle transition-colors active:bg-surface-subtle border border-border"
+                >
+                  <span className="font-semibold text-text-primary">{cat.name}</span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => handleAssignCategory(null)}
+              disabled={assigningCategory}
+              className="w-full py-3 text-text-tertiary text-sm font-medium"
+            >
+              {assigningCategory ? "Assignation en cours..." : "Laisser dans Non classés"}
+            </button>
+          </div>
         </div>
       )}
     </div>
