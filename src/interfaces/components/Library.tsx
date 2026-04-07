@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary, createCategory } from "@infrastructure/container";
 import { CategorizedLibrary } from "@application/use-cases/GetCategorizedLibrary";
-import { CollectionStats } from "./CollectionStats";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 import { PullToRefresh } from "./PullToRefresh";
 import { BottomSheet } from "./BottomSheet";
@@ -19,6 +18,7 @@ interface LibraryProps {
 }
 
 type SortOption = "name" | "count" | "recent";
+type ReadFilter = "all" | "unread" | "read";
 
 export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
   const [data, setData] = useState<CategorizedLibrary | null>(null);
@@ -26,6 +26,7 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("name");
+  const [readFilter, setReadFilter] = useState<ReadFilter>("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [globalQuery, setGlobalQuery] = useState("");
@@ -84,11 +85,23 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
 
   const filteredCategories = useMemo(() => {
     if (!data) return [];
-    let filtered = data.categories;
+
+    // Apply read filter to books within each category
+    const withFilteredBooks = data.categories.map((c) => ({
+      ...c,
+      books: readFilter === "all" ? c.books
+        : readFilter === "read" ? c.books.filter((b) => b.isRead)
+        : c.books.filter((b) => !b.isRead),
+    }));
+
+    // Filter out empty categories when a read filter is active
+    let filtered = readFilter === "all"
+      ? withFilteredBooks
+      : withFilteredBooks.filter((c) => c.books.length > 0);
 
     if (search.trim()) {
       const q = search.toLowerCase();
-      filtered = data.categories.filter(
+      filtered = filtered.filter(
         (c) =>
           c.category.name.toLowerCase().includes(q) ||
           c.books.some(
@@ -117,19 +130,26 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
         break;
     }
     return sorted;
-  }, [data, search, sort]);
+  }, [data, search, sort, readFilter]);
 
-  const showUncategorized = useMemo(() => {
-    if (!data || data.uncategorized.length === 0) return false;
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return data.uncategorized.some(
-      (b) =>
-        b.title.toLowerCase().includes(q) ||
-        b.authors.some((a) => a.toLowerCase().includes(q)) ||
-        b.publisher.toLowerCase().includes(q),
-    );
-  }, [data, search]);
+  const filteredUncategorized = useMemo(() => {
+    if (!data) return [];
+    let books = data.uncategorized;
+    if (readFilter === "read") books = books.filter((b) => b.isRead);
+    else if (readFilter === "unread") books = books.filter((b) => !b.isRead);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      books = books.filter(
+        (b) =>
+          b.title.toLowerCase().includes(q) ||
+          b.authors.some((a) => a.toLowerCase().includes(q)) ||
+          b.publisher.toLowerCase().includes(q),
+      );
+    }
+    return books;
+  }, [data, search, readFilter]);
+
+  const showUncategorized = filteredUncategorized.length > 0;
 
   const wishlistBooks = useMemo(() => {
     return allBooks.filter((b) => b.wishlist);
@@ -188,7 +208,31 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
         </div>
       </div>
 
-      <CollectionStats books={allBooks} categoryCount={data?.categories.length ?? 0} />
+      {/* Read filter pills */}
+      {allBooks.length > 0 && (
+        <div className="flex gap-1.5 mb-3">
+          {([
+            ["all", "Tous", allBooks.length],
+            ["unread", "À lire", allBooks.filter((b) => !b.isRead).length],
+            ["read", "Lus", allBooks.filter((b) => b.isRead).length],
+          ] as [ReadFilter, string, number][]).map(([key, label, count]) => (
+            <button
+              key={key}
+              onClick={() => setReadFilter(key)}
+              className={`px-3 py-1.5 rounded-pill text-xs font-semibold transition-all duration-200 ${
+                readFilter === key
+                  ? "bg-brand-amber text-text-primary shadow-sm"
+                  : "bg-surface-subtle text-text-tertiary"
+              }`}
+            >
+              {label}
+              <span className={`ml-1 ${readFilter === key ? "text-text-primary/70" : "text-text-muted"}`}>
+                {count}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {allBooks.length === 0 ? (
         <div className="py-8 sm:py-12 text-center">
@@ -313,7 +357,7 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
               )}
 
               {/* Non classés */}
-              {showUncategorized && data && (
+              {showUncategorized && (
                 <div className="mt-4">
                   <button
                     onClick={() => onSelectCategory(null)}
@@ -328,7 +372,7 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
                     <div>
                       <h3 className="font-semibold text-text-secondary">Non classés</h3>
                       <p className="text-text-tertiary text-sm">
-                        {data.uncategorized.length} livre{data.uncategorized.length > 1 ? "s" : ""}
+                        {filteredUncategorized.length} livre{filteredUncategorized.length > 1 ? "s" : ""}
                       </p>
                     </div>
                   </button>

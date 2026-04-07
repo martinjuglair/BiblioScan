@@ -8,10 +8,11 @@ import { BookDetail } from "@interfaces/components/BookDetail";
 import { Groups } from "@interfaces/components/Groups";
 import { GroupDetail } from "@interfaces/components/GroupDetail";
 import { Profile } from "@interfaces/components/Profile";
+import { Stats } from "@interfaces/components/Stats";
 import { BottomNav } from "@interfaces/components/BottomNav";
 import { ToastProvider } from "@interfaces/components/Toast";
 
-type Tab = "scanner" | "library" | "groups" | "profile";
+type Tab = "library" | "groups" | "scanner" | "stats" | "profile";
 
 type View =
   | { screen: "main" }
@@ -130,6 +131,8 @@ export default function App() {
           onBack={() => setView({ screen: "main" })}
         />
       )}
+
+      {tab === "stats" && <Stats />}
 
       {tab === "profile" && (
         <Profile
