@@ -11,6 +11,8 @@ interface UseAuthReturn {
   signUp: (email: string, password: string, firstName?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateFirstName: (name: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 export function useAuth(): UseAuthReturn {
@@ -68,5 +70,15 @@ export function useAuth(): UseAuthReturn {
     }
   }, []);
 
-  return { user, firstName, loading, error, signIn, signUp, signOut, updateFirstName };
+  const resetPassword = useCallback(async (email: string) => {
+    const result = await authService.resetPassword(email);
+    return result.ok ? { ok: true } : { ok: false, error: result.error };
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword: string) => {
+    const result = await authService.updatePassword(newPassword);
+    return result.ok ? { ok: true } : { ok: false, error: result.error };
+  }, []);
+
+  return { user, firstName, loading, error, signIn, signUp, signOut, updateFirstName, resetPassword, updatePassword };
 }

@@ -11,6 +11,7 @@ import { hapticLight } from "@interfaces/utils/haptics";
 import { BookStackIllustration, ScanIllustration } from "./Illustrations";
 import { ShareCollection } from "./ShareCollection";
 import { LazyImage } from "./LazyImage";
+import { ReadBadge } from "./ReadBadge";
 
 interface LibraryProps {
   refreshKey: number;
@@ -360,19 +361,22 @@ export function Library({ refreshKey, onSelectCategory, onSelectBook }: LibraryP
                         onClick={() => onSelectBook(book.isbn)}
                         className="text-left active:scale-[0.97] transition-all duration-200"
                       >
-                        {book.coverUrl ? (
-                          <LazyImage
-                            src={book.coverUrl}
-                            alt={book.title}
-                            className="w-full aspect-[2/3] rounded-lg shadow-card"
-                          />
-                        ) : (
-                          <div className="w-full aspect-[2/3] bg-surface-subtle rounded-lg flex items-center justify-center">
-                            <svg className="w-8 h-8 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                            </svg>
-                          </div>
-                        )}
+                        <div className="relative">
+                          {book.coverUrl ? (
+                            <LazyImage
+                              src={book.coverUrl}
+                              alt={book.title}
+                              className="w-full aspect-[2/3] rounded-lg shadow-card"
+                            />
+                          ) : (
+                            <div className="w-full aspect-[2/3] bg-surface-subtle rounded-lg flex items-center justify-center">
+                              <svg className="w-8 h-8 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                              </svg>
+                            </div>
+                          )}
+                          {book.isRead && <ReadBadge />}
+                        </div>
                         <p className="text-xs text-text-primary mt-1 truncate font-medium">{book.title}</p>
                       </button>
                     ))}

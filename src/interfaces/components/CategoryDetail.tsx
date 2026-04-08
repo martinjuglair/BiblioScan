@@ -5,7 +5,7 @@ import { Category } from "@domain/entities/Category";
 import { PullToRefresh } from "./PullToRefresh";
 import { BottomSheet } from "./BottomSheet";
 import { CategoryDetailSkeleton } from "./Skeleton";
-import { SwipeToRead } from "./SwipeToRead";
+import { ReadBadge } from "./ReadBadge";
 import { useToast } from "./Toast";
 import { hapticMedium, hapticError } from "@interfaces/utils/haptics";
 import { LazyImage } from "./LazyImage";
@@ -105,14 +105,6 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
     setMoveBookIsbn(null);
   };
 
-  const handleToggleRead = async (isbn: string, newVal: boolean) => {
-    const result = await updateBook.execute(isbn, { isRead: newVal });
-    if (result.ok) {
-      setBooks((prev) => prev.map((b) => (b.isbn === isbn ? result.value : b)));
-      toast(newVal ? "Marqué comme lu ✓" : "Marqué comme à lire", "success");
-    }
-  };
-
   const handleDeleteCategory = async () => {
     if (!categoryId) return;
     if (!confirm(`Supprimer la catégorie "${categoryName}" ? Les livres seront déplacés dans "Non classés".`)) return;
@@ -187,7 +179,6 @@ export function CategoryDetail({ categoryId, refreshKey, onBack, onSelectBook }:
                   else { setSwipedIsbn(null); setSwipeDelta(0); }
                 }}
                 onTap={() => onSelectBook(book.isbn)}
-                onToggleRead={(val) => handleToggleRead(book.isbn, val)}
               />
             ))}
           </div>
@@ -244,7 +235,6 @@ function SwipeableBookCard({
   onDrag,
   onRelease,
   onTap,
-  onToggleRead,
 }: {
   book: ComicBook;
   isActive: boolean;
@@ -253,7 +243,6 @@ function SwipeableBookCard({
   onDrag: (delta: number) => void;
   onRelease: () => void;
   onTap: () => void;
-  onToggleRead: (isRead: boolean) => void;
 }) {
   const startX = useRef(0);
   const startY = useRef(0);
@@ -332,17 +321,20 @@ function SwipeableBookCard({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {book.coverUrl ? (
-          <LazyImage
-            src={book.coverUrl}
-            alt={book.title}
-            className="w-14 h-20 rounded-lg flex-shrink-0"
-          />
-        ) : (
-          <div className="w-14 h-20 bg-surface-subtle rounded-lg flex items-center justify-center text-text-muted text-xs flex-shrink-0">
-            ?
-          </div>
-        )}
+        <div className="relative flex-shrink-0">
+          {book.coverUrl ? (
+            <LazyImage
+              src={book.coverUrl}
+              alt={book.title}
+              className="w-14 h-20 rounded-lg"
+            />
+          ) : (
+            <div className="w-14 h-20 bg-surface-subtle rounded-lg flex items-center justify-center text-text-muted text-xs">
+              ?
+            </div>
+          )}
+          {book.isRead && <ReadBadge />}
+        </div>
         <div className="min-w-0 flex-1 flex flex-col justify-center">
           <h3 className="font-semibold text-text-primary truncate">{book.title}</h3>
           <p className="text-text-tertiary text-sm truncate">
@@ -364,9 +356,6 @@ function SwipeableBookCard({
               ))}
             </div>
           )}
-        </div>
-        <div className="flex items-center flex-shrink-0" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-          <SwipeToRead isRead={book.isRead} onChange={onToggleRead} />
         </div>
       </div>
     </div>

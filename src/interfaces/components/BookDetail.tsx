@@ -6,6 +6,8 @@ import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, read
 import { CoverLightbox } from "./CoverLightbox";
 import { BottomSheet } from "./BottomSheet";
 import { BookDetailSkeleton } from "./Skeleton";
+import { SwipeToRead } from "./SwipeToRead";
+import { ReadBadge } from "./ReadBadge";
 import { useToast } from "./Toast";
 import { supabase } from "@infrastructure/supabase/client";
 import { hapticLight, hapticMedium, hapticError } from "@interfaces/utils/haptics";
@@ -36,6 +38,9 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
+
+  // Read state
+  const [isRead, setIsRead] = useState(false);
 
   // Wishlist state
   const [isWishlist, setIsWishlist] = useState(false);
@@ -78,6 +83,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     setRating(b.rating);
     setComment(b.comment ?? "");
     setCategoryId(b.categoryId);
+    setIsRead(b.isRead);
     setIsWishlist(b.wishlist);
   };
 
@@ -112,6 +118,16 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       setBook(result.value);
       onUpdated();
       toast("Catégorie mise à jour", "success");
+    }
+  };
+
+  const handleToggleRead = async (newVal: boolean) => {
+    setIsRead(newVal);
+    const result = await updateBook.execute(isbn, { isRead: newVal });
+    if (result.ok) {
+      setBook(result.value);
+      onUpdated();
+      toast(newVal ? "Marqué comme lu ✓" : "Marqué comme à lire", "success");
     }
   };
 
@@ -277,6 +293,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
               alt={book.title}
               className="w-28 h-40 min-[360px]:w-36 min-[360px]:h-52 sm:w-40 sm:h-60 object-cover rounded-card shadow-hero mb-3 sm:mb-4"
             />
+            {isRead && <ReadBadge />}
             <div className="absolute inset-0 mb-3 sm:mb-4 rounded-card bg-black/0 group-active:bg-black/10 transition-colors flex items-center justify-center">
               <svg className="w-8 h-8 text-white opacity-0 group-active:opacity-80 transition-opacity drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
@@ -325,6 +342,11 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             disabled={uploadingCover}
           />
         </label>
+
+        {/* Swipe to mark as read */}
+        <div className="w-full mt-4">
+          <SwipeToRead isRead={isRead} onChange={handleToggleRead} />
+        </div>
       </div>
 
       {/* Cover lightbox */}

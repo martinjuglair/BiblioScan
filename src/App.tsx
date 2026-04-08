@@ -22,7 +22,7 @@ type View =
   | { screen: "group"; groupId: string };
 
 export default function App() {
-  const { user, firstName, loading, error, signIn, signUp, signOut, updateFirstName } = useAuth();
+  const { user, firstName, loading, error, signIn, signUp, signOut, updateFirstName, resetPassword, updatePassword } = useAuth();
   const [tab, setTab] = useState<Tab>("scanner");
   const [view, setView] = useState<View>({ screen: "main" });
   const [refreshKey, setRefreshKey] = useState(0);
@@ -69,6 +69,7 @@ export default function App() {
       <LoginScreen
         onSignIn={signIn}
         onSignUp={signUp}
+        onResetPassword={resetPassword}
         loading={loading}
         error={error}
       />
@@ -156,6 +157,7 @@ export default function App() {
           email={user.email ?? ""}
           firstName={firstName}
           onUpdateFirstName={updateFirstName}
+          onUpdatePassword={updatePassword}
           onSignOut={signOut}
           onStartOnboarding={handleStartOnboarding}
         />

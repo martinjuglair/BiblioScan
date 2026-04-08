@@ -3,15 +3,21 @@ import { useState } from "react";
 interface LoginScreenProps {
   onSignIn: (email: string, password: string) => Promise<void>;
   onSignUp: (email: string, password: string, firstName?: string) => Promise<void>;
+  onResetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
   loading: boolean;
   error: string | null;
 }
 
-export function LoginScreen({ onSignIn, onSignUp, loading, error }: LoginScreenProps) {
+export function LoginScreen({ onSignIn, onSignUp, onResetPassword, loading, error }: LoginScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +111,16 @@ export function LoginScreen({ onSignIn, onSignUp, loading, error }: LoginScreenP
           )}
         </button>
 
+        {!isSignUp && (
+          <button
+            type="button"
+            onClick={() => { setShowReset(true); setResetEmail(email); setResetSent(false); setResetError(null); }}
+            className="w-full text-center text-sm text-text-tertiary"
+          >
+            Mot de passe oublié ?
+          </button>
+        )}
+
         <p className="text-center text-sm text-text-tertiary">
           {isSignUp ? "Déjà un compte ?" : "Pas encore de compte ?"}{" "}
           <button
@@ -116,6 +132,72 @@ export function LoginScreen({ onSignIn, onSignUp, loading, error }: LoginScreenP
           </button>
         </p>
       </form>
+
+      {/* Reset password modal */}
+      {showReset && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowReset(false)} />
+          <div className="relative bg-white rounded-2xl w-full max-w-sm mx-auto p-5 space-y-4 shadow-hero">
+            <h2 className="text-lg font-bold text-text-primary">Réinitialiser le mot de passe</h2>
+
+            {resetSent ? (
+              <div className="text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-status-success-bg flex items-center justify-center mx-auto">
+                  <svg className="w-7 h-7 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </div>
+                <p className="text-sm text-text-secondary">
+                  Un email de réinitialisation a été envoyé à <strong>{resetEmail}</strong>. Vérifiez votre boîte de réception.
+                </p>
+                <button onClick={() => setShowReset(false)} className="btn-primary w-full">
+                  OK
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-text-tertiary">
+                  Entrez votre email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+                </p>
+                {resetError && (
+                  <p className="text-status-error text-sm bg-status-error-bg rounded-xl p-2.5">{resetError}</p>
+                )}
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  className="input-field w-full"
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <button onClick={() => setShowReset(false)} className="btn-secondary flex-1">
+                    Annuler
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!resetEmail.trim()) return;
+                      setResetLoading(true);
+                      setResetError(null);
+                      const result = await onResetPassword(resetEmail.trim());
+                      setResetLoading(false);
+                      if (result.ok) {
+                        setResetSent(true);
+                      } else {
+                        setResetError(result.error ?? "Erreur");
+                      }
+                    }}
+                    disabled={resetLoading || !resetEmail.trim()}
+                    className="btn-primary flex-1"
+                  >
+                    {resetLoading ? "..." : "Envoyer"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

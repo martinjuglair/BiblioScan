@@ -6,14 +6,20 @@ interface ProfileProps {
   email: string;
   firstName: string | null;
   onUpdateFirstName: (name: string) => Promise<void>;
+  onUpdatePassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   onSignOut: () => Promise<void>;
   onStartOnboarding: () => void;
 }
 
-export function Profile({ email, firstName, onUpdateFirstName, onSignOut, onStartOnboarding }: ProfileProps) {
+export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword, onSignOut, onStartOnboarding }: ProfileProps) {
   const [nameInput, setNameInput] = useState(firstName ?? "");
   const [saving, setSaving] = useState(false);
   const [edited, setEdited] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const { toast } = useToast();
 
   const handleSave = async () => {
@@ -94,6 +100,25 @@ export function Profile({ email, firstName, onUpdateFirstName, onSignOut, onStar
         </div>
       </div>
 
+      {/* Change password */}
+      <button
+        onClick={() => { setShowPasswordModal(true); setNewPassword(""); setConfirmPassword(""); setPasswordError(null); }}
+        className="w-full card flex items-center gap-3 mb-2 active:scale-[0.98] transition-all"
+      >
+        <div className="w-10 h-10 rounded-xl bg-brand-bubblegum/10 flex items-center justify-center flex-shrink-0">
+          <svg className="w-5 h-5 text-brand-bubblegum" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+        </div>
+        <div className="text-left">
+          <p className="text-sm font-semibold text-text-primary">Changer le mot de passe</p>
+          <p className="text-xs text-text-tertiary">Modifier votre mot de passe</p>
+        </div>
+        <svg className="w-4 h-4 text-text-muted ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </button>
+
       {/* Replay onboarding */}
       <button
         onClick={onStartOnboarding}
@@ -120,6 +145,78 @@ export function Profile({ email, firstName, onUpdateFirstName, onSignOut, onStar
       >
         Se déconnecter
       </button>
+
+      {/* Password change modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowPasswordModal(false)} />
+          <div className="relative bg-white rounded-2xl w-full max-w-sm mx-auto p-5 space-y-4 shadow-hero">
+            <h2 className="text-lg font-bold text-text-primary">Changer le mot de passe</h2>
+
+            {passwordError && (
+              <p className="text-status-error text-sm bg-status-error-bg rounded-xl p-2.5">{passwordError}</p>
+            )}
+
+            <div>
+              <label className="text-sm text-text-secondary block mb-1 font-medium">Nouveau mot de passe</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="6 caractères minimum"
+                className="input-field w-full"
+                minLength={6}
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-text-secondary block mb-1 font-medium">Confirmer</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Retapez le mot de passe"
+                className="input-field w-full"
+                minLength={6}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setShowPasswordModal(false)} className="btn-secondary flex-1">
+                Annuler
+              </button>
+              <button
+                onClick={async () => {
+                  setPasswordError(null);
+                  if (newPassword.length < 6) {
+                    setPasswordError("Le mot de passe doit faire au moins 6 caractères");
+                    return;
+                  }
+                  if (newPassword !== confirmPassword) {
+                    setPasswordError("Les mots de passe ne correspondent pas");
+                    return;
+                  }
+                  setPasswordSaving(true);
+                  const result = await onUpdatePassword(newPassword);
+                  setPasswordSaving(false);
+                  if (result.ok) {
+                    setShowPasswordModal(false);
+                    hapticLight();
+                    toast("Mot de passe mis à jour", "success");
+                  } else {
+                    setPasswordError(result.error ?? "Erreur");
+                  }
+                }}
+                disabled={passwordSaving || !newPassword || !confirmPassword}
+                className="btn-primary flex-1"
+              >
+                {passwordSaving ? "..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

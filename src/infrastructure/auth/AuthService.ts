@@ -35,6 +35,20 @@ export class AuthService {
     return (user.user_metadata?.first_name as string) ?? null;
   }
 
+  async resetPassword(email: string): Promise<Result<void>> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    if (error) return Result.fail(error.message);
+    return Result.ok(undefined);
+  }
+
+  async updatePassword(newPassword: string): Promise<Result<void>> {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return Result.fail(error.message);
+    return Result.ok(undefined);
+  }
+
   async signOut(): Promise<Result<void>> {
     const { error } = await supabase.auth.signOut();
     if (error) return Result.fail(error.message);
