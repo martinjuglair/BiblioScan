@@ -95,6 +95,7 @@ export default function App() {
         <Library
           refreshKey={refreshKey}
           onSelectCategory={(categoryId) => setView({ screen: "category", categoryId })}
+          onSelectBook={(isbn) => setView({ screen: "book", isbn, fromCategoryId: null })}
         />
       )}
 

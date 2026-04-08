@@ -15,12 +15,13 @@ import { LazyImage } from "./LazyImage";
 interface LibraryProps {
   refreshKey: number;
   onSelectCategory: (categoryId: string | null) => void;
+  onSelectBook: (isbn: string) => void;
 }
 
 type SortOption = "name" | "count" | "recent";
 type ReadFilter = "all" | "unread" | "read";
 
-export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
+export function Library({ refreshKey, onSelectCategory, onSelectBook }: LibraryProps) {
   const [data, setData] = useState<CategorizedLibrary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -356,27 +357,37 @@ export function Library({ refreshKey, onSelectCategory }: LibraryProps) {
                 </div>
               )}
 
-              {/* Non classés */}
+              {/* Uncategorized books shown individually */}
               {showUncategorized && (
-                <div className="mt-4">
-                  <button
-                    onClick={() => onSelectCategory(null)}
-                    className="card w-full text-left active:scale-[0.98] transition-all duration-200 hover:shadow-float flex items-center gap-3"
-                  >
-                    <div className="w-12 h-12 bg-surface-subtle rounded-lg flex items-center justify-center flex-shrink-0">
-                      <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-text-secondary">Non classés</h3>
-                      <p className="text-text-tertiary text-sm">
-                        {filteredUncategorized.length} livre{filteredUncategorized.length > 1 ? "s" : ""}
-                      </p>
-                    </div>
-                  </button>
-                </div>
+                <>
+                  <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide mt-4 mb-2 px-1">
+                    Sans catégorie
+                  </h2>
+                  <div className="grid grid-cols-3 min-[360px]:grid-cols-4 gap-2">
+                    {filteredUncategorized.map((book) => (
+                      <button
+                        key={book.isbn}
+                        onClick={() => onSelectBook(book.isbn)}
+                        className="text-left active:scale-[0.97] transition-all duration-200"
+                      >
+                        {book.coverUrl ? (
+                          <LazyImage
+                            src={book.coverUrl}
+                            alt={book.title}
+                            className="w-full aspect-[2/3] rounded-lg shadow-card"
+                          />
+                        ) : (
+                          <div className="w-full aspect-[2/3] bg-surface-subtle rounded-lg flex items-center justify-center">
+                            <svg className="w-8 h-8 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                            </svg>
+                          </div>
+                        )}
+                        <p className="text-xs text-text-primary mt-1 truncate font-medium">{book.title}</p>
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}
