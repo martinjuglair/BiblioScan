@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { ReadingGroup, GroupMember, GroupBook, GroupReview, GroupActivity } from "@domain/entities/ReadingGroup";
-import { readingGroupRepository } from "@infrastructure/container";
+import { readingGroupRepository, scanComicBook } from "@infrastructure/container";
 import { BottomSheet } from "./BottomSheet";
 import { LazyImage } from "./LazyImage";
 import { useToast } from "./Toast";
@@ -66,6 +66,7 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
   const [reviewComment, setReviewComment] = useState("");
   const [savingReview, setSavingReview] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [addingToLibrary, setAddingToLibrary] = useState(false);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -131,6 +132,26 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
       await navigator.clipboard.writeText(group.inviteCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleAddToLibrary = async (book: GroupBook) => {
+    setAddingToLibrary(true);
+    const result = await scanComicBook.confirm({
+      isbn: book.isbn,
+      title: book.title,
+      authors: [],
+      publisher: "",
+      publishedDate: "",
+      coverUrl: book.coverUrl,
+      retailPrice: null,
+    });
+    setAddingToLibrary(false);
+    if (result.ok) {
+      hapticMedium();
+      toast(`"${book.title}" ajouté à votre collection`, "success");
+    } else {
+      toast(result.error, "error");
     }
   };
 
@@ -344,6 +365,24 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
         title={selectedBook?.title ?? "Avis"}
       >
         <div className="space-y-4 pb-4">
+          {/* Add to my library */}
+          {selectedBook && (
+            <button
+              onClick={() => handleAddToLibrary(selectedBook)}
+              disabled={addingToLibrary}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-grape/10 text-brand-grape font-semibold text-sm transition-all active:scale-[0.97]"
+            >
+              {addingToLibrary ? (
+                <div className="animate-spin w-4 h-4 border-2 border-brand-grape border-t-transparent rounded-full" />
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              )}
+              Ajouter à ma collection
+            </button>
+          )}
+
           {/* Existing reviews */}
           {reviews.length > 0 && (
             <div className="space-y-2">

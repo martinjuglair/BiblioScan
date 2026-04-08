@@ -7,6 +7,7 @@ interface CategoryRow {
   id: string;
   user_id: string;
   name: string;
+  emoji: string | null;
   created_at: string;
 }
 
@@ -14,6 +15,7 @@ function rowToEntity(row: CategoryRow): Category {
   return new Category({
     id: row.id,
     name: row.name,
+    emoji: row.emoji ?? null,
     createdAt: new Date(row.created_at),
   });
 }
@@ -41,12 +43,12 @@ export class SupabaseCategoryRepository implements ICategoryRepository {
     }
   }
 
-  async create(name: string): Promise<Result<Category>> {
+  async create(name: string, emoji?: string | null): Promise<Result<Category>> {
     try {
       const userId = await getUserId();
       const { data, error } = await supabase
         .from("categories")
-        .insert({ user_id: userId, name: name.trim() })
+        .insert({ user_id: userId, name: name.trim(), emoji: emoji ?? null })
         .select()
         .single();
 
