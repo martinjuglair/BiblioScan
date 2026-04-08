@@ -34,6 +34,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
   const [showBatchComplete, setShowBatchComplete] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [assigningCategory, setAssigningCategory] = useState(false);
+  const [showIsbnInput, setShowIsbnInput] = useState(false);
 
   // First name prompt state
   const [showNamePrompt, setShowNamePrompt] = useState(!firstName);
@@ -199,9 +200,8 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
             </div>
           )}
 
-          {/* Main action cards */}
+          {/* Primary actions — Scan & Title search */}
           <div className="w-full max-w-sm grid grid-cols-2 gap-3">
-            {/* Scan card */}
             <button
               onClick={handleStartScan}
               className="card text-center py-6 active:scale-[0.97] transition-all duration-200 hover:shadow-float group"
@@ -217,60 +217,74 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
               <p className="text-text-tertiary text-xs mt-0.5">Code-barres</p>
             </button>
 
-            {/* Batch scan card */}
             <button
-              onClick={() => { setBatchMode(true); setBatchCount(0); handleStartScan(); }}
+              onClick={() => setState({ step: "titleSearch" })}
               className="card text-center py-6 active:scale-[0.97] transition-all duration-200 hover:shadow-float group"
             >
               <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center transition-transform group-active:scale-90"
                 style={{ background: "linear-gradient(135deg, #F472B6 0%, #EC4899 100%)" }}>
                 <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
               </div>
-              <h3 className="font-bold text-text-primary text-sm">Scan en lot</h3>
-              <p className="text-text-tertiary text-xs mt-0.5">Enchaîner vite</p>
+              <h3 className="font-bold text-text-primary text-sm">Rechercher</h3>
+              <p className="text-text-tertiary text-xs mt-0.5">Par titre ou auteur</p>
             </button>
           </div>
 
-          {/* ISBN manual entry */}
-          <div className="w-full max-w-sm">
-            <p className="text-text-tertiary text-sm text-center my-2">ou entrer l'ISBN</p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={manualIsbn}
-                onChange={(e) => setManualIsbn(e.target.value)}
-                placeholder="978-2-2052-5..."
-                className="input-field flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleManualLookup();
-                }}
-              />
-              <button onClick={handleManualLookup} className="btn-primary px-5">
-                OK
-              </button>
-            </div>
-          </div>
-
           {/* Secondary actions */}
-          <div className="w-full max-w-sm border-t border-border pt-3 sm:pt-4 mt-1">
-            <p className="text-text-tertiary text-sm text-center mb-2 sm:mb-3">Pas de code-barres ?</p>
-            <div className="flex flex-col min-[320px]:flex-row gap-2">
+          <div className="w-full max-w-sm">
+            <p className="text-text-tertiary text-xs text-center mb-2">Autres options</p>
+            <div className="flex gap-2">
               <button
-                onClick={() => setState({ step: "titleSearch" })}
-                className="btn-secondary flex-1"
+                onClick={() => setShowIsbnInput((v) => !v)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-surface-subtle text-text-secondary text-xs font-semibold active:scale-[0.97] transition-all"
               >
-                Chercher par titre
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16h10M7 20h4" />
+                </svg>
+                ISBN
               </button>
               <button
                 onClick={() => setState({ step: "manualEntry" })}
-                className="btn-secondary flex-1"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-surface-subtle text-text-secondary text-xs font-semibold active:scale-[0.97] transition-all"
               >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" />
+                </svg>
                 Saisie manuelle
               </button>
+              <button
+                onClick={() => { setBatchMode(true); setBatchCount(0); handleStartScan(); }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-surface-subtle text-text-secondary text-xs font-semibold active:scale-[0.97] transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-1.007.661-1.862 1.572-2.14z" />
+                </svg>
+                Scan en lot
+              </button>
             </div>
+
+            {/* Collapsible ISBN input */}
+            {showIsbnInput && (
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  value={manualIsbn}
+                  onChange={(e) => setManualIsbn(e.target.value)}
+                  placeholder="978-2-2052-5..."
+                  className="input-field flex-1"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleManualLookup();
+                  }}
+                />
+                <button onClick={handleManualLookup} className="btn-primary px-5">
+                  OK
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}

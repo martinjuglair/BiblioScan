@@ -11,6 +11,7 @@ import { Profile } from "@interfaces/components/Profile";
 import { Stats } from "@interfaces/components/Stats";
 import { BottomNav } from "@interfaces/components/BottomNav";
 import { ToastProvider } from "@interfaces/components/Toast";
+import { Onboarding } from "@interfaces/components/Onboarding";
 
 type Tab = "library" | "groups" | "scanner" | "stats" | "profile";
 
@@ -25,8 +26,20 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("scanner");
   const [view, setView] = useState<View>({ screen: "main" });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem("biblioscan-onboarding-v1");
+  });
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  const handleOnboardingComplete = useCallback(() => {
+    localStorage.setItem("biblioscan-onboarding-v1", "1");
+    setShowOnboarding(false);
+  }, []);
+
+  const handleStartOnboarding = useCallback(() => {
+    setShowOnboarding(true);
+  }, []);
 
   const handleTabChange = (newTab: Tab) => {
     setTab(newTab);
@@ -65,6 +78,9 @@ export default function App() {
   // Authenticated
   return (
     <ToastProvider>
+    {showOnboarding && (
+      <Onboarding firstName={firstName} onComplete={handleOnboardingComplete} />
+    )}
     <div className="min-h-screen pb-20 max-w-lg mx-auto px-safe">
       {/* Header bar */}
       <div className="flex items-center justify-between p-3">
@@ -141,6 +157,7 @@ export default function App() {
           firstName={firstName}
           onUpdateFirstName={updateFirstName}
           onSignOut={signOut}
+          onStartOnboarding={handleStartOnboarding}
         />
       )}
 
