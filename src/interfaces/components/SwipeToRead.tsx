@@ -6,8 +6,9 @@ interface SwipeToReadProps {
   onChange: (isRead: boolean) => void;
 }
 
-const THUMB_SIZE = 52;
+const THUMB_SIZE = 56;
 const PADDING = 4;
+const TRACK_HEIGHT = THUMB_SIZE + PADDING * 2;
 
 /**
  * Full-width swipe-to-unlock style toggle for read status.
@@ -20,13 +21,13 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
   const [celebrating, setCelebrating] = useState(false);
   const startX = useRef(0);
   const hasMoved = useRef(false);
-  const trackWidth = useRef(0);
+  const maxRef = useRef(200);
 
-  const getMaxOffset = () => {
+  const measureMax = () => {
     if (trackRef.current) {
-      trackWidth.current = trackRef.current.offsetWidth;
+      maxRef.current = trackRef.current.offsetWidth - THUMB_SIZE - PADDING * 2;
     }
-    return trackWidth.current - THUMB_SIZE - PADDING * 2;
+    return maxRef.current;
   };
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -35,14 +36,14 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
     hasMoved.current = false;
     setDragging(true);
     setOffset(0);
-    getMaxOffset();
+    measureMax();
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     e.stopPropagation();
     const dx = e.touches[0]!.clientX - startX.current;
     if (Math.abs(dx) > 4) hasMoved.current = true;
-    const max = getMaxOffset();
+    const max = maxRef.current;
 
     if (isRead) {
       setOffset(Math.max(-max, Math.min(0, dx)));
@@ -51,90 +52,92 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
     }
   }, [isRead]);
 
+  const trigger = useCallback((newVal: boolean) => {
+    if (newVal) {
+      hapticSuccess();
+      setCelebrating(true);
+      setTimeout(() => setCelebrating(false), 800);
+    } else {
+      hapticLight();
+    }
+    onChange(newVal);
+    setOffset(0);
+  }, [onChange]);
+
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     e.stopPropagation();
     setDragging(false);
-    const max = getMaxOffset();
-    const threshold = max * 0.45;
+    const max = maxRef.current;
 
     if (!hasMoved.current) {
-      const newVal = !isRead;
-      if (newVal) {
-        hapticSuccess();
-        setCelebrating(true);
-        setTimeout(() => setCelebrating(false), 800);
-      } else {
-        hapticLight();
-      }
-      onChange(newVal);
-      setOffset(0);
+      trigger(!isRead);
       return;
     }
 
-    const absOffset = Math.abs(offset);
-    if (absOffset > threshold) {
-      const newVal = !isRead;
-      if (newVal) {
-        hapticSuccess();
-        setCelebrating(true);
-        setTimeout(() => setCelebrating(false), 800);
-      } else {
-        hapticLight();
-      }
-      onChange(newVal);
+    if (Math.abs(offset) > max * 0.4) {
+      trigger(!isRead);
+    } else {
+      setOffset(0);
     }
-    setOffset(0);
-  }, [isRead, offset, onChange]);
+  }, [isRead, offset, trigger]);
 
-  const maxOffset = getMaxOffset() || 200;
-  const thumbPos = isRead ? maxOffset + offset : offset;
-  const progress = Math.max(0, Math.min(1, thumbPos / maxOffset));
+  const max = maxRef.current;
+  const thumbPos = isRead ? max + offset : offset;
+  const progress = max > 0 ? Math.max(0, Math.min(1, thumbPos / max)) : 0;
+
+  // Gradient fills continuously from left based on progress
+  const gradientStop = Math.round(progress * 100);
 
   return (
     <div
       ref={trackRef}
-      className="relative w-full select-none touch-none"
-      style={{ height: THUMB_SIZE + PADDING * 2 }}
+      className="relative w-full select-none touch-none overflow-hidden rounded-full"
+      style={{ height: TRACK_HEIGHT }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Track background */}
+      {/* Track background — smooth gradient fill */}
       <div
-        className="absolute inset-0 rounded-full overflow-hidden transition-all duration-300"
+        className="absolute inset-0 rounded-full"
         style={{
-          background: progress > 0.5
-            ? `linear-gradient(90deg, rgba(139,92,246,${0.15 + progress * 0.25}), rgba(244,114,182,${0.1 + progress * 0.2}))`
+          background: progress > 0.02
+            ? `linear-gradient(90deg, rgba(139,92,246,0.25) 0%, rgba(244,114,182,0.2) ${gradientStop}%, #F0F0F3 ${gradientStop}%)`
             : "#F0F0F3",
+          transition: dragging ? "none" : "background 400ms ease-out",
+        }}
+      />
+
+      {/* Shimmer when not read and not dragging */}
+      {!isRead && !dragging && (
+        <div
+          className="absolute inset-0 rounded-full opacity-40 pointer-events-none"
+          style={{
+            background: "linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.25) 40%, rgba(244,114,182,0.3) 60%, transparent 100%)",
+            backgroundSize: "250% 100%",
+            animation: "shimmer 3s ease-in-out infinite",
+          }}
+        />
+      )}
+
+      {/* Label — centered in remaining space */}
+      <div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        style={{
+          // Offset the text center away from the thumb
+          paddingLeft: isRead ? 0 : THUMB_SIZE + PADDING,
+          paddingRight: isRead ? THUMB_SIZE + PADDING : 0,
+          transition: dragging ? "none" : "opacity 300ms",
+          opacity: dragging ? 0.3 : 1,
         }}
       >
-        {/* Shimmer when not read */}
-        {!isRead && !dragging && (
-          <div
-            className="absolute inset-0 opacity-50"
-            style={{
-              background: "linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.2) 40%, rgba(244,114,182,0.25) 60%, transparent 100%)",
-              backgroundSize: "250% 100%",
-              animation: "shimmer 3s ease-in-out infinite",
-            }}
-          />
-        )}
-
-        {/* Track label */}
-        <div className="absolute inset-0 flex items-center pointer-events-none">
-          <span
-            className={`text-sm font-bold tracking-wide transition-all duration-300 ${
-              isRead ? "text-brand-grape" : "text-text-muted"
-            } ${dragging ? "opacity-0" : "opacity-100"}`}
-            style={{
-              position: "absolute",
-              left: isRead ? "24px" : undefined,
-              right: isRead ? undefined : "24px",
-            }}
-          >
-            {isRead ? "✓ Lu" : "Glisser pour marquer lu →"}
-          </span>
-        </div>
+        <span
+          className={`text-sm font-bold tracking-wide ${
+            isRead ? "text-brand-grape" : "text-text-muted"
+          }`}
+        >
+          {isRead ? "✓ Lu" : "Glisser pour marquer lu →"}
+        </span>
       </div>
 
       {/* Thumb */}
@@ -144,19 +147,21 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
           width: THUMB_SIZE,
           height: THUMB_SIZE,
           top: PADDING,
-          left: PADDING + Math.max(0, Math.min(maxOffset, thumbPos)),
-          transition: dragging ? "none" : "left 400ms cubic-bezier(0.34, 1.56, 0.64, 1), background 300ms, box-shadow 300ms",
-          background: progress > 0.5
-            ? "linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%)"
+          left: PADDING + Math.max(0, Math.min(max, thumbPos)),
+          transition: dragging
+            ? "background 150ms, box-shadow 150ms"
+            : "left 400ms cubic-bezier(0.34, 1.56, 0.64, 1), background 300ms, box-shadow 300ms",
+          background: progress > 0.3
+            ? `linear-gradient(135deg, rgba(139,92,246,${0.5 + progress * 0.5}) 0%, rgba(244,114,182,${0.3 + progress * 0.7}) 100%)`
             : "white",
-          boxShadow: progress > 0.5
-            ? "0 4px 15px rgba(139,92,246,0.4)"
+          boxShadow: progress > 0.3
+            ? `0 4px 15px rgba(139,92,246,${progress * 0.5})`
             : "0 2px 8px rgba(0,0,0,0.12)",
         }}
       >
-        {progress > 0.5 ? (
+        {progress > 0.3 ? (
           <svg
-            className={`w-6 h-6 text-white transition-transform duration-300 ${celebrating ? "scale-125" : "scale-100"}`}
+            className={`w-6 h-6 text-white transition-transform duration-200 ${celebrating ? "scale-125" : "scale-100"}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -174,14 +179,14 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
       {/* Celebration particles */}
       {celebrating && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
-          {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
             <div
               key={deg}
               className="absolute w-2 h-2 rounded-full"
               style={{
-                left: `${PADDING + Math.min(maxOffset, thumbPos) + THUMB_SIZE / 2}px`,
+                left: `${PADDING + Math.min(max, thumbPos) + THUMB_SIZE / 2}px`,
                 top: "50%",
-                background: deg % 60 === 0 ? "#8B5CF6" : deg % 60 === 30 ? "#F472B6" : "#A78BFA",
+                background: deg % 90 === 0 ? "#8B5CF6" : "#F472B6",
                 animation: "sparkle-burst 700ms ease-out forwards",
                 transform: `rotate(${deg}deg) translateY(-4px)`,
               }}
