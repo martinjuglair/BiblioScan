@@ -14,65 +14,10 @@ function setGoalStorage(n: number) {
   localStorage.setItem(GOAL_KEY, String(n));
 }
 
-// --- Level system ---
-const LEVELS = [
-  { level: 1, name: "Curieux", min: 0, icon: "seed" },
-  { level: 2, name: "Lecteur", min: 5, icon: "sprout" },
-  { level: 3, name: "Passionné", min: 15, icon: "tree" },
-  { level: 4, name: "Dévoreur", min: 30, icon: "fire" },
-  { level: 5, name: "Bibliophile", min: 50, icon: "star" },
-  { level: 6, name: "Maître lecteur", min: 100, icon: "crown" },
-] as const;
-
-function getLevel(readCount: number) {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (readCount >= LEVELS[i]!.min) return LEVELS[i]!;
-  }
-  return LEVELS[0]!;
-}
-
-function getNextLevel(readCount: number) {
-  const current = getLevel(readCount);
-  const idx = LEVELS.findIndex((l) => l.level === current.level);
-  return idx < LEVELS.length - 1 ? LEVELS[idx + 1]! : null;
-}
-
-const LEVEL_ICONS: Record<string, string> = {
-  seed: "\ud83c\udf31",
-  sprout: "\ud83c\udf3f",
-  tree: "\ud83c\udf33",
-  fire: "\ud83d\udd25",
-  star: "\u2b50",
-  crown: "\ud83d\udc51",
-};
-
-// --- Badges ---
-interface BadgeDef {
-  id: string;
-  name: string;
-  description: string;
-  emoji: string;
-  check: (books: ComicBook[], streakData?: { current: number; best: number; total: number }) => boolean;
-}
-
-const BADGES: BadgeDef[] = [
-  { id: "first", name: "Premier pas", description: "Ajouter votre 1er livre", emoji: "\ud83d\udcda", check: (b) => b.length >= 1 },
-  { id: "ten", name: "Beau début", description: "10 livres dans la collection", emoji: "\ud83c\udf1f", check: (b) => b.length >= 10 },
-  { id: "fifty", name: "Collectionneur", description: "50 livres collectionnés", emoji: "\ud83c\udfc6", check: (b) => b.length >= 50 },
-  { id: "reader5", name: "Lecteur assidu", description: "5 livres lus", emoji: "\ud83d\udcd6", check: (b) => b.filter((x) => x.isRead).length >= 5 },
-  { id: "reader20", name: "Rat de bibliothèque", description: "20 livres lus", emoji: "\ud83d\udc00", check: (b) => b.filter((x) => x.isRead).length >= 20 },
-  { id: "critic", name: "Critique littéraire", description: "Noter 10 livres", emoji: "\u2b50", check: (b) => b.filter((x) => x.rating).length >= 10 },
-  { id: "top", name: "Coup de coeur", description: "Donner un 5/5", emoji: "\u2764\ufe0f", check: (b) => b.some((x) => x.rating === 5) },
-  { id: "diverse", name: "Éclectique", description: "5 éditeurs différents", emoji: "\ud83c\udf0d", check: (b) => new Set(b.map((x) => x.publisher).filter(Boolean)).size >= 5 },
-  { id: "streak3", name: "Régulier", description: "3 jours de lecture d'affilée", emoji: "\ud83d\udd25", check: (_b, s) => (s?.best ?? 0) >= 3 },
-  { id: "streak7", name: "Semaine parfaite", description: "7 jours de lecture consécutifs", emoji: "\ud83c\udf1f", check: (_b, s) => (s?.best ?? 0) >= 7 },
-  { id: "streak30", name: "Inarrêtable", description: "30 jours de lecture d'affilée", emoji: "\ud83d\udc8e", check: (_b, s) => (s?.best ?? 0) >= 30 },
-];
-
 // --- Daily reading log (localStorage) ---
 const LOG_KEY = "biblioscan-reading-log";
 
-function getReadingLog(): string[] {
+export function getReadingLog(): string[] {
   try {
     return JSON.parse(localStorage.getItem(LOG_KEY) ?? "[]");
   } catch {
@@ -101,7 +46,7 @@ function logToday(log: string[]): string[] {
   return updated;
 }
 
-function computeStreak(log: string[]): { current: number; best: number; total: number } {
+export function computeStreak(log: string[]): { current: number; best: number; total: number } {
   if (log.length === 0) return { current: 0, best: 0, total: 0 };
 
   const DAY = 86400000;
@@ -113,7 +58,6 @@ function computeStreak(log: string[]): { current: number; best: number; total: n
   const sorted = [...new Set(log)].sort().reverse();
   const total = sorted.length;
 
-  // Current streak: consecutive days from today/yesterday backwards
   const today = new Date();
   const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   const latestMs = toMs(sorted[0]!);
@@ -132,7 +76,6 @@ function computeStreak(log: string[]): { current: number; best: number; total: n
     }
   }
 
-  // Best streak
   let best = 1;
   let streak = 1;
   const ascending = [...sorted].reverse();
@@ -148,32 +91,81 @@ function computeStreak(log: string[]): { current: number; best: number; total: n
   return { current, best: Math.max(best, current), total };
 }
 
+// --- Level system ---
+export const LEVELS = [
+  { level: 1, name: "Curieux", min: 0, icon: "seed" },
+  { level: 2, name: "Lecteur", min: 5, icon: "sprout" },
+  { level: 3, name: "Passionné", min: 15, icon: "tree" },
+  { level: 4, name: "Dévoreur", min: 30, icon: "fire" },
+  { level: 5, name: "Bibliophile", min: 50, icon: "star" },
+  { level: 6, name: "Maître lecteur", min: 100, icon: "crown" },
+] as const;
+
+export function getLevel(readCount: number) {
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (readCount >= LEVELS[i]!.min) return LEVELS[i]!;
+  }
+  return LEVELS[0]!;
+}
+
+export function getNextLevel(readCount: number) {
+  const current = getLevel(readCount);
+  const idx = LEVELS.findIndex((l) => l.level === current.level);
+  return idx < LEVELS.length - 1 ? LEVELS[idx + 1]! : null;
+}
+
+export const LEVEL_ICONS: Record<string, string> = {
+  seed: "\ud83c\udf31",
+  sprout: "\ud83c\udf3f",
+  tree: "\ud83c\udf33",
+  fire: "\ud83d\udd25",
+  star: "\u2b50",
+  crown: "\ud83d\udc51",
+};
+
+// --- Badges ---
+export interface BadgeDef {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  check: (books: ComicBook[], streakData?: { current: number; best: number; total: number }) => boolean;
+}
+
+export const BADGES: BadgeDef[] = [
+  { id: "first", name: "Premier pas", description: "Ajouter votre 1er livre", emoji: "\ud83d\udcda", check: (b) => b.length >= 1 },
+  { id: "ten", name: "Beau début", description: "10 livres dans la collection", emoji: "\ud83c\udf1f", check: (b) => b.length >= 10 },
+  { id: "fifty", name: "Collectionneur", description: "50 livres collectionnés", emoji: "\ud83c\udfc6", check: (b) => b.length >= 50 },
+  { id: "reader5", name: "Lecteur assidu", description: "5 livres lus", emoji: "\ud83d\udcd6", check: (b) => b.filter((x) => x.isRead).length >= 5 },
+  { id: "reader20", name: "Rat de bibliothèque", description: "20 livres lus", emoji: "\ud83d\udc00", check: (b) => b.filter((x) => x.isRead).length >= 20 },
+  { id: "critic", name: "Critique littéraire", description: "Noter 10 livres", emoji: "\u2b50", check: (b) => b.filter((x) => x.rating).length >= 10 },
+  { id: "top", name: "Coup de coeur", description: "Donner un 5/5", emoji: "\u2764\ufe0f", check: (b) => b.some((x) => x.rating === 5) },
+  { id: "diverse", name: "Éclectique", description: "5 éditeurs différents", emoji: "\ud83c\udf0d", check: (b) => new Set(b.map((x) => x.publisher).filter(Boolean)).size >= 5 },
+  { id: "streak3", name: "Régulier", description: "3 jours de lecture d'affilée", emoji: "\ud83d\udd25", check: (_b, s) => (s?.best ?? 0) >= 3 },
+  { id: "streak7", name: "Semaine parfaite", description: "7 jours de lecture consécutifs", emoji: "\ud83c\udf1f", check: (_b, s) => (s?.best ?? 0) >= 7 },
+  { id: "streak30", name: "Inarrêtable", description: "30 jours de lecture d'affilée", emoji: "\ud83d\udc8e", check: (_b, s) => (s?.best ?? 0) >= 30 },
+];
+
 // --- Reading history by month ---
 function getReadingHistory(books: ComicBook[]): { month: string; books: ComicBook[] }[] {
   const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
   const readBooks = books.filter((b) => b.readAt).sort((a, b) => b.readAt!.getTime() - a.readAt!.getTime());
 
   const groups = new Map<string, ComicBook[]>();
-  for (const book of readBooks) {
-    const d = book.readAt!;
-    const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
-    const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(book);
-    // Store label on first entry
-    if (!groups.has(`label_${key}`)) groups.set(`label_${key}`, []);
-    groups.set(`label_${key}`, [{ label } as unknown as ComicBook]);
-  }
-
   const result: { month: string; books: ComicBook[] }[] = [];
   const seen = new Set<string>();
+
   for (const book of readBooks) {
     const d = book.readAt!;
     const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
-    result.push({ month: label, books: groups.get(key)! });
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(book);
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
+      result.push({ month: label, books: groups.get(key)! });
+    }
   }
   return result;
 }
@@ -204,8 +196,6 @@ export function Stats() {
   useEffect(() => { load(); }, [load]);
 
   const stats = useMemo(() => computeStats(books, categoryCount), [books, categoryCount]);
-  const readCount = useMemo(() => books.filter((b) => b.isRead).length, [books]);
-  const readPercent = books.length > 0 ? Math.round((readCount / books.length) * 100) : 0;
 
   // Year goal progress
   const now = new Date();
@@ -214,20 +204,9 @@ export function Stats() {
   [books, now]);
   const goalPercent = goal > 0 ? Math.min(100, Math.round((yearReadCount / goal) * 100)) : 0;
 
-  // Level
-  const level = getLevel(readCount);
-  const nextLevel = getNextLevel(readCount);
-  const levelProgress = nextLevel
-    ? ((readCount - level.min) / (nextLevel.min - level.min)) * 100
-    : 100;
-
-  // Streak (from daily reading log)
+  // Streak
   const streak = useMemo(() => computeStreak(readingLog), [readingLog]);
   const loggedToday = hasLoggedToday(readingLog);
-
-  // Badges
-  const earnedBadges = useMemo(() => BADGES.filter((b) => b.check(books, streak)), [books, streak]);
-  const lockedBadges = useMemo(() => BADGES.filter((b) => !b.check(books, streak)), [books, streak]);
 
   // Reading history
   const history = useMemo(() => getReadingHistory(books), [books]);
@@ -267,125 +246,107 @@ export function Stats() {
   return (
     <PullToRefresh onRefresh={load}>
       <div className="px-3 sm:px-4 py-4">
+
+        {/* Hero: Streak + Daily CTA */}
+        <div
+          className="rounded-2xl p-4 mb-4 text-white"
+          style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%)" }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold opacity-80">Streak en cours</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-2xl">{streak.current > 0 ? "\ud83d\udd25" : "\u2744\ufe0f"}</span>
+                <span className="text-3xl font-extrabold leading-none">{streak.current} j</span>
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-[11px] opacity-75">
+                {streak.best > streak.current && <span>Record : {streak.best} j</span>}
+                <span>{streak.total} jour{streak.total > 1 ? "s" : ""} au total</span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (!loggedToday) {
+                  hapticSuccess();
+                  setReadingLog(logToday(readingLog));
+                  setJustLogged(true);
+                  setTimeout(() => setJustLogged(false), 2000);
+                }
+              }}
+              disabled={loggedToday}
+              className="flex-shrink-0 px-5 py-3 rounded-full font-bold text-sm transition-all active:scale-95"
+              style={{
+                background: loggedToday ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.2)",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              {loggedToday
+                ? justLogged ? "✓ Noté !" : "✓ Lu"
+                : "J'ai lu"}
+            </button>
+          </div>
+        </div>
+
         <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">Statistiques</h1>
 
-        {/* Level card */}
-        <div className="card mb-3 relative overflow-hidden">
-          <div className="flex items-center gap-3">
-            <div className="text-3xl">{LEVEL_ICONS[level.icon]}</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-grape uppercase">Niveau {level.level}</span>
-                <span className="text-sm font-bold text-text-primary">{level.name}</span>
-              </div>
-              {nextLevel ? (
-                <>
-                  <div className="h-2 bg-surface-subtle rounded-full overflow-hidden mt-1.5">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${levelProgress}%`,
-                        background: "linear-gradient(90deg, #8B5CF6, #F472B6)",
-                      }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-text-muted mt-1">
-                    {readCount}/{nextLevel.min} livres lus pour "{nextLevel.name}" {LEVEL_ICONS[nextLevel.icon]}
-                  </p>
-                </>
-              ) : (
-                <p className="text-[10px] text-status-success font-semibold mt-1">Niveau maximum atteint !</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Reading goal + streak row */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {/* Annual goal */}
-          <div className="card text-center py-3" onClick={() => { setEditingGoal(true); setGoalInput(goal > 0 ? String(goal) : ""); }}>
-            {goal > 0 ? (
-              <>
-                <div className="relative w-14 h-14 mx-auto">
-                  <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
-                    <circle cx="28" cy="28" r="23" fill="none" stroke="#F5F3FF" strokeWidth="4" />
-                    <circle
-                      cx="28" cy="28" r="23" fill="none"
-                      stroke={goalPercent >= 100 ? "#22C55E" : "#FBBF24"} strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeDasharray={`${2 * Math.PI * 23}`}
-                      strokeDashoffset={`${2 * Math.PI * 23 * (1 - goalPercent / 100)}`}
-                      className="transition-all duration-700"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-sm font-bold text-text-primary">{yearReadCount}/{goal}</span>
-                  </div>
-                </div>
-                <p className="text-[11px] text-text-tertiary mt-1">
-                  Objectif {now.getFullYear()}
-                </p>
-                {goalPercent >= 100 && (
-                  <p className="text-[10px] text-status-success font-bold mt-0.5">Objectif atteint !</p>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="text-2xl mb-1">{"\ud83c\udfaf"}</div>
-                <p className="text-xs text-brand-grape font-semibold">Fixer un objectif</p>
-                <p className="text-[10px] text-text-muted mt-0.5">Livres à lire en {now.getFullYear()}</p>
-              </>
-            )}
-          </div>
-
-          {/* Streak + daily check-in */}
-          <div className="card text-center py-3">
-            <div className="text-2xl mb-1">{streak.current > 0 ? "\ud83d\udd25" : "\u2744\ufe0f"}</div>
-            <span className="text-xl font-bold text-text-primary">{streak.current}</span>
-            <p className="text-[11px] text-text-tertiary">jour{streak.current > 1 ? "s" : ""} de suite</p>
-            {streak.best > streak.current && (
-              <p className="text-[10px] text-text-muted mt-0.5">Record : {streak.best} j</p>
-            )}
-            <p className="text-[10px] text-text-muted">{streak.total} jour{streak.total > 1 ? "s" : ""} au total</p>
-          </div>
-        </div>
-
-        {/* Daily reading check-in button */}
-        <button
-          onClick={() => {
-            if (!loggedToday) {
-              hapticSuccess();
-              setReadingLog(logToday(readingLog));
-              setJustLogged(true);
-              setTimeout(() => setJustLogged(false), 2000);
-            }
-          }}
-          disabled={loggedToday}
-          className={`w-full mb-3 py-3.5 rounded-card font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
-            loggedToday
-              ? "bg-status-success/10 text-status-success border border-status-success/20"
-              : "active:scale-[0.97] shadow-card text-white"
-          }`}
-          style={!loggedToday ? {
-            background: "linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%)",
-          } : undefined}
+        {/* Annual goal */}
+        <div
+          className="card mb-3 flex items-center gap-4"
+          onClick={() => { setEditingGoal(true); setGoalInput(goal > 0 ? String(goal) : ""); }}
         >
-          {loggedToday ? (
+          {goal > 0 ? (
             <>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              {justLogged ? "C'est noté !" : "Lu aujourd'hui"}
+              <div className="relative w-20 h-20 flex-shrink-0">
+                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                  <circle cx="40" cy="40" r="34" fill="none" stroke="#F5F3FF" strokeWidth="6" />
+                  <circle
+                    cx="40" cy="40" r="34" fill="none"
+                    stroke="url(#goalGrad)" strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${2 * Math.PI * 34}`}
+                    strokeDashoffset={`${2 * Math.PI * 34 * (1 - goalPercent / 100)}`}
+                    className="transition-all duration-700"
+                  />
+                  <defs>
+                    <linearGradient id="goalGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#8B5CF6" />
+                      <stop offset="100%" stopColor="#F472B6" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-extrabold text-text-primary">{yearReadCount}<span className="text-text-muted font-semibold text-sm">/{goal}</span></span>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-bold text-text-primary">Objectif {now.getFullYear()}</h3>
+                <p className="text-sm text-text-tertiary mt-0.5">
+                  {goalPercent}% — {goal - yearReadCount > 0 ? `${goal - yearReadCount} livres restants` : ""}
+                </p>
+                {goalPercent >= 100 ? (
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success">
+                    Objectif atteint !
+                  </span>
+                ) : goalPercent >= 50 ? (
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success">
+                    En bonne voie
+                  </span>
+                ) : null}
+              </div>
             </>
           ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            <div className="flex items-center gap-3 w-full">
+              <div className="text-3xl">{"\ud83c\udfaf"}</div>
+              <div>
+                <p className="text-sm font-bold text-brand-grape">Fixer un objectif de lecture</p>
+                <p className="text-xs text-text-muted mt-0.5">Combien de livres en {now.getFullYear()} ?</p>
+              </div>
+              <svg className="w-4 h-4 text-text-muted ml-auto flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
-              J'ai lu aujourd'hui
-            </>
+            </div>
           )}
-        </button>
+        </div>
 
         {/* Goal edit modal */}
         {editingGoal && (
@@ -410,102 +371,48 @@ export function Stats() {
           </div>
         )}
 
-        {/* Reading progress ring */}
-        <div className="card flex items-center gap-4 mb-3">
-          <div className="relative w-20 h-20 flex-shrink-0">
-            <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-              <circle cx="40" cy="40" r="34" fill="none" stroke="#F5F3FF" strokeWidth="6" />
-              <circle
-                cx="40" cy="40" r="34" fill="none"
-                stroke="url(#progressGrad)" strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 34}`}
-                strokeDashoffset={`${2 * Math.PI * 34 * (1 - readPercent / 100)}`}
-                className="transition-all duration-700"
-              />
-              <defs>
-                <linearGradient id="progressGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#8B5CF6" />
-                  <stop offset="100%" stopColor="#F472B6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-lg font-bold text-text-primary">{readPercent}%</span>
-            </div>
-          </div>
-          <div>
-            <h2 className="font-bold text-text-primary">Progression lecture</h2>
-            <p className="text-sm text-text-tertiary mt-0.5">
-              {readCount} lu{readCount > 1 ? "s" : ""} sur {books.length} livre{books.length > 1 ? "s" : ""}
-            </p>
-            <p className="text-xs text-text-muted mt-1">
-              {books.length - readCount} restant{books.length - readCount > 1 ? "s" : ""} à lire
-            </p>
-          </div>
-        </div>
-
-        {/* Badges */}
-        <div className="card mb-3">
-          <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
-            Badges ({earnedBadges.length}/{BADGES.length})
-          </h3>
-          <div className="grid grid-cols-4 gap-2">
-            {earnedBadges.map((badge) => (
-              <div key={badge.id} className="text-center">
-                <div className="text-2xl mb-0.5">{badge.emoji}</div>
-                <p className="text-[10px] text-text-primary font-semibold leading-tight">{badge.name}</p>
-              </div>
-            ))}
-            {lockedBadges.map((badge) => (
-              <div key={badge.id} className="text-center opacity-30">
-                <div className="text-2xl mb-0.5 grayscale">{badge.emoji}</div>
-                <p className="text-[10px] text-text-muted leading-tight">{badge.name}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Main stats row */}
+        {/* Main stats */}
         <div className="grid grid-cols-3 gap-2 mb-3">
           <StatBadge value={stats.totalBooks} label="Livres" color="brand-grape" />
           <StatBadge value={stats.totalCategories} label={stats.totalCategories > 1 ? "Catégories" : "Catégorie"} color="brand-bubblegum" />
           <StatBadge
-            value={stats.totalValue ? formatEur(stats.totalValue) : "—"}
+            value={stats.totalValue ? formatEur(stats.totalValue) : "\u2014"}
             label="Valeur neuf"
             color="status-success"
           />
         </div>
 
         {/* Quick stats */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {stats.avgPrice > 0 && (
-            <div className="card text-center py-3">
-              <span className="text-lg font-bold text-brand-mint">{formatEur(stats.avgPrice)}</span>
-              <p className="text-[11px] text-text-tertiary mt-0.5">Prix moyen</p>
-            </div>
-          )}
-          {stats.thisMonth > 0 && (
-            <div className="card text-center py-3">
-              <span className="text-lg font-bold text-brand-grape">+{stats.thisMonth}</span>
-              <p className="text-[11px] text-text-tertiary mt-0.5">Ce mois-ci</p>
-            </div>
-          )}
-          {stats.oldestBook && (
-            <div className="card text-center py-3">
-              <span className="text-lg font-bold text-text-secondary">{stats.oldestBook.year}</span>
-              <p className="text-[11px] text-text-tertiary mt-0.5">Le + ancien</p>
-              <p className="text-[10px] text-brand-grape truncate mt-0.5 font-medium">{truncate(stats.oldestBook.title, 18)}</p>
-            </div>
-          )}
-          {stats.newestBook && (
-            <div className="card text-center py-3">
-              <span className="text-lg font-bold text-brand-mint">{stats.newestBook.year}</span>
-              <p className="text-[11px] text-text-tertiary mt-0.5">Le + récent</p>
-              <p className="text-[10px] text-brand-grape truncate mt-0.5 font-medium">{truncate(stats.newestBook.title, 18)}</p>
-            </div>
-          )}
-        </div>
+        {(stats.avgPrice > 0 || stats.thisMonth > 0 || stats.oldestBook || stats.newestBook) && (
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {stats.avgPrice > 0 && (
+              <div className="card text-center py-3">
+                <span className="text-lg font-bold text-brand-mint">{formatEur(stats.avgPrice)}</span>
+                <p className="text-[11px] text-text-tertiary mt-0.5">Prix moyen</p>
+              </div>
+            )}
+            {stats.thisMonth > 0 && (
+              <div className="card text-center py-3">
+                <span className="text-lg font-bold text-brand-grape">+{stats.thisMonth}</span>
+                <p className="text-[11px] text-text-tertiary mt-0.5">Ce mois-ci</p>
+              </div>
+            )}
+            {stats.oldestBook && (
+              <div className="card text-center py-3">
+                <span className="text-lg font-bold text-text-secondary">{stats.oldestBook.year}</span>
+                <p className="text-[11px] text-text-tertiary mt-0.5">Le + ancien</p>
+                <p className="text-[10px] text-brand-grape truncate mt-0.5 font-medium">{truncate(stats.oldestBook.title, 18)}</p>
+              </div>
+            )}
+            {stats.newestBook && (
+              <div className="card text-center py-3">
+                <span className="text-lg font-bold text-brand-mint">{stats.newestBook.year}</span>
+                <p className="text-[11px] text-text-tertiary mt-0.5">Le + récent</p>
+                <p className="text-[10px] text-brand-grape truncate mt-0.5 font-medium">{truncate(stats.newestBook.title, 18)}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Publisher distribution */}
         {stats.publishers.length > 0 && (
@@ -618,6 +525,7 @@ export function Stats() {
             </div>
           </div>
         )}
+
       </div>
     </PullToRefresh>
   );
@@ -720,3 +628,4 @@ function extractYear(date: string): string {
 function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max) + "\u2026" : str;
 }
+

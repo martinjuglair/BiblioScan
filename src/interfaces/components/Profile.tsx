@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "./Toast";
-import { hapticLight } from "@interfaces/utils/haptics";
+import { hapticLight, hapticSuccess } from "@interfaces/utils/haptics";
+import { ComicBook } from "@domain/entities/ComicBook";
+import { getCategorizedLibrary } from "@infrastructure/container";
+import { LEVEL_ICONS, getLevel, getNextLevel, BADGES, BadgeDef, computeStreak, getReadingLog } from "./Stats";
+
+const EARNED_BADGES_KEY = "biblioscan-earned-badges";
 
 interface ProfileProps {
   email: string;
@@ -20,7 +25,44 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [books, setBooks] = useState<ComicBook[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    getCategorizedLibrary.execute().then((result) => {
+      if (result.ok) {
+        setBooks([
+          ...result.value.categories.flatMap((c) => c.books),
+          ...result.value.uncategorized,
+        ]);
+      }
+    });
+  }, []);
+
+  const readCount = useMemo(() => books.filter((b) => b.isRead).length, [books]);
+  const level = getLevel(readCount);
+  const nextLevel = getNextLevel(readCount);
+  const levelProgress = nextLevel ? ((readCount - level.min) / (nextLevel.min - level.min)) * 100 : 100;
+  const streak = useMemo(() => computeStreak(getReadingLog()), []);
+  const earnedBadges = useMemo(() => BADGES.filter((b) => b.check(books, streak)), [books, streak]);
+  const lockedBadges = useMemo(() => BADGES.filter((b) => !b.check(books, streak)), [books, streak]);
+
+  // New badge celebration
+  const [celebratingBadge, setCelebratingBadge] = useState<BadgeDef | null>(null);
+
+  useEffect(() => {
+    if (earnedBadges.length === 0) return;
+    const prevIds: string[] = JSON.parse(localStorage.getItem(EARNED_BADGES_KEY) ?? "[]");
+    const currentIds = earnedBadges.map((b) => b.id);
+    const newlyEarned = earnedBadges.filter((b) => !prevIds.includes(b.id));
+    localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(currentIds));
+    if (newlyEarned.length > 0) {
+      hapticSuccess();
+      setCelebratingBadge(newlyEarned[0]!);
+    }
+  }, [earnedBadges]);
+
+  const dismissCelebration = useCallback(() => setCelebratingBadge(null), []);
 
   const handleSave = async () => {
     if (!nameInput.trim()) return;
@@ -54,6 +96,135 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
         )}
         <p className="text-sm text-text-tertiary">{email}</p>
       </div>
+
+      {/* Level card */}
+      {books.length > 0 && (
+        <div className="card mb-4">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl">{LEVEL_ICONS[level.icon]}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-brand-grape uppercase">Niveau {level.level}</span>
+                <span className="text-sm font-bold text-text-primary">{level.name}</span>
+              </div>
+              {nextLevel ? (
+                <>
+                  <div className="h-2 bg-surface-subtle rounded-full overflow-hidden mt-1.5">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${levelProgress}%`,
+                        background: "linear-gradient(90deg, #8B5CF6, #F472B6)",
+                      }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-1">
+                    {readCount}/{nextLevel.min} livres lus pour "{nextLevel.name}" {LEVEL_ICONS[nextLevel.icon]}
+                  </p>
+                </>
+              ) : (
+                <p className="text-[10px] text-status-success font-semibold mt-1">Niveau maximum atteint !</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Badges */}
+      {books.length > 0 && (
+        <div className="card mb-4">
+          <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">
+            Badges ({earnedBadges.length}/{BADGES.length})
+          </h3>
+
+          {/* Earned */}
+          {earnedBadges.length > 0 && (
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {earnedBadges.map((badge) => (
+                <div key={badge.id} className="text-center">
+                  <div className="text-2xl mb-0.5">{badge.emoji}</div>
+                  <p className="text-[10px] text-text-primary font-semibold leading-tight">{badge.name}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Locked — show description hint */}
+          {lockedBadges.length > 0 && (
+            <div className="space-y-2">
+              {earnedBadges.length > 0 && <div className="border-t border-border pt-2" />}
+              <p className="text-[10px] text-text-muted uppercase tracking-wide font-semibold">À débloquer</p>
+              {lockedBadges.map((badge) => (
+                <div key={badge.id} className="flex items-center gap-2.5">
+                  <div className="text-xl grayscale opacity-40 flex-shrink-0">{badge.emoji}</div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-text-secondary font-semibold leading-tight">{badge.name}</p>
+                    <p className="text-[10px] text-text-muted leading-tight">{badge.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Badge celebration overlay */}
+      {celebratingBadge && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center px-6" onClick={dismissCelebration}>
+          <div className="absolute inset-0 bg-black/50" style={{ animation: "fade-in 300ms ease-out" }} />
+          <div
+            className="relative bg-white rounded-3xl p-6 text-center shadow-hero max-w-xs w-full"
+            style={{ animation: "badge-pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards" }}
+          >
+            {/* Confetti particles */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+              {[
+                { x: -30, y: -50, c: "#8B5CF6", d: 0 },
+                { x: 30, y: -50, c: "#F472B6", d: 50 },
+                { x: -50, y: -20, c: "#FBBF24", d: 100 },
+                { x: 50, y: -20, c: "#34D399", d: 150 },
+                { x: -40, y: -40, c: "#F472B6", d: 80 },
+                { x: 40, y: -40, c: "#8B5CF6", d: 120 },
+                { x: -20, y: -55, c: "#38BDF8", d: 60 },
+                { x: 20, y: -55, c: "#FBBF24", d: 140 },
+                { x: 0, y: -60, c: "#34D399", d: 30 },
+                { x: -55, y: -10, c: "#F472B6", d: 180 },
+                { x: 55, y: -10, c: "#8B5CF6", d: 200 },
+                { x: 0, y: -45, c: "#38BDF8", d: 90 },
+              ].map((p, i) => (
+                <div
+                  key={i}
+                  className="absolute rounded-full"
+                  style={{
+                    width: 6 + (i % 3) * 2,
+                    height: 6 + (i % 3) * 2,
+                    left: "50%",
+                    top: "35%",
+                    background: p.c,
+                    animation: `confetti-particle 700ms ease-out ${p.d}ms forwards`,
+                    "--tx": `${p.x}px`,
+                    "--ty": `${p.y}px`,
+                    opacity: 0,
+                  } as React.CSSProperties}
+                />
+              ))}
+            </div>
+
+            <div className="text-5xl mb-3" style={{ animation: "badge-emoji 600ms ease-out 200ms both" }}>
+              {celebratingBadge.emoji}
+            </div>
+            <p className="text-xs font-bold text-brand-grape uppercase tracking-widest mb-1">Nouveau badge !</p>
+            <p className="text-lg font-bold text-text-primary mb-1">{celebratingBadge.name}</p>
+            <p className="text-sm text-text-secondary mb-4">{celebratingBadge.description}</p>
+            <button
+              onClick={dismissCelebration}
+              className="btn-primary px-6"
+            >
+              Super !
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Edit name */}
       <div className="card space-y-3 mb-4">
