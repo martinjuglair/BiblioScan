@@ -56,6 +56,14 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [shareMessage, setShareMessage] = useState("");
   const [shareRating, setShareRating] = useState(0);
   const [shareComment, setShareComment] = useState("");
+
+  // Tags
+  const [showTagInput, setShowTagInput] = useState(false);
+  const [newTag, setNewTag] = useState("");
+
+  // Buy picker
+  const [showBuyPicker, setShowBuyPicker] = useState(false);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -158,6 +166,32 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       setBook(result.value);
       onUpdated();
       toast("Avis enregistré", "success");
+    }
+  };
+
+  const handleAddTag = async () => {
+    if (!book || !newTag.trim()) return;
+    const tag = newTag.trim().toLowerCase();
+    if ((book.tags ?? []).includes(tag)) { setNewTag(""); return; }
+    const updated = [...(book.tags ?? []), tag];
+    const result = await updateBook.execute(isbn, { tags: updated });
+    if (result.ok) {
+      hapticLight();
+      setBook(result.value);
+      onUpdated();
+      toast(`Tag "${tag}" ajouté`, "success");
+    }
+    setNewTag("");
+    setShowTagInput(false);
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    if (!book) return;
+    const updated = (book.tags ?? []).filter((t) => t !== tag);
+    const result = await updateBook.execute(isbn, { tags: updated });
+    if (result.ok) {
+      setBook(result.value);
+      onUpdated();
     }
   };
 
@@ -340,21 +374,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           </span>
         </button>
 
-        {/* Buy button — shown for wishlisted books */}
-        {isWishlist && (
-          <a
-            href={`https://www.amazon.fr/s?k=${encodeURIComponent(book.isbn)}&tag=biblioscan-21`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 flex items-center gap-1.5 px-5 py-2 rounded-pill bg-[#FF9900]/10 text-[#FF9900] font-semibold text-sm transition-all active:scale-95 hover:bg-[#FF9900]/20"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-            Acheter ce livre
-          </a>
-        )}
-
         {/* Cover photo upload */}
         <label className="mt-2 flex items-center gap-1.5 text-sm text-brand-grape font-medium cursor-pointer active:opacity-60 transition-opacity">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -439,6 +458,57 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         </div>
       )}
 
+      {/* Tags */}
+      {!editing && (
+        <div className="card mt-4 space-y-3">
+          <h3 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide">Tags</h3>
+          <div className="flex flex-wrap gap-2">
+            {(book.tags ?? []).map((tag) => (
+              <button
+                key={tag}
+                onClick={() => handleRemoveTag(tag)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-brand-grape/10 text-brand-grape text-xs font-medium transition-all hover:bg-brand-grape/20 active:scale-95"
+              >
+                {tag}
+                <svg className="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            ))}
+            {showTagInput ? (
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleAddTag(); }}
+                className="flex items-center gap-1.5"
+              >
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="ex: prêté, collector..."
+                  className="w-32 px-2.5 py-1 text-xs rounded-pill border border-brand-grape focus:outline-none focus:ring-1 focus:ring-brand-grape"
+                  autoFocus
+                  maxLength={30}
+                  onBlur={() => { if (!newTag.trim()) setShowTagInput(false); }}
+                />
+                <button
+                  type="submit"
+                  className="w-6 h-6 rounded-full bg-brand-grape text-white text-xs flex items-center justify-center"
+                >
+                  +
+                </button>
+              </form>
+            ) : (
+              <button
+                onClick={() => setShowTagInput(true)}
+                className="px-3 py-1.5 rounded-pill border border-dashed border-border text-brand-grape text-xs font-medium transition-all hover:border-brand-grape active:scale-95"
+              >
+                + Ajouter un tag
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Rating & Comment */}
       {!editing && (
         <div className="card mt-4 space-y-3">
@@ -492,9 +562,67 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         </button>
       )}
 
+      {/* Buy button — all books */}
+      {!editing && (
+        <div className="relative mt-4">
+          <button
+            onClick={() => setShowBuyPicker(!showBuyPicker)}
+            className="w-full py-3 rounded-card bg-white shadow-card font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm text-brand-grape border border-border hover:shadow-float"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+            </svg>
+            Acheter ce livre
+          </button>
+          {showBuyPicker && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-float border border-border overflow-hidden z-10 animate-fadeIn">
+              <a
+                href={`https://www.amazon.fr/s?k=${encodeURIComponent(book.isbn)}&tag=biblioscan-21`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowBuyPicker(false)}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-surface-subtle transition-colors"
+              >
+                <span className="text-xl">🛒</span>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-text-primary">Amazon</p>
+                  <p className="text-xs text-text-tertiary">Livraison rapide, large choix</p>
+                </div>
+              </a>
+              <a
+                href={`https://www.fnac.com/SearchResult/ResultList.aspx?Search=${encodeURIComponent(book.isbn)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowBuyPicker(false)}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-surface-subtle transition-colors border-t border-border-light"
+              >
+                <span className="text-xl">📦</span>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-text-primary">Fnac</p>
+                  <p className="text-xs text-text-tertiary">Retrait en magasin, carte fidélité</p>
+                </div>
+              </a>
+              <a
+                href={`https://www.cultura.com/search?q=${encodeURIComponent(book.isbn)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setShowBuyPicker(false)}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-surface-subtle transition-colors border-t border-border-light"
+              >
+                <span className="text-xl">🏪</span>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-text-primary">Cultura</p>
+                  <p className="text-xs text-text-tertiary">Culture et loisirs</p>
+                </div>
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
       <button
         onClick={handleDelete}
-        className="w-full mt-4 py-3 rounded-pill bg-status-error-bg text-status-error font-semibold transition-all duration-200 active:scale-95 text-sm"
+        className="w-full mt-4 py-3 text-status-error font-medium transition-all duration-200 active:scale-95 text-sm"
       >
         Supprimer ce livre
       </button>

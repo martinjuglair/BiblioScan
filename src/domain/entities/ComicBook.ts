@@ -15,6 +15,7 @@ export interface ComicBookProps {
   rating: number | null;
   comment: string | null;
   categoryId: string | null;
+  tags: string[];
   wishlist: boolean;
   isRead: boolean;
   readAt: Date | null;
@@ -71,6 +72,9 @@ export class ComicBook {
   get categoryId(): string | null {
     return this.props.categoryId;
   }
+  get tags(): string[] {
+    return this.props.tags;
+  }
   get wishlist(): boolean {
     return this.props.wishlist;
   }
@@ -112,6 +116,7 @@ export class ComicBook {
         rating: null,
         comment: null,
         categoryId: input.categoryId ?? null,
+        tags: [],
         wishlist: false,
         isRead: false,
         readAt: null,
@@ -137,6 +142,7 @@ export class ComicBook {
     rating?: number | null;
     comment?: string | null;
     categoryId?: string | null;
+    tags?: string[];
     wishlist?: boolean;
     isRead?: boolean;
   }): ComicBook {
@@ -155,6 +161,7 @@ export class ComicBook {
       ...(updates.rating !== undefined && { rating: updates.rating }),
       ...(updates.comment !== undefined && { comment: updates.comment }),
       ...(updates.categoryId !== undefined && { categoryId: updates.categoryId }),
+      ...(updates.tags !== undefined && { tags: updates.tags }),
       ...(updates.wishlist !== undefined && { wishlist: updates.wishlist }),
       ...(updates.isRead !== undefined && { isRead: updates.isRead }),
       readAt,
@@ -176,6 +183,7 @@ export class ComicBook {
       rating: this.rating,
       comment: this.comment,
       categoryId: this.categoryId,
+      tags: this.tags,
       wishlist: this.wishlist,
       isRead: this.isRead,
       readAt: this.readAt?.toISOString() ?? null,
@@ -198,6 +206,7 @@ export interface ComicBookRecord {
   rating: number | null;
   comment: string | null;
   categoryId: string | null;
+  tags: string[];
   wishlist: boolean;
   isRead: boolean;
   readAt: string | null;

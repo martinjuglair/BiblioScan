@@ -21,6 +21,7 @@ interface ComicBookRow {
   rating: number | null;
   comment: string | null;
   category_id: string | null;
+  tags: string[];
   wishlist: boolean;
   is_read: boolean;
   read_at: string | null;
@@ -50,6 +51,7 @@ function rowToEntity(row: ComicBookRow): ComicBook {
     rating: row.rating ?? null,
     comment: row.comment ?? null,
     categoryId: row.category_id ?? null,
+    tags: row.tags ?? [],
     wishlist: row.wishlist ?? false,
     isRead: row.is_read ?? false,
     readAt: row.read_at ? new Date(row.read_at) : null,
@@ -80,6 +82,7 @@ function entityToRow(book: ComicBook, userId: string): ComicBookRow {
     rating: persistence.rating ?? null,
     comment: persistence.comment ?? null,
     category_id: persistence.categoryId ?? null,
+    tags: persistence.tags ?? [],
     wishlist: persistence.wishlist ?? false,
     is_read: persistence.isRead ?? false,
     read_at: persistence.readAt ?? null,

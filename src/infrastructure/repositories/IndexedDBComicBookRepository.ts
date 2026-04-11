@@ -32,6 +32,7 @@ function recordToEntity(record: ComicBookRecord): ComicBook {
     rating: record.rating ?? null,
     comment: record.comment ?? null,
     categoryId: record.categoryId ?? null,
+    tags: record.tags ?? [],
     wishlist: record.wishlist ?? false,
     isRead: record.isRead ?? false,
     readAt: record.readAt ? new Date(record.readAt) : null,

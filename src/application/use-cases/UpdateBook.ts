@@ -11,6 +11,7 @@ export interface UpdateBookInput {
   rating?: number | null;
   comment?: string | null;
   categoryId?: string | null;
+  tags?: string[];
   wishlist?: boolean;
   isRead?: boolean;
 }
@@ -42,6 +43,7 @@ export class UpdateBook {
       rating: input.rating,
       comment: input.comment,
       categoryId: input.categoryId,
+      tags: input.tags,
       wishlist: input.wishlist,
       isRead: input.isRead,
     });
