@@ -340,6 +340,21 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           </span>
         </button>
 
+        {/* Buy button — shown for wishlisted books */}
+        {isWishlist && (
+          <a
+            href={`https://www.amazon.fr/s?k=${encodeURIComponent(book.isbn)}&tag=biblioscan-21`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 flex items-center gap-1.5 px-5 py-2 rounded-pill bg-[#FF9900]/10 text-[#FF9900] font-semibold text-sm transition-all active:scale-95 hover:bg-[#FF9900]/20"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+            </svg>
+            Acheter ce livre
+          </a>
+        )}
+
         {/* Cover photo upload */}
         <label className="mt-2 flex items-center gap-1.5 text-sm text-brand-grape font-medium cursor-pointer active:opacity-60 transition-opacity">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
