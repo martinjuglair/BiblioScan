@@ -10,8 +10,8 @@ import {
 } from "@domain/entities/ReadingGroup";
 
 function generateInviteCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
 async function getUserId(): Promise<string> {

@@ -123,7 +123,8 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
   const handleCopyInvite = async () => {
     if (!group) return;
     hapticMedium();
-    const text = `Rejoins mon groupe de lecture "${group.name}" sur BiblioScan !\nCode d'invitation : ${group.inviteCode}`;
+    const deepLink = `biblioscan://join/${group.inviteCode}`;
+    const text = `Rejoins mon groupe de lecture "${group.name}" sur BiblioScan !\n\n👉 ${deepLink}\n\nOu entre le code : ${group.inviteCode}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: `Groupe ${group.name}`, text });
