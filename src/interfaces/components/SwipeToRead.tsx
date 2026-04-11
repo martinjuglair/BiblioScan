@@ -6,13 +6,13 @@ interface SwipeToReadProps {
   onChange: (isRead: boolean) => void;
 }
 
-const THUMB_SIZE = 56;
+const THUMB_SIZE = 52;
 const PADDING = 4;
 const TRACK_HEIGHT = THUMB_SIZE + PADDING * 2;
 
 /**
- * Full-width swipe-to-unlock style toggle for read status.
- * Grape-to-bubblegum gradient, large thumb, celebration particles.
+ * Elegant swipe-to-read toggle.
+ * Clean grape gradient, SVG icons, shimmer effect, celebration particles.
  */
 export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -85,24 +85,24 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
   const thumbPos = isRead ? max + offset : offset;
   const progress = max > 0 ? Math.max(0, Math.min(1, thumbPos / max)) : 0;
 
-  // Gradient fills continuously from left based on progress
   const gradientStop = Math.round(progress * 100);
 
   return (
     <div
       ref={trackRef}
-      className="relative w-full select-none touch-none overflow-hidden rounded-full"
-      style={{ height: TRACK_HEIGHT }}
+      className="relative w-full select-none touch-none overflow-hidden"
+      style={{ height: TRACK_HEIGHT, borderRadius: TRACK_HEIGHT / 2 }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Track background — smooth gradient fill */}
+      {/* Track background */}
       <div
-        className="absolute inset-0 rounded-full"
+        className="absolute inset-0"
         style={{
+          borderRadius: TRACK_HEIGHT / 2,
           background: progress > 0.02
-            ? `linear-gradient(90deg, rgba(139,92,246,0.25) 0%, rgba(244,114,182,0.2) ${gradientStop}%, #F0F0F3 ${gradientStop}%)`
+            ? `linear-gradient(90deg, rgba(139,92,246,0.15) 0%, rgba(139,92,246,0.1) ${gradientStop}%, #F0F0F3 ${gradientStop}%)`
             : "#F0F0F3",
           transition: dragging ? "none" : "background 400ms ease-out",
         }}
@@ -111,57 +111,58 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
       {/* Shimmer when not read and not dragging */}
       {!isRead && !dragging && (
         <div
-          className="absolute inset-0 rounded-full opacity-40 pointer-events-none"
+          className="absolute inset-0 pointer-events-none"
           style={{
-            background: "linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.25) 40%, rgba(244,114,182,0.3) 60%, transparent 100%)",
+            borderRadius: TRACK_HEIGHT / 2,
+            background: "linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.12) 45%, rgba(139,92,246,0.15) 55%, transparent 100%)",
             backgroundSize: "250% 100%",
-            animation: "shimmer 3s ease-in-out infinite",
+            animation: "shimmer 2.5s ease-in-out infinite",
           }}
         />
       )}
 
-      {/* Label — centered in remaining space */}
+      {/* Label */}
       <div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
         style={{
-          // Offset the text center away from the thumb
-          paddingLeft: isRead ? 0 : THUMB_SIZE + PADDING,
-          paddingRight: isRead ? THUMB_SIZE + PADDING : 0,
+          paddingLeft: isRead ? 0 : THUMB_SIZE + PADDING + 8,
+          paddingRight: isRead ? THUMB_SIZE + PADDING + 8 : 0,
           transition: dragging ? "none" : "opacity 300ms",
-          opacity: dragging ? 0.3 : 1,
+          opacity: dragging ? 0.2 : 1,
         }}
       >
         <span
-          className={`text-sm font-bold tracking-wide ${
-            isRead ? "text-brand-grape" : "text-text-muted"
+          className={`text-[13px] font-semibold tracking-wide ${
+            isRead ? "text-brand-grape font-bold" : "text-text-muted"
           }`}
         >
-          {isRead ? "✓ Lu" : "Glisser pour marquer lu →"}
+          {isRead ? "Lu" : "Glisser pour marquer lu"}
         </span>
       </div>
 
       {/* Thumb */}
       <div
-        className="absolute rounded-full shadow-lg flex items-center justify-center"
+        className="absolute flex items-center justify-center"
         style={{
           width: THUMB_SIZE,
           height: THUMB_SIZE,
+          borderRadius: THUMB_SIZE / 2,
           top: PADDING,
           left: PADDING + Math.max(0, Math.min(max, thumbPos)),
           transition: dragging
             ? "background 150ms, box-shadow 150ms"
             : "left 400ms cubic-bezier(0.34, 1.56, 0.64, 1), background 300ms, box-shadow 300ms",
           background: progress > 0.3
-            ? `linear-gradient(135deg, rgba(139,92,246,${0.5 + progress * 0.5}) 0%, rgba(244,114,182,${0.3 + progress * 0.7}) 100%)`
+            ? `rgba(139,92,246,${0.6 + progress * 0.4})`
             : "white",
           boxShadow: progress > 0.3
-            ? `0 4px 15px rgba(139,92,246,${progress * 0.5})`
-            : "0 2px 8px rgba(0,0,0,0.12)",
+            ? `0 4px 15px rgba(139,92,246,${progress * 0.4})`
+            : "0 2px 8px rgba(0,0,0,0.1)",
         }}
       >
         {progress > 0.3 ? (
           <svg
-            className={`w-6 h-6 text-white transition-transform duration-200 ${celebrating ? "scale-125" : "scale-100"}`}
+            className={`w-5 h-5 text-white transition-transform duration-200 ${celebrating ? "scale-125" : "scale-100"}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -170,7 +171,7 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         ) : (
-          <svg className="w-6 h-6 text-brand-grape" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-5 h-5 text-brand-grape" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         )}
@@ -178,17 +179,19 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
 
       {/* Celebration particles */}
       {celebrating && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-full">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ borderRadius: TRACK_HEIGHT / 2 }}>
           {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
             <div
               key={deg}
-              className="absolute w-2 h-2 rounded-full"
+              className="absolute rounded-full"
               style={{
+                width: 5,
+                height: 5,
                 left: `${PADDING + Math.min(max, thumbPos) + THUMB_SIZE / 2}px`,
                 top: "50%",
                 background: deg % 90 === 0 ? "#8B5CF6" : "#F472B6",
-                animation: "sparkle-burst 700ms ease-out forwards",
-                transform: `rotate(${deg}deg) translateY(-4px)`,
+                animation: "sparkle-burst 600ms ease-out forwards",
+                transform: `rotate(${deg}deg) translateY(-3px)`,
               }}
             />
           ))}

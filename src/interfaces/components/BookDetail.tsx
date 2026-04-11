@@ -54,6 +54,8 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [myGroups, setMyGroups] = useState<ReadingGroup[]>([]);
   const [sharingToGroup, setSharingToGroup] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState("");
+  const [shareRating, setShareRating] = useState(0);
+  const [shareComment, setShareComment] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -232,6 +234,8 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const handleOpenShareGroup = async () => {
     hapticLight();
     setShareMessage("");
+    setShareRating(rating ?? 0);
+    setShareComment(comment ?? "");
     setShowShareGroup(true);
     const result = await readingGroupRepository.findMyGroups();
     if (result.ok) setMyGroups(result.value);
@@ -248,6 +252,16 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       book.comment,
       shareMessage.trim() || null,
     );
+    // Also post review if rating > 0
+    if (shareRating > 0) {
+      await readingGroupRepository.addReview(
+        groupId,
+        book.isbn,
+        shareRating,
+        shareComment.trim() || null,
+        book.title,
+      );
+    }
     setSharingToGroup(null);
     if (result.ok) {
       hapticMedium();
@@ -487,6 +501,39 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
               maxLength={200}
             />
           </div>
+
+          {/* Review for group */}
+          <div>
+            <label className="text-xs text-text-secondary block mb-1 font-medium">
+              Votre avis (visible dans le groupe)
+            </label>
+            <div className="flex gap-1 mb-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setShareRating(shareRating === star ? 0 : star)}
+                  className="transition-transform active:scale-90"
+                >
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill={star <= shareRating ? "#FBBF24" : "none"} stroke={star <= shareRating ? "#FBBF24" : "currentColor"} strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+            {shareRating > 0 && (
+              <input
+                type="text"
+                value={shareComment}
+                onChange={(e) => setShareComment(e.target.value)}
+                placeholder="Commentaire (optionnel)"
+                className="input-field"
+                maxLength={300}
+              />
+            )}
+          </div>
+
+          <div className="border-t border-border-light my-2" />
 
           {myGroups.length === 0 ? (
             <p className="text-sm text-text-tertiary text-center py-4">
