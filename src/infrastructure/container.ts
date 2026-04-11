@@ -4,6 +4,7 @@ import { GoogleBooksService } from "./services/GoogleBooksService";
 import { OpenLibraryService } from "./services/OpenLibraryService";
 import { BookLookupFacade } from "./services/BookLookupFacade";
 import { BnfSearchService } from "./services/BnfSearchService";
+import { UnifiedSearchService } from "./services/UnifiedSearchService";
 import { AuthService } from "./auth/AuthService";
 import { ScanComicBook } from "@application/use-cases/ScanComicBook";
 import { GetCategorizedLibrary } from "@application/use-cases/GetCategorizedLibrary";
@@ -36,6 +37,7 @@ export const deleteBook = new DeleteBook(repository);
 
 // Search services
 export const bnfSearchService = new BnfSearchService();
+export const unifiedSearch = new UnifiedSearchService(googleBooks, bnfSearchService, lookupFacade);
 
 import { GcdService } from "./services/GcdService";
 export const gcdService = new GcdService();
