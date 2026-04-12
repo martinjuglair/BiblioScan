@@ -199,36 +199,58 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     }
   };
 
-  /** Generate a share card image using Canvas API */
+  /** Generate a share card image using Canvas API — "Cinema Poster" design */
   const generateShareCard = async (): Promise<string> => {
+    const W = 1080, H = 1920;
     const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 1920;
+    canvas.width = W;
+    canvas.height = H;
     const ctx = canvas.getContext("2d")!;
 
-    // Background gradient (dark to grape to bubblegum)
-    const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    bg.addColorStop(0, "#1E1B2E");
-    bg.addColorStop(0.35, "#2D1B69");
-    bg.addColorStop(0.7, "#8B5CF6");
-    bg.addColorStop(1, "#F472B6");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Deep dark background
+    ctx.fillStyle = "#0D0B1A";
+    ctx.fillRect(0, 0, W, H);
 
-    // Soft radial glow behind cover
-    const glow = ctx.createRadialGradient(540, 700, 0, 540, 700, 350);
-    glow.addColorStop(0, "rgba(139, 92, 246, 0.5)");
-    glow.addColorStop(1, "transparent");
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 300, 1080, 800);
+    // Ambient orbs
+    const drawOrb = (x: number, y: number, r: number, color: string) => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, color);
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    };
+    drawOrb(120, 100, 400, "rgba(139, 92, 246, 0.15)");
+    drawOrb(540, 600, 450, "rgba(99, 70, 200, 0.12)");
+    drawOrb(900, 1700, 500, "rgba(244, 114, 182, 0.10)");
+
+    // Decorative top/bottom lines
+    ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
+    ctx.fillRect(0, 0, W, 4);
+    ctx.fillStyle = "rgba(244, 114, 182, 0.3)";
+    ctx.fillRect(0, H - 4, W, 4);
+
+    ctx.textAlign = "center";
 
     // Brand
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.font = "600 36px Inter, -apple-system, sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText("BIBLIOSCAN", 100, 130);
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.font = "700 30px Inter, -apple-system, sans-serif";
+    ctx.letterSpacing = "8px";
+    ctx.fillText("BIBLIOSCAN", W / 2, 100);
+    // Brand underline
+    ctx.fillStyle = "rgba(139, 92, 246, 0.5)";
+    const brandW = 80;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - brandW / 2, 116, brandW, 3, 2);
+    ctx.fill();
 
-    // Cover image
+    // Cover
+    const cw = 520, ch = 752;
+    const cx = (W - cw) / 2, cy = 190;
+
+    // Glow behind cover
+    drawOrb(W / 2, cy + ch / 2 - 20, 420, "rgba(139, 92, 246, 0.22)");
+    drawOrb(W / 2, cy + ch / 2, 300, "rgba(139, 92, 246, 0.18)");
+
     if (book?.coverUrl) {
       try {
         const img = new window.Image();
@@ -238,112 +260,180 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           img.onerror = () => reject();
           img.src = book.coverUrl!;
         });
-        const cw = 480, ch = 690;
-        const cx = (1080 - cw) / 2, cy = 240;
-        // Shadow
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 60;
-        ctx.shadowOffsetY = 20;
-        // Rounded rect clip
-        const r = 32;
+        ctx.save();
+        // Rounded rect for cover
+        const r = 36;
         ctx.beginPath();
-        ctx.moveTo(cx + r, cy);
-        ctx.lineTo(cx + cw - r, cy);
-        ctx.quadraticCurveTo(cx + cw, cy, cx + cw, cy + r);
-        ctx.lineTo(cx + cw, cy + ch - r);
-        ctx.quadraticCurveTo(cx + cw, cy + ch, cx + cw - r, cy + ch);
-        ctx.lineTo(cx + r, cy + ch);
-        ctx.quadraticCurveTo(cx, cy + ch, cx, cy + ch - r);
-        ctx.lineTo(cx, cy + r);
-        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+        ctx.roundRect(cx, cy, cw, ch, r);
         ctx.closePath();
+        // Border
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
         ctx.clip();
         ctx.drawImage(img, cx, cy, cw, ch);
         ctx.restore();
+
+        // Reflection below cover
         ctx.save();
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-      } catch { /* skip cover if load fails */ }
+        ctx.globalAlpha = 0.12;
+        const rh = 120;
+        const ry = cy + ch + 4;
+        ctx.translate(W / 2, ry + rh / 2);
+        ctx.scale(0.88, -1);
+        ctx.translate(-W / 2, -rh / 2);
+        ctx.beginPath();
+        ctx.roundRect(cx, 0, cw, rh, [0, 0, r, r]);
+        ctx.clip();
+        ctx.drawImage(img, cx, 0, cw, ch);
+        ctx.restore();
+      } catch { /* skip cover */ }
     }
 
-    // Reset shadow
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.shadowColor = "transparent";
-
     // Title
+    let yPos = cy + ch + 140;
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "800 60px Inter, -apple-system, sans-serif";
-    ctx.textAlign = "center";
+    ctx.font = "800 64px Inter, -apple-system, sans-serif";
     const titleText = book?.title ?? "";
-    // Word wrap title
-    const maxTitleWidth = 900;
-    let titleY = 1020;
-    if (ctx.measureText(titleText).width > maxTitleWidth) {
+    const maxTitleW = 900;
+    if (ctx.measureText(titleText).width > maxTitleW) {
       const words = titleText.split(" ");
       let line = "";
       for (const word of words) {
         const test = line + (line ? " " : "") + word;
-        if (ctx.measureText(test).width > maxTitleWidth && line) {
-          ctx.fillText(line, 540, titleY);
+        if (ctx.measureText(test).width > maxTitleW && line) {
+          ctx.fillText(line, W / 2, yPos);
           line = word;
-          titleY += 70;
+          yPos += 76;
         } else {
           line = test;
         }
       }
-      ctx.fillText(line, 540, titleY);
+      ctx.fillText(line, W / 2, yPos);
     } else {
-      ctx.fillText(titleText, 540, titleY);
+      ctx.fillText(titleText, W / 2, yPos);
     }
-    titleY += 50;
+    yPos += 50;
 
     // Author
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.font = "400 38px Inter, -apple-system, sans-serif";
-    ctx.fillText(book?.authors.join(", ") || "Auteur inconnu", 540, titleY);
-    titleY += 70;
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.font = "500 36px Inter, -apple-system, sans-serif";
+    ctx.fillText(book?.authors.join(", ") || "Auteur inconnu", W / 2, yPos);
+    yPos += 50;
 
-    // Stars
-    if (rating && rating > 0) {
-      const stars = Array(5).fill(0).map((_, i) => i < rating ? "\u2605" : "\u2606").join(" ");
-      ctx.fillStyle = "#FBBF24";
-      ctx.font = "60px sans-serif";
-      ctx.fillText(stars, 540, titleY);
-      titleY += 70;
-    }
+    // Decorative divider
+    const divY = yPos;
+    ctx.fillStyle = "rgba(139, 92, 246, 0.4)";
+    ctx.fillRect(W / 2 - 44, divY, 36, 2);
+    ctx.fillRect(W / 2 + 8, divY, 36, 2);
+    // Center dot
+    ctx.beginPath();
+    ctx.arc(W / 2, divY + 1, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(139, 92, 246, 0.6)";
+    ctx.fill();
+    yPos += 40;
 
-    // Quote
-    if (comment) {
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.font = "italic 38px Inter, -apple-system, sans-serif";
-      const quoteText = `\u201C${comment}\u201D`;
-      // Simple word wrap
-      const maxW = 850;
-      const words = quoteText.split(" ");
-      let line = "";
-      let qY = titleY + 10;
-      for (const word of words) {
-        const test = line + (line ? " " : "") + word;
-        if (ctx.measureText(test).width > maxW && line) {
-          ctx.fillText(line, 540, qY);
-          line = word;
-          qY += 50;
-          if (qY > 1700) break; // Don't overflow
-        } else {
-          line = test;
+    // Fiche de lecture card
+    if ((rating && rating > 0) || comment) {
+      const cardX = 80, cardW = W - 160;
+      const cardTop = yPos;
+      let cardH = 50; // base padding
+
+      // Measure content height
+      if (rating && rating > 0) cardH += 80;
+      if (comment) {
+        ctx.font = "italic 36px Inter, -apple-system, sans-serif";
+        const qWords = comment.split(" ");
+        let qLine = "";
+        let qLines = 1;
+        for (const w of qWords) {
+          const test = qLine + (qLine ? " " : "") + w;
+          if (ctx.measureText(test).width > cardW - 80 && qLine) { qLines++; qLine = w; }
+          else qLine = test;
         }
+        cardH += 60 + qLines * 48 + 60; // quote marks + text + padding
       }
-      if (line && qY <= 1700) ctx.fillText(line, 540, qY);
+      cardH = Math.min(cardH, H - cardTop - 120);
+
+      // Draw frosted card
+      ctx.fillStyle = "rgba(255,255,255,0.04)";
+      ctx.beginPath();
+      ctx.roundRect(cardX, cardTop, cardW, cardH, 40);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.07)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      let fy = cardTop + 40;
+
+      // Label
+      ctx.fillStyle = "rgba(139, 92, 246, 0.65)";
+      ctx.font = "700 24px Inter, -apple-system, sans-serif";
+      ctx.fillText("MA FICHE DE LECTURE", W / 2, fy);
+      fy += 46;
+
+      // Stars
+      if (rating && rating > 0) {
+        const starSize = 52;
+        const totalW = 5 * starSize + 4 * 8;
+        let sx = W / 2 - totalW / 2;
+        for (let i = 1; i <= 5; i++) {
+          ctx.font = `${starSize}px sans-serif`;
+          ctx.fillStyle = i <= rating ? "#FBBF24" : "rgba(255,255,255,0.12)";
+          ctx.textAlign = "left";
+          ctx.fillText("★", sx, fy);
+          sx += starSize + 8;
+        }
+        // Rating number
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.font = "700 36px Inter, -apple-system, sans-serif";
+        ctx.fillText(`${rating}/5`, sx + 20, fy - 6);
+        fy += 50;
+      }
+
+      // Quote
+      if (comment) {
+        ctx.textAlign = "center";
+        fy += 10;
+        // Opening mark
+        ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
+        ctx.font = "700 80px Georgia, serif";
+        ctx.fillText("\u201C", W / 2, fy);
+        fy += 30;
+
+        // Quote text
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.font = "italic 36px Inter, -apple-system, sans-serif";
+        const maxW = cardW - 80;
+        const words = comment.split(" ");
+        let line = "";
+        for (const word of words) {
+          const test = line + (line ? " " : "") + word;
+          if (ctx.measureText(test).width > maxW && line) {
+            ctx.fillText(line, W / 2, fy);
+            line = word;
+            fy += 48;
+            if (fy > cardTop + cardH - 60) break;
+          } else {
+            line = test;
+          }
+        }
+        if (line && fy <= cardTop + cardH - 60) ctx.fillText(line, W / 2, fy);
+        fy += 30;
+
+        // Closing mark
+        ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
+        ctx.font = "700 80px Georgia, serif";
+        ctx.fillText("\u201D", W / 2 + 60, fy);
+      }
     }
 
     // Footer
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
-    ctx.font = "700 28px Inter, -apple-system, sans-serif";
-    ctx.fillText("FICHE DE LECTURE", 540, 1810);
-    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
     ctx.font = "500 24px Inter, -apple-system, sans-serif";
-    ctx.fillText("Partagé via BiblioScan", 540, 1855);
+    ctx.fillText("Partagé via BiblioScan", W / 2, H - 50);
 
     return canvas.toDataURL("image/png");
   };
