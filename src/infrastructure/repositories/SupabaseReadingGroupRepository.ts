@@ -120,6 +120,41 @@ export class SupabaseReadingGroupRepository {
     }
   }
 
+  async updateGroup(groupId: string, updates: { name?: string; emoji?: string }): Promise<Result<ReadingGroup>> {
+    try {
+      const updateData: Record<string, string> = {};
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.emoji !== undefined) updateData.emoji = updates.emoji;
+
+      const { data, error } = await supabase
+        .from("reading_groups")
+        .update(updateData)
+        .eq("id", groupId)
+        .select("*")
+        .single();
+
+      if (error) return Result.fail(error.message);
+      return Result.ok(this.rowToGroup(data));
+    } catch (e) {
+      return Result.fail(e instanceof Error ? e.message : "Erreur mise à jour groupe");
+    }
+  }
+
+  async removeMember(groupId: string, userId: string): Promise<Result<void>> {
+    try {
+      const { error } = await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", groupId)
+        .eq("user_id", userId);
+
+      if (error) return Result.fail(error.message);
+      return Result.ok(undefined);
+    } catch (e) {
+      return Result.fail(e instanceof Error ? e.message : "Erreur suppression membre");
+    }
+  }
+
   async deleteGroup(groupId: string): Promise<Result<void>> {
     try {
       const { error } = await supabase

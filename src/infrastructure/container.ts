@@ -45,5 +45,8 @@ export const gcdService = new GcdService();
 import { SupabaseReadingGroupRepository } from "./repositories/SupabaseReadingGroupRepository";
 export const readingGroupRepository = new SupabaseReadingGroupRepository();
 
+import { SupabaseFriendshipRepository } from "./repositories/SupabaseFriendshipRepository";
+export const friendshipRepository = new SupabaseFriendshipRepository();
+
 // Expose category repository for BookDetail dropdown
 export { categoryRepository };

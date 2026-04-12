@@ -81,7 +81,7 @@ export function Groups({ onSelectGroup }: GroupsProps) {
 
   if (loading) {
     return (
-      <div className="px-3 sm:px-4 py-4">
+      <div>
         <div className="h-7 w-48 rounded-lg mb-4" style={{ background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 37%, #f0f0f0 63%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s ease-in-out infinite" }} />
         {[1, 2, 3].map((i) => (
           <div key={i} className="card mb-2 h-20" style={{ background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 37%, #f0f0f0 63%)", backgroundSize: "200% 100%", animation: "shimmer 1.4s ease-in-out infinite" }} />
@@ -91,7 +91,7 @@ export function Groups({ onSelectGroup }: GroupsProps) {
   }
 
   return (
-    <div className="px-3 sm:px-4 py-4">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Groupes de lecture</h1>
         <div className="flex gap-2">
