@@ -58,38 +58,10 @@ export class SupabaseFriendshipRepository {
 
   async acceptInvite(code: string): Promise<Result<void>> {
     try {
-      const user = await getUserMeta();
-
-      // Find the invite
-      const { data: invite, error: findErr } = await supabase
-        .from("friend_invites")
-        .select("*")
-        .eq("invite_code", code.toUpperCase())
-        .maybeSingle();
-      if (findErr) return Result.fail(findErr.message);
-      if (!invite) return Result.fail("Code d'invitation introuvable");
-      if (invite.from_user_id === user.id) return Result.fail("Vous ne pouvez pas vous ajouter vous-même");
-
-      // Create friendship (both directions with upsert)
-      const { error: e1 } = await supabase.from("friendships").upsert({
-        user_id: user.id,
-        friend_id: invite.from_user_id,
-        user_name: user.name,
-        friend_name: invite.from_user_name,
-      }, { onConflict: "user_id,friend_id" });
-      if (e1) return Result.fail(e1.message);
-
-      const { error: e2 } = await supabase.from("friendships").upsert({
-        user_id: invite.from_user_id,
-        friend_id: user.id,
-        user_name: invite.from_user_name,
-        friend_name: user.name,
-      }, { onConflict: "user_id,friend_id" });
-      if (e2) return Result.fail(e2.message);
-
-      // Delete the invite
-      await supabase.from("friend_invites").delete().eq("id", invite.id);
-
+      const { error } = await supabase.rpc("accept_friend_invite", {
+        p_invite_code: code.toUpperCase(),
+      });
+      if (error) return Result.fail(error.message);
       return Result.ok(undefined);
     } catch (e: any) {
       return Result.fail(e.message);
