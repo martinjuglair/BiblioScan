@@ -64,6 +64,10 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   // Buy picker
   const [showBuyPicker, setShowBuyPicker] = useState(false);
 
+  // Social share
+  const [showSocialShare, setShowSocialShare] = useState(false);
+  const [generatingCard, setGeneratingCard] = useState(false);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -192,6 +196,197 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     if (result.ok) {
       setBook(result.value);
       onUpdated();
+    }
+  };
+
+  /** Generate a share card image using Canvas API */
+  const generateShareCard = async (): Promise<string> => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1920;
+    const ctx = canvas.getContext("2d")!;
+
+    // Background gradient (dark to grape to bubblegum)
+    const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bg.addColorStop(0, "#1E1B2E");
+    bg.addColorStop(0.35, "#2D1B69");
+    bg.addColorStop(0.7, "#8B5CF6");
+    bg.addColorStop(1, "#F472B6");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Soft radial glow behind cover
+    const glow = ctx.createRadialGradient(540, 700, 0, 540, 700, 350);
+    glow.addColorStop(0, "rgba(139, 92, 246, 0.5)");
+    glow.addColorStop(1, "transparent");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 300, 1080, 800);
+
+    // Brand
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.font = "600 36px Inter, -apple-system, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("BIBLIOSCAN", 100, 130);
+
+    // Cover image
+    if (book?.coverUrl) {
+      try {
+        const img = new window.Image();
+        img.crossOrigin = "anonymous";
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject();
+          img.src = book.coverUrl!;
+        });
+        const cw = 480, ch = 690;
+        const cx = (1080 - cw) / 2, cy = 240;
+        // Shadow
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 60;
+        ctx.shadowOffsetY = 20;
+        // Rounded rect clip
+        const r = 32;
+        ctx.beginPath();
+        ctx.moveTo(cx + r, cy);
+        ctx.lineTo(cx + cw - r, cy);
+        ctx.quadraticCurveTo(cx + cw, cy, cx + cw, cy + r);
+        ctx.lineTo(cx + cw, cy + ch - r);
+        ctx.quadraticCurveTo(cx + cw, cy + ch, cx + cw - r, cy + ch);
+        ctx.lineTo(cx + r, cy + ch);
+        ctx.quadraticCurveTo(cx, cy + ch, cx, cy + ch - r);
+        ctx.lineTo(cx, cy + r);
+        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(img, cx, cy, cw, ch);
+        ctx.restore();
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+      } catch { /* skip cover if load fails */ }
+    }
+
+    // Reset shadow
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowColor = "transparent";
+
+    // Title
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "800 60px Inter, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    const titleText = book?.title ?? "";
+    // Word wrap title
+    const maxTitleWidth = 900;
+    let titleY = 1020;
+    if (ctx.measureText(titleText).width > maxTitleWidth) {
+      const words = titleText.split(" ");
+      let line = "";
+      for (const word of words) {
+        const test = line + (line ? " " : "") + word;
+        if (ctx.measureText(test).width > maxTitleWidth && line) {
+          ctx.fillText(line, 540, titleY);
+          line = word;
+          titleY += 70;
+        } else {
+          line = test;
+        }
+      }
+      ctx.fillText(line, 540, titleY);
+    } else {
+      ctx.fillText(titleText, 540, titleY);
+    }
+    titleY += 50;
+
+    // Author
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.font = "400 38px Inter, -apple-system, sans-serif";
+    ctx.fillText(book?.authors.join(", ") || "Auteur inconnu", 540, titleY);
+    titleY += 70;
+
+    // Stars
+    if (rating && rating > 0) {
+      const stars = Array(5).fill(0).map((_, i) => i < rating ? "\u2605" : "\u2606").join(" ");
+      ctx.fillStyle = "#FBBF24";
+      ctx.font = "60px sans-serif";
+      ctx.fillText(stars, 540, titleY);
+      titleY += 70;
+    }
+
+    // Quote
+    if (comment) {
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.font = "italic 38px Inter, -apple-system, sans-serif";
+      const quoteText = `\u201C${comment}\u201D`;
+      // Simple word wrap
+      const maxW = 850;
+      const words = quoteText.split(" ");
+      let line = "";
+      let qY = titleY + 10;
+      for (const word of words) {
+        const test = line + (line ? " " : "") + word;
+        if (ctx.measureText(test).width > maxW && line) {
+          ctx.fillText(line, 540, qY);
+          line = word;
+          qY += 50;
+          if (qY > 1700) break; // Don't overflow
+        } else {
+          line = test;
+        }
+      }
+      if (line && qY <= 1700) ctx.fillText(line, 540, qY);
+    }
+
+    // Footer
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.font = "700 28px Inter, -apple-system, sans-serif";
+    ctx.fillText("FICHE DE LECTURE", 540, 1810);
+    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.font = "500 24px Inter, -apple-system, sans-serif";
+    ctx.fillText("Partagé via BiblioScan", 540, 1855);
+
+    return canvas.toDataURL("image/png");
+  };
+
+  const handleDownloadCard = async () => {
+    if (!book) return;
+    setGeneratingCard(true);
+    try {
+      const dataUrl = await generateShareCard();
+      const link = document.createElement("a");
+      link.download = `biblioscan-${book.isbn}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast("Image téléchargée ! Partagez-la sur Instagram", "success");
+    } catch (e) {
+      toast("Erreur lors de la génération", "error");
+    }
+    setGeneratingCard(false);
+  };
+
+  const handleShareNative = async () => {
+    if (!book) return;
+    const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via BiblioScan`;
+
+    try {
+      const dataUrl = await generateShareCard();
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `biblioscan-${book.isbn}.png`, { type: "image/png" });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: `${book.title} — Ma fiche de lecture`,
+          text,
+          files: [file],
+        });
+      } else if (navigator.share) {
+        await navigator.share({ title: `${book.title} — Ma fiche de lecture`, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast("Texte copié !", "success");
+      }
+    } catch {
+      // User cancelled or error, that's fine
     }
   };
 
@@ -562,16 +757,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             Groupe
           </button>
           <button
-            onClick={() => {
-              // Web: share via native Share API or copy link
-              const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via BiblioScan`;
-              if (navigator.share) {
-                navigator.share({ title: `${book.title} — Ma fiche de lecture`, text });
-              } else {
-                navigator.clipboard.writeText(text);
-                toast("Fiche copiée !", "success");
-              }
-            }}
+            onClick={() => setShowSocialShare(true)}
             className="flex-1 py-3 rounded-pill bg-[#F472B6]/10 text-[#F472B6] font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -732,6 +918,72 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
               ))}
             </div>
           )}
+        </div>
+      </BottomSheet>
+
+      {/* Social share bottom sheet */}
+      <BottomSheet isOpen={showSocialShare} onClose={() => setShowSocialShare(false)} title="Partager ma fiche de lecture">
+        <div className="pb-4 space-y-2">
+          {/* Download for Instagram */}
+          <button
+            onClick={async () => {
+              await handleDownloadCard();
+              setShowSocialShare(false);
+            }}
+            disabled={generatingCard}
+            className="flex items-center gap-3 w-full py-3 px-3 rounded-xl hover:bg-surface-subtle active:scale-[0.98] transition-all text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045] flex items-center justify-center text-white text-lg flex-shrink-0">
+              📸
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-text-primary text-sm">Télécharger l'image</p>
+              <p className="text-text-tertiary text-xs">Format story pour Instagram, Snapchat...</p>
+            </div>
+            {generatingCard && (
+              <div className="w-5 h-5 border-2 border-brand-grape border-t-transparent rounded-full animate-spin" />
+            )}
+          </button>
+
+          {/* Native share with image */}
+          <button
+            onClick={async () => {
+              setShowSocialShare(false);
+              await handleShareNative();
+            }}
+            className="flex items-center gap-3 w-full py-3 px-3 rounded-xl hover:bg-surface-subtle active:scale-[0.98] transition-all text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-brand-sky/10 flex items-center justify-center text-brand-sky text-lg flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-text-primary text-sm">Partager</p>
+              <p className="text-text-tertiary text-xs">Envoyer l'image + texte via le menu de partage</p>
+            </div>
+          </button>
+
+          {/* Copy text */}
+          <button
+            onClick={() => {
+              const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via BiblioScan`;
+              navigator.clipboard.writeText(text);
+              toast("Texte copié !", "success");
+              setShowSocialShare(false);
+            }}
+            className="flex items-center gap-3 w-full py-3 px-3 rounded-xl hover:bg-surface-subtle active:scale-[0.98] transition-all text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-surface-subtle flex items-center justify-center text-text-secondary text-lg flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-text-primary text-sm">Copier le texte</p>
+              <p className="text-text-tertiary text-xs">Coller dans n'importe quelle app</p>
+            </div>
+          </button>
         </div>
       </BottomSheet>
     </div>
