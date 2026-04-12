@@ -512,7 +512,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       {/* Rating & Comment */}
       {!editing && (
         <div className="card mt-4 space-y-3">
-          <h3 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide">Mon avis</h3>
+          <h3 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide">Ma fiche de lecture</h3>
           <div className="flex gap-0">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
@@ -535,7 +535,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Votre commentaire..."
+            placeholder="Mon ressenti, ce que j'en retiens..."
             rows={2}
             className="input-rect w-full resize-none"
           />
@@ -544,22 +544,42 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             disabled={savingReview}
             className="w-full py-2.5 rounded-pill bg-brand-grape/10 text-brand-grape font-semibold transition-all duration-200 active:scale-95"
           >
-            {savingReview ? "..." : "Enregistrer mon avis"}
+            {savingReview ? "..." : "Enregistrer ma fiche"}
           </button>
         </div>
       )}
 
-      {/* Share to group */}
+      {/* Share actions */}
       {!editing && (
-        <button
-          onClick={handleOpenShareGroup}
-          className="w-full mt-4 py-3 rounded-pill bg-brand-sky/10 text-brand-sky font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-          </svg>
-          Partager dans un groupe
-        </button>
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={handleOpenShareGroup}
+            className="flex-1 py-3 rounded-pill bg-brand-sky/10 text-brand-sky font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+            </svg>
+            Groupe
+          </button>
+          <button
+            onClick={() => {
+              // Web: share via native Share API or copy link
+              const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via BiblioScan`;
+              if (navigator.share) {
+                navigator.share({ title: `${book.title} — Ma fiche de lecture`, text });
+              } else {
+                navigator.clipboard.writeText(text);
+                toast("Fiche copiée !", "success");
+              }
+            }}
+            className="flex-1 py-3 rounded-pill bg-[#F472B6]/10 text-[#F472B6] font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+            </svg>
+            Ma fiche
+          </button>
+        </div>
       )}
 
       {/* Buy button — all books */}
@@ -648,7 +668,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           {/* Review for group */}
           <div>
             <label className="text-xs text-text-secondary block mb-1 font-medium">
-              Votre avis (visible dans le groupe)
+              Ma fiche de lecture (visible dans le groupe)
             </label>
             <div className="flex gap-1 mb-2">
               {[1, 2, 3, 4, 5].map((star) => (
