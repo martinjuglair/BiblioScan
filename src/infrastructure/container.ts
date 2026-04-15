@@ -1,6 +1,7 @@
 import { SupabaseComicBookRepository } from "./repositories/SupabaseComicBookRepository";
 import { SupabaseCategoryRepository } from "./repositories/SupabaseCategoryRepository";
 import { GoogleBooksService } from "./services/GoogleBooksService";
+import { GoogleBooksCacheService } from "./services/GoogleBooksCacheService";
 import { OpenLibraryService } from "./services/OpenLibraryService";
 import { BookLookupFacade } from "./services/BookLookupFacade";
 import { BnfSearchService } from "./services/BnfSearchService";
@@ -19,9 +20,10 @@ export const authService = new AuthService();
 // Singletons
 const repository = new SupabaseComicBookRepository();
 const categoryRepository = new SupabaseCategoryRepository();
-const googleBooks = new GoogleBooksService();
+const booksCache = new GoogleBooksCacheService();
+const googleBooks = new GoogleBooksService(booksCache);
 const openLibrary = new OpenLibraryService();
-const lookupFacade = new BookLookupFacade(googleBooks, openLibrary);
+const lookupFacade = new BookLookupFacade(googleBooks, openLibrary, googleBooks);
 
 // Exposed for cover lookup and title search
 export const bookLookup = lookupFacade;
@@ -38,6 +40,18 @@ export const deleteBook = new DeleteBook(repository);
 // Search services
 export const bnfSearchService = new BnfSearchService();
 export const unifiedSearch = new UnifiedSearchService(googleBooks, bnfSearchService, lookupFacade);
+
+import { GoogleBooksSeriesSearchService } from "./services/GoogleBooksSeriesSearchService";
+import { GetSeriesRecommendations } from "@application/use-cases/GetSeriesRecommendations";
+
+const seriesSearchService = new GoogleBooksSeriesSearchService(googleBooks);
+export const getSeriesRecommendations = new GetSeriesRecommendations(repository, seriesSearchService);
+
+import { GetAuthorRecommendations } from "@application/use-cases/GetAuthorRecommendations";
+export const getAuthorRecommendations = new GetAuthorRecommendations(repository, googleBooks);
+
+import { GetPopularBooks } from "@application/use-cases/GetPopularBooks";
+export const getPopularBooks = new GetPopularBooks(repository, googleBooks);
 
 import { GcdService } from "./services/GcdService";
 export const gcdService = new GcdService();

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ComicBookCreateInput } from "@domain/entities/ComicBook";
 import { scanComicBook, categoryRepository, updateBook } from "@infrastructure/container";
 import { Category } from "@domain/entities/Category";
@@ -13,6 +13,12 @@ interface ScannerProps {
   onBookAdded: () => void;
   firstName: string | null;
   onUpdateFirstName: (name: string) => Promise<void>;
+  /** When used as overlay from Library, start directly in a specific step */
+  initialStep?: "scan" | "search" | "manual";
+  /** Close callback for overlay mode */
+  onClose?: () => void;
+  /** Whether the scanner is embedded in an overlay (hides greeting/idle) */
+  embedded?: boolean;
 }
 
 type ScanState =
@@ -25,8 +31,15 @@ type ScanState =
   | { step: "success"; title: string; coverUrl: string | null }
   | { step: "error"; message: string };
 
-export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerProps) {
-  const [state, setState] = useState<ScanState>({ step: "idle" });
+export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep, onClose, embedded }: ScannerProps) {
+  const getInitialState = (): ScanState => {
+    if (initialStep === "scan") return { step: "scanning" };
+    if (initialStep === "search") return { step: "titleSearch" };
+    if (initialStep === "manual") return { step: "manualEntry" };
+    return { step: "idle" };
+  };
+
+  const [state, setState] = useState<ScanState>(getInitialState);
   const [manualIsbn, setManualIsbn] = useState("");
   const [batchMode, setBatchMode] = useState(false);
   const [batchCount, setBatchCount] = useState(0);
@@ -55,6 +68,13 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
     onDetected: handleDetected,
   });
 
+  // Auto-start camera when entering in scan mode
+  useEffect(() => {
+    if (initialStep === "scan") {
+      start();
+    }
+  }, []);
+
   const handleStartScan = () => {
     setState({ step: "scanning" });
     start();
@@ -79,6 +99,10 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
   };
 
   const handleSuccessDone = () => {
+    if (embedded && onClose) {
+      onClose();
+      return;
+    }
     if (batchMode) {
       // In batch mode, go straight back to scanning
       setState({ step: "scanning" });
@@ -91,6 +115,10 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
 
   const handleCancel = () => {
     stop();
+    if (embedded && onClose) {
+      onClose();
+      return;
+    }
     if (batchMode && batchIsbns.length > 0) {
       // Show batch complete screen with category assignment
       setState({ step: "idle" });

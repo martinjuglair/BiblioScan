@@ -27,6 +27,11 @@ export const GoogleBooksVolumeSchema = z.object({
             )
             .optional()
             .default([]),
+          description: z.string().optional(),
+          categories: z.array(z.string()).optional().default([]),
+          pageCount: z.number().optional(),
+          averageRating: z.number().optional(),
+          ratingsCount: z.number().optional(),
         }),
         saleInfo: z
           .object({

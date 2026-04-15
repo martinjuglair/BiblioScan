@@ -7,9 +7,9 @@ interface OnboardingProps {
 
 // Tab order matches BottomNav button order in the DOM
 const TAB_NAV_INDEX: Record<string, number> = {
-  library: 0,
+  discover: 0,
   groups: 1,
-  scanner: 2,
+  library: 2,
   stats: 3,
   profile: 4,
 };
@@ -22,15 +22,15 @@ const STEPS = [
   },
   {
     type: "tab" as const,
-    tab: "scanner",
-    title: "Ajouter",
-    description: "Ajoutez un livre en scannant son code-barres ou en cherchant par titre. Rapide et simple.",
+    tab: "library",
+    title: "Collection",
+    description: "Ajoutez vos livres par scan, recherche ou saisie manuelle, et organisez-les par catégories.",
   },
   {
     type: "tab" as const,
-    tab: "library",
-    title: "Collection",
-    description: "Tous vos livres organisés par catégories. Filtrez, triez et retrouvez n'importe quel livre.",
+    tab: "discover",
+    title: "Découvrir",
+    description: "Explorez de nouvelles lectures basées sur vos goûts et trouvez votre prochaine pépite.",
   },
   {
     type: "tab" as const,

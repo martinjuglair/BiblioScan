@@ -267,7 +267,7 @@ export class UnifiedSearchService {
       // Google with langRestrict=fr
       timeout(this.googleBooks.searchByTitle(trimmed), { ok: false as const, error: "timeout" }),
       // Google WITHOUT langRestrict (catches books not tagged as French)
-      timeout(this.searchGoogleNoLang(trimmed), []),
+      timeout(this.googleBooks.searchNoLang(trimmed), { ok: false as const, error: "timeout" }),
       // BnF with progressive relaxation
       timeout(searchBnfProgressive(this.bnfSearch, trimmed), []),
       // Open Library (NEW source)
@@ -281,8 +281,10 @@ export class UnifiedSearchService {
       unified.push(...googleFR.value.map((r) => this.googleToUnified(r)));
     }
 
-    // Google ALL results (no lang restrict) — already UnifiedSearchResult[]
-    unified.push(...googleALL);
+    // Google ALL results (no lang restrict)
+    if (googleALL.ok) {
+      unified.push(...googleALL.value.map((r) => this.googleToUnified(r)));
+    }
 
     // BnF results
     unified.push(...bnfResults.map((r) => this.bnfToUnified(r)));
@@ -323,52 +325,6 @@ export class UnifiedSearchService {
       price: d.retailPrice ? { amount: d.retailPrice.amount, currency: d.retailPrice.currency ?? "EUR" } : null,
       score: 100,
     }]);
-  }
-
-  /** Google Books search WITHOUT langRestrict — catches mistagged French books */
-  private async searchGoogleNoLang(query: string): Promise<UnifiedSearchResult[]> {
-    try {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8&country=FR&orderBy=relevance`;
-      let res = await fetch(url);
-      if (res.status === 429) {
-        await new Promise((r) => setTimeout(r, 2000));
-        res = await fetch(url);
-      }
-      if (!res.ok) return [];
-      const data = await res.json();
-      if (!data.items || data.items.length === 0) return [];
-
-      return data.items.map((item: any) => {
-        const info = item.volumeInfo ?? {};
-        const sale = item.saleInfo;
-        const isbn13 = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13");
-        const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_10");
-        let coverUrl = info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail ?? null;
-        if (coverUrl) {
-          coverUrl = coverUrl.replace("http://", "https://").replace(/&zoom=\d/, "&zoom=2");
-          if (!coverUrl.includes("zoom=")) coverUrl += "&zoom=2";
-          coverUrl = coverUrl.replace(/&edge=curl/, "");
-        }
-        const price = sale?.listPrice
-          ? { amount: sale.listPrice.amount, currency: sale.listPrice.currencyCode }
-          : sale?.retailPrice
-            ? { amount: sale.retailPrice.amount, currency: sale.retailPrice.currencyCode }
-            : null;
-        return {
-          source: "google" as const,
-          title: info.title ?? "Sans titre",
-          authors: info.authors ?? [],
-          publisher: info.publisher ?? "",
-          publishedDate: info.publishedDate ?? "",
-          isbn: isbn13?.identifier ?? isbn10?.identifier ?? null,
-          coverUrl,
-          price,
-          score: 0,
-        };
-      });
-    } catch {
-      return [];
-    }
   }
 
   private googleToUnified(r: GoogleBooksSearchResult): UnifiedSearchResult {

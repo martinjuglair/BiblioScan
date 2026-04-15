@@ -133,11 +133,15 @@ async function amazonCover(isbn: string): Promise<string | null> {
 /** Tries Google Books first, falls back to Open Library, then BnF. Enriches with cover fallbacks. */
 export class BookLookupFacade implements IBookLookupService {
   private readonly bnfService = new BnfService();
+  private readonly googleVolumeIdLookup?: (isbn: string) => Promise<string | null>;
 
   constructor(
     private readonly primary: IBookLookupService,   // Google Books
     private readonly fallback: IBookLookupService,   // Open Library
-  ) {}
+    googleBooksService?: { lookupVolumeId: (isbn: string) => Promise<string | null> },
+  ) {
+    this.googleVolumeIdLookup = googleBooksService?.lookupVolumeId.bind(googleBooksService);
+  }
 
   async lookupByISBN(isbn: string): Promise<Result<ComicBookCreateInput>> {
     // Fetch ALL sources in parallel for maximum data
@@ -239,17 +243,13 @@ export class BookLookupFacade implements IBookLookupService {
   }
 
   /**
-   * Quick Google Books search to grab a volumeId for direct cover URL.
-   * The direct cover endpoint doesn't count toward API quota.
+   * Grab a volumeId via GoogleBooksService (queued + cached) then build direct cover URL.
+   * The cover endpoint (books.google.com/books/content) doesn't count toward API quota.
    */
   private async tryGoogleCoverFallback(isbn: string): Promise<string | null> {
+    if (!this.googleVolumeIdLookup) return null;
     try {
-      const res = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&fields=items/id&maxResults=1`
-      );
-      if (!res.ok) return null;
-      const data = await res.json();
-      const volumeId = data?.items?.[0]?.id;
+      const volumeId = await this.googleVolumeIdLookup(isbn);
       if (!volumeId) return null;
       return googleBooksCoverById(volumeId);
     } catch {

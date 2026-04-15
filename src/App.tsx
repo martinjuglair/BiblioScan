@@ -9,13 +9,14 @@ import { Groups } from "@interfaces/components/Groups";
 import { GroupDetail } from "@interfaces/components/GroupDetail";
 import { Profile } from "@interfaces/components/Profile";
 import { Stats } from "@interfaces/components/Stats";
+import { Discover } from "@interfaces/components/Discover";
 import { BottomNav } from "@interfaces/components/BottomNav";
 import { ToastProvider } from "@interfaces/components/Toast";
 import { Onboarding } from "@interfaces/components/Onboarding";
 import { BadgeBanner } from "@interfaces/components/BadgeBanner";
 import { useBadgeChecker } from "@interfaces/hooks/useBadgeChecker";
 
-type Tab = "library" | "groups" | "scanner" | "stats" | "profile";
+type Tab = "discover" | "groups" | "library" | "stats" | "profile";
 
 type View =
   | { screen: "main" }
@@ -50,7 +51,8 @@ export default function App() {
   // Global badge detection — safe to call unconditionally, the hook checks library internally
   useBadgeChecker();
 
-  const [tab, setTab] = useState<Tab>("scanner");
+  const [tab, setTab] = useState<Tab>("library");
+  const [addMode, setAddMode] = useState<"scan" | "search" | "manual" | null>(null);
   const [view, setView] = useState<View>({ screen: "main" });
   const [refreshKey, setRefreshKey] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -123,19 +125,47 @@ export default function App() {
         </div>
       </div>
 
-      {tab === "scanner" && (
-        <Scanner
-          onBookAdded={refresh}
-          firstName={firstName}
-          onUpdateFirstName={updateFirstName}
-        />
-      )}
+      {tab === "discover" && <Discover onAddBook={(mode) => { setTab("library"); setAddMode(mode); }} />}
 
       {tab === "library" && view.screen === "main" && (
+        <>
+        {/* Scanner overlay */}
+        {addMode !== null && (
+          <div className="fixed inset-0 z-50 bg-bg overflow-y-auto">
+            <div className="max-w-lg mx-auto px-safe">
+              {/* Close header */}
+              <div className="flex items-center justify-between p-3">
+                <button
+                  onClick={() => setAddMode(null)}
+                  className="w-9 h-9 rounded-full bg-surface-subtle flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <span className="text-base font-bold text-text-primary">Ajouter un livre</span>
+                <div className="w-9" />
+              </div>
+              <Scanner
+                onBookAdded={() => { refresh(); setAddMode(null); }}
+                firstName={firstName}
+                onUpdateFirstName={updateFirstName}
+                initialStep={addMode}
+                onClose={() => setAddMode(null)}
+                embedded
+              />
+            </div>
+          </div>
+        )}
+      </>
+      )}
+
+      {tab === "library" && view.screen === "main" && addMode === null && (
         <Library
           refreshKey={refreshKey}
           onSelectCategory={(categoryId) => setView({ screen: "category", categoryId })}
           onSelectBook={(isbn) => setView({ screen: "book", isbn, fromCategoryId: null })}
+          onAddBook={(mode) => setAddMode(mode)}
         />
       )}
 

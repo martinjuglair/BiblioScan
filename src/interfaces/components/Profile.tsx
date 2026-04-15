@@ -44,20 +44,6 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
       }
     });
 
-    // Check if feedback was recently submitted
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return;
-      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-      supabase
-        .from("app_feedback")
-        .select("id")
-        .eq("user_id", data.user.id)
-        .gte("created_at", weekAgo)
-        .limit(1)
-        .then(({ data: rows }) => {
-          if (rows && rows.length > 0) setFeedbackSent(true);
-        });
-    });
   }, []);
 
   const readCount = useMemo(() => books.filter((b) => b.isRead).length, [books]);
@@ -259,6 +245,12 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
             <div className="text-3xl mb-2">🎉</div>
             <p className="text-base font-bold text-text-primary">Merci pour votre avis !</p>
             <p className="text-xs text-text-tertiary mt-1">Votre retour nous aide à améliorer Shelfy.</p>
+            <button
+              onClick={() => { setFeedbackSent(false); setFeedbackRating(0); setFeedbackMsg(""); }}
+              className="mt-3 text-sm font-semibold text-brand-grape"
+            >
+              Donner un nouvel avis
+            </button>
           </div>
         ) : (
           <>
