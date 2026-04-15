@@ -32,6 +32,7 @@ export const GoogleBooksVolumeSchema = z.object({
           pageCount: z.number().optional(),
           averageRating: z.number().optional(),
           ratingsCount: z.number().optional(),
+          language: z.string().optional(),
         }),
         saleInfo: z
           .object({

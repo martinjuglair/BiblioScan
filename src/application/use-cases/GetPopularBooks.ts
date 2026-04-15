@@ -3,12 +3,24 @@ import { AuthorSuggestedBook } from "@domain/entities/AuthorRecommendation";
 import { Result } from "@domain/shared/Result";
 import { GoogleBooksService } from "@infrastructure/services/GoogleBooksService";
 
-/** Curated queries for discovering popular/trending books */
+/** Curated queries targeting popular French-language books */
 const POPULAR_QUERIES = [
-  "roman best seller 2025",
-  "meilleur livre 2024",
-  "prix littéraire récent",
+  "roman best seller français 2025",
+  "prix Goncourt Renaudot récent",
+  "meilleur roman français 2024",
+  "bande dessinée populaire 2025",
+  "manga populaire édition française",
 ];
+
+/** Check if a book is likely French based on language tag or ISBN (978-2 = francophone) */
+function isLikelyFrench(result: { language?: string; isbn: string | null }): boolean {
+  if (result.language === "fr") return true;
+  if (result.isbn) {
+    const clean = result.isbn.replace(/[-\s]/g, "");
+    if (clean.startsWith("9782")) return true;
+  }
+  return false;
+}
 
 export class GetPopularBooks {
   constructor(
@@ -42,7 +54,7 @@ export class GetPopularBooks {
           if (!searchResult.ok) continue;
 
           for (const result of searchResult.value) {
-            if (suggestions.length >= 12) break;
+            if (suggestions.length >= 15) break;
 
             const titleLower = result.title.toLowerCase().trim();
 
@@ -56,6 +68,9 @@ export class GetPopularBooks {
 
             // Must have a cover to look good in the UI
             if (!result.coverUrl) continue;
+
+            // Only French-language books
+            if (!isLikelyFrench(result)) continue;
 
             if (result.isbn) seenIsbns.add(result.isbn);
             seenTitles.add(titleLower);
@@ -74,7 +89,16 @@ export class GetPopularBooks {
         }
       }
 
-      return Result.ok(suggestions);
+      // Sort: books with ratings first (proxy for popularity), then by rating desc
+      suggestions.sort((a, b) => {
+        const ra = a.averageRating ?? 0;
+        const rb = b.averageRating ?? 0;
+        if (ra && !rb) return -1;
+        if (!ra && rb) return 1;
+        return rb - ra;
+      });
+
+      return Result.ok(suggestions.slice(0, 12));
     } catch {
       return Result.fail("Erreur lors du chargement des livres populaires");
     }

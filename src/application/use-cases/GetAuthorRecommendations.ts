@@ -5,6 +5,16 @@ import { GoogleBooksService } from "@infrastructure/services/GoogleBooksService"
 
 const MAX_AUTHORS = 3;
 
+/** Check if a book is likely French based on language tag or ISBN (978-2 = francophone) */
+function isLikelyFrench(result: { language?: string; isbn: string | null }): boolean {
+  if (result.language === "fr") return true;
+  if (result.isbn) {
+    const clean = result.isbn.replace(/[-\s]/g, "");
+    if (clean.startsWith("9782")) return true;
+  }
+  return false;
+}
+
 export class GetAuthorRecommendations {
   constructor(
     private readonly repository: IComicBookRepository,
@@ -85,6 +95,9 @@ export class GetAuthorRecommendations {
         a.toLowerCase().includes(authorLower) || authorLower.includes(a.toLowerCase()),
       );
       if (!hasAuthor) continue;
+
+      // Only French-language editions
+      if (!isLikelyFrench(result)) continue;
 
       suggestions.push({
         title: result.title,

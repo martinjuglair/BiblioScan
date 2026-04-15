@@ -55,6 +55,7 @@ export interface GoogleBooksSearchResult {
   categories?: string[];
   averageRating?: number;
   ratingsCount?: number;
+  language?: string;
 }
 
 export class GoogleBooksService implements IBookLookupService {
@@ -260,6 +261,7 @@ export class GoogleBooksService implements IBookLookupService {
         categories: info.categories,
         averageRating: info.averageRating,
         ratingsCount: info.ratingsCount,
+        language: info.language,
       };
     });
   }

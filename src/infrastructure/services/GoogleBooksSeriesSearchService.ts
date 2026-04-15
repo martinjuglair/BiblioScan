@@ -4,6 +4,16 @@ import { Result } from "@domain/shared/Result";
 import { SeriesDetector } from "@domain/services/SeriesDetector";
 import { GoogleBooksService } from "./GoogleBooksService";
 
+/** Check if a book is likely French based on language tag or ISBN (978-2 = francophone) */
+function isLikelyFrench(result: { language?: string; isbn: string | null }): boolean {
+  if (result.language === "fr") return true;
+  if (result.isbn) {
+    const clean = result.isbn.replace(/[-\s]/g, "");
+    if (clean.startsWith("9782")) return true;
+  }
+  return false;
+}
+
 export class GoogleBooksSeriesSearchService implements ISeriesSearchService {
   constructor(private readonly googleBooks: GoogleBooksService) {}
 
@@ -59,6 +69,9 @@ export class GoogleBooksSeriesSearchService implements ISeriesSearchService {
       if (result.isbn && ownedIsbnSet.has(result.isbn)) continue;
       if (ownedTitleNorm.has(titleLower)) continue;
 
+      // Only French-language editions
+      if (!isLikelyFrench(result)) continue;
+
       // Extract volume number if present in the title
       const detected = SeriesDetector.detect(result.title);
       const volumeNumber = detected.volumeNumber;
@@ -95,8 +108,8 @@ export class GoogleBooksSeriesSearchService implements ISeriesSearchService {
         detectedNorm.includes(normalizedSeries) ||
         normalizedSeries.includes(detectedNorm);
 
-      // And the volume number matches
-      if (seriesMatch && detected.volumeNumber === volumeNumber) {
+      // And the volume number matches + must be French
+      if (seriesMatch && detected.volumeNumber === volumeNumber && isLikelyFrench(result)) {
         return {
           volumeNumber,
           title: result.title,
