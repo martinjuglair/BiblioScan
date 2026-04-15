@@ -3,6 +3,7 @@ import { useToast } from "./Toast";
 import { hapticLight } from "@interfaces/utils/haptics";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary } from "@infrastructure/container";
+import { supabase } from "@infrastructure/supabase/client";
 import { LEVEL_ICONS, getLevel, getNextLevel, BADGES, computeStreak, getReadingLog } from "./Stats";
 
 interface ProfileProps {
@@ -26,6 +27,13 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
   const [books, setBooks] = useState<ComicBook[]>([]);
   const { toast } = useToast();
 
+  // Feedback
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedbackSending, setFeedbackSending] = useState(false);
+  const [feedbackHover, setFeedbackHover] = useState(0);
+
   useEffect(() => {
     getCategorizedLibrary.execute().then((result) => {
       if (result.ok) {
@@ -34,6 +42,21 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
           ...result.value.uncategorized,
         ]);
       }
+    });
+
+    // Check if feedback was recently submitted
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      supabase
+        .from("app_feedback")
+        .select("id")
+        .eq("user_id", data.user.id)
+        .gte("created_at", weekAgo)
+        .limit(1)
+        .then(({ data: rows }) => {
+          if (rows && rows.length > 0) setFeedbackSent(true);
+        });
     });
   }, []);
 
@@ -53,6 +76,26 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
     setEdited(false);
     hapticLight();
     toast("Prénom mis à jour", "success");
+  };
+
+  const handleFeedback = async () => {
+    if (feedbackRating < 1) return;
+    setFeedbackSending(true);
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return;
+      const { error } = await supabase.from("app_feedback").insert({
+        user_id: data.user.id,
+        rating: feedbackRating,
+        message: feedbackMsg.trim(),
+      });
+      if (!error) {
+        setFeedbackSent(true);
+        hapticLight();
+        toast("Merci pour votre avis !", "success");
+      }
+    } catch {}
+    setFeedbackSending(false);
   };
 
   const handleChange = (val: string) => {
@@ -130,20 +173,34 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
             </div>
           )}
 
-          {/* Locked — show description hint */}
+          {/* Locked — show description + progression */}
           {lockedBadges.length > 0 && (
             <div className="space-y-2">
               {earnedBadges.length > 0 && <div className="border-t border-border pt-2" />}
               <p className="text-[10px] text-text-muted uppercase tracking-wide font-semibold">À débloquer</p>
-              {lockedBadges.map((badge) => (
-                <div key={badge.id} className="flex items-center gap-2.5">
-                  <div className="text-xl grayscale opacity-40 flex-shrink-0">{badge.emoji}</div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-text-secondary font-semibold leading-tight">{badge.name}</p>
-                    <p className="text-[10px] text-text-muted leading-tight">{badge.description}</p>
+              {lockedBadges.map((badge) => {
+                const prog = badge.progress?.(books, streak);
+                return (
+                  <div key={badge.id} className="flex items-start gap-2.5">
+                    <div className="text-xl grayscale opacity-40 flex-shrink-0 mt-0.5">{badge.emoji}</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-text-secondary font-semibold leading-tight">{badge.name}</p>
+                      <p className="text-[10px] text-text-muted leading-tight">{badge.description}</p>
+                      {prog && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="h-1 flex-1 bg-surface-subtle rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, (prog.current / prog.target) * 100)}%`, backgroundColor: "rgba(139,92,246,0.4)" }}
+                            />
+                          </div>
+                          <span className="text-[9px] text-text-muted font-semibold">{prog.current}/{prog.target}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -190,8 +247,51 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-text-secondary">Moteur</span>
-          <span className="text-sm text-text-primary font-medium">BiblioScan PWA</span>
+          <span className="text-sm text-text-primary font-medium">Shelfy PWA</span>
         </div>
+      </div>
+
+      {/* Feedback */}
+      <div className="card space-y-3 mb-4">
+        <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide">Votre avis compte</h2>
+        {feedbackSent ? (
+          <div className="text-center py-4">
+            <div className="text-3xl mb-2">🎉</div>
+            <p className="text-base font-bold text-text-primary">Merci pour votre avis !</p>
+            <p className="text-xs text-text-tertiary mt-1">Votre retour nous aide à améliorer Shelfy.</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-text-secondary">Comment trouvez-vous Shelfy ?</p>
+            <div className="flex justify-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setFeedbackRating(star)}
+                  onMouseEnter={() => setFeedbackHover(star)}
+                  onMouseLeave={() => setFeedbackHover(0)}
+                  className="text-3xl transition-transform hover:scale-110 active:scale-95 p-1"
+                >
+                  {(feedbackHover || feedbackRating) >= star ? "★" : "☆"}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={feedbackMsg}
+              onChange={(e) => setFeedbackMsg(e.target.value)}
+              placeholder="Dites-nous ce que vous en pensez..."
+              className="input-field w-full min-h-[80px] resize-none"
+              rows={3}
+            />
+            <button
+              onClick={handleFeedback}
+              disabled={feedbackSending || feedbackRating < 1}
+              className="btn-primary w-full"
+            >
+              {feedbackSending ? "Envoi..." : "Envoyer"}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Change password */}

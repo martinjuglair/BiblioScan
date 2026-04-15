@@ -244,7 +244,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName }: ScannerPr
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 16h10M7 20h4" />
                 </svg>
-                ISBN
+                Saisir un code
               </button>
               <button
                 onClick={() => setState({ step: "manualEntry" })}

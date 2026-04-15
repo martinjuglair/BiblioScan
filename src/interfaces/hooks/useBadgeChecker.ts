@@ -4,7 +4,7 @@ import { getReadingLog, computeStreak } from "@interfaces/components/Stats";
 import { emitBadgeEarned } from "@interfaces/utils/badgeEvent";
 import { BADGES } from "@interfaces/utils/badges";
 
-const EARNED_BADGES_KEY = "biblioscan-earned-badges";
+const EARNED_BADGES_KEY = "shelfy-earned-badges";
 
 function getEarnedBadgeIds(): string[] {
   try {

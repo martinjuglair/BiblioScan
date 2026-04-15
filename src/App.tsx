@@ -23,6 +23,27 @@ type View =
   | { screen: "book"; isbn: string; fromCategoryId: string | null }
   | { screen: "group"; groupId: string };
 
+// Storage migration BiblioScan → Shelfy (one-shot)
+(() => {
+  const MIGRATION_KEY = "shelfy-migrated";
+  if (!localStorage.getItem(MIGRATION_KEY)) {
+    const renames: [string, string][] = [
+      ["biblioscan-reading-goal", "shelfy-reading-goal"],
+      ["biblioscan-reading-log", "shelfy-reading-log"],
+      ["biblioscan-earned-badges", "shelfy-earned-badges"],
+      ["biblioscan-onboarding-v1", "shelfy-onboarding-v1"],
+    ];
+    for (const [old, fresh] of renames) {
+      const v = localStorage.getItem(old);
+      if (v != null && !localStorage.getItem(fresh)) {
+        localStorage.setItem(fresh, v);
+        localStorage.removeItem(old);
+      }
+    }
+    localStorage.setItem(MIGRATION_KEY, "1");
+  }
+})();
+
 export default function App() {
   const { user, firstName, loading, error, signIn, signUp, signOut, updateFirstName, resetPassword, updatePassword } = useAuth();
 
@@ -33,13 +54,13 @@ export default function App() {
   const [view, setView] = useState<View>({ screen: "main" });
   const [refreshKey, setRefreshKey] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem("biblioscan-onboarding-v1");
+    return !localStorage.getItem("shelfy-onboarding-v1");
   });
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   const handleOnboardingComplete = useCallback(() => {
-    localStorage.setItem("biblioscan-onboarding-v1", "1");
+    localStorage.setItem("shelfy-onboarding-v1", "1");
     setShowOnboarding(false);
   }, []);
 

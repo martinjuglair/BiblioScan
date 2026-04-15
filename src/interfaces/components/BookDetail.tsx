@@ -374,7 +374,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     try {
       const dataUrl = await generateShareCard();
       const link = document.createElement("a");
-      link.download = `biblioscan-${book.isbn}.png`;
+      link.download = `shelfy-${book.isbn}.png`;
       link.href = dataUrl;
       link.click();
       toast("Image téléchargée ! Partagez-la sur Instagram", "success");
@@ -386,12 +386,12 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
   const handleShareNative = async () => {
     if (!book) return;
-    const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via BiblioScan`;
+    const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via Shelfy`;
 
     try {
       const dataUrl = await generateShareCard();
       const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], `biblioscan-${book.isbn}.png`, { type: "image/png" });
+      const file = new File([blob], `shelfy-${book.isbn}.png`, { type: "image/png" });
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
@@ -855,7 +855,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           {showBuyPicker && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-float border border-border overflow-hidden z-10 animate-fadeIn">
               <a
-                href={`https://www.amazon.fr/s?k=${encodeURIComponent(book.isbn)}&tag=biblioscan-21`}
+                href={`https://www.amazon.fr/s?k=${encodeURIComponent(book.isbn)}&tag=shelfy-21`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowBuyPicker(false)}
@@ -1104,7 +1104,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           {/* Copy text */}
           <button
             onClick={() => {
-              const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via BiblioScan`;
+              const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via Shelfy`;
               navigator.clipboard.writeText(text);
               toast("Texte copié !", "success");
               setShowSocialShare(false);
