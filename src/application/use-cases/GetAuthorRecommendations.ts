@@ -99,6 +99,9 @@ export class GetAuthorRecommendations {
       // Only French-language editions
       if (!isLikelyFrench(result)) continue;
 
+      // Must have a cover
+      if (!result.coverUrl) continue;
+
       suggestions.push({
         title: result.title,
         authors: result.authors,

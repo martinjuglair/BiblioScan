@@ -51,16 +51,16 @@ export class GetPopularBooks {
       const seenIsbns = new Set<string>();
       const seenTitles = new Set<string>();
 
-      // Try each query until we have enough results
-      for (const query of POPULAR_QUERIES) {
-        if (suggestions.length >= 10) break;
+      const MAX_PER_QUERY = 3; // Limit per query to ensure variety across categories
 
+      for (const query of POPULAR_QUERIES) {
         try {
           const searchResult = await this.googleBooks.searchByTitle(query);
           if (!searchResult.ok) continue;
 
+          let added = 0;
           for (const result of searchResult.value) {
-            if (suggestions.length >= 15) break;
+            if (added >= MAX_PER_QUERY) break;
 
             const titleLower = result.title.toLowerCase().trim();
 
@@ -72,7 +72,7 @@ export class GetPopularBooks {
             if (result.isbn && seenIsbns.has(result.isbn)) continue;
             if (seenTitles.has(titleLower)) continue;
 
-            // Must have a cover to look good in the UI
+            // Must have a real cover (not a placeholder)
             if (!result.coverUrl) continue;
 
             // Only French-language books
@@ -89,6 +89,7 @@ export class GetPopularBooks {
               isbn: result.isbn,
               averageRating: result.averageRating,
             });
+            added++;
           }
         } catch {
           // Skip this query, try next

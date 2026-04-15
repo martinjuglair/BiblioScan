@@ -72,6 +72,9 @@ export class GoogleBooksSeriesSearchService implements ISeriesSearchService {
       // Only French-language editions
       if (!isLikelyFrench(result)) continue;
 
+      // Must have a cover
+      if (!result.coverUrl) continue;
+
       // Extract volume number if present in the title
       const detected = SeriesDetector.detect(result.title);
       const volumeNumber = detected.volumeNumber;
