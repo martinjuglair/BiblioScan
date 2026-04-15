@@ -148,7 +148,7 @@ export function Groups({ onSelectGroup }: GroupsProps) {
         <button
           onClick={() => setShowActions(true)}
           className="w-11 h-11 rounded-full flex items-center justify-center shadow-card transition-all active:scale-90"
-          style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)" }}
+          style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #B065E0 100%)" }}
         >
           <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -187,7 +187,7 @@ export function Groups({ onSelectGroup }: GroupsProps) {
                   className="card flex items-center gap-3 text-left active:scale-[0.98] transition-all duration-200 hover:shadow-float"
                 >
                   <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)" }}
+                    style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #B065E0 100%)" }}
                   >
                     {(group.friendName ?? "A")[0]!.toUpperCase()}
                   </div>

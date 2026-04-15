@@ -15,31 +15,41 @@
         position: fixed; inset: 0; z-index: 9999;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
-        background: #FEFBFF;
+        background: linear-gradient(135deg, #8B5CF6 0%, #B065E0 50%, #F472B6 100%);
         transition: opacity 0.4s ease-out;
       }
       #splash.hide { opacity: 0; pointer-events: none; }
       #splash-logo {
-        width: 80px; height: 80px;
-        border-radius: 20px;
-        background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 50%, #F472B6 100%);
-        display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.3);
+        width: 88px; height: 88px;
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
         animation: splash-pulse 1.5s ease-in-out infinite;
       }
-      #splash-logo svg { width: 40px; height: 40px; color: white; }
+      #splash-logo img { width: 100%; height: 100%; display: block; }
       #splash-text {
-        margin-top: 16px; font-family: 'Nunito', sans-serif;
-        font-size: 24px; font-weight: 800; color: #1E1B4B;
+        margin-top: 16px; font-family: 'Nunito', system-ui, sans-serif;
+        font-size: 28px; font-weight: 800; color: #FFFFFF;
         letter-spacing: -0.02em;
       }
       #splash-sub {
-        margin-top: 4px; font-family: 'Nunito', sans-serif;
-        font-size: 13px; color: #9CA3AF;
+        margin-top: 4px; font-family: 'Nunito', system-ui, sans-serif;
+        font-size: 13px; color: rgba(255,255,255,0.7);
+      }
+      #splash-loader {
+        margin-top: 32px;
+        width: 24px; height: 24px;
+        border: 2.5px solid rgba(255,255,255,0.25);
+        border-top-color: rgba(255,255,255,0.8);
+        border-radius: 50%;
+        animation: splash-spin 0.8s linear infinite;
       }
       @keyframes splash-pulse {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.05); }
+      }
+      @keyframes splash-spin {
+        to { transform: rotate(360deg); }
       }
     </style>
   </head>
@@ -47,12 +57,11 @@
     <!-- Splash screen -->
     <div id="splash">
       <div id="splash-logo">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
+        <img src="/shelfy-logo.png" alt="Shelfy" />
       </div>
       <div id="splash-text">Shelfy</div>
       <div id="splash-sub">Votre bibliothèque de poche</div>
+      <div id="splash-loader"></div>
     </div>
 
     <div id="root"></div>

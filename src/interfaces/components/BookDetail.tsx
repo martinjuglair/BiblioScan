@@ -1029,7 +1029,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                 >
                   {g.isPrivate ? (
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                      style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)" }}
+                      style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #B065E0 100%)" }}
                     >
                       {(g.friendName ?? "A")[0]!.toUpperCase()}
                     </div>

@@ -30,7 +30,7 @@
 
 @layer components {
   .btn-primary {
-    background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%);
+    background: linear-gradient(135deg, #8B5CF6 0%, #B065E0 100%);
     @apply text-white font-semibold py-2.5 px-4 sm:py-3 sm:px-6 rounded-[16px]
            active:scale-95 transition-all duration-200 text-sm sm:text-base;
     box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);

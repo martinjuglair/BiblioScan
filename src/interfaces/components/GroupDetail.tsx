@@ -274,7 +274,7 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
       <div className="flex items-center gap-3 mb-4">
         {group.isPrivate ? (
           <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)" }}
+            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #B065E0 100%)" }}
           >
             {(friendName ?? "A")[0]!.toUpperCase()}
           </div>

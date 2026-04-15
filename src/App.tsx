@@ -73,19 +73,19 @@ export default function App() {
     setView({ screen: "main" });
   };
 
-  // Loading state
+  // Loading state — branded splash
   if (loading && !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-light">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-hero"
-            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 50%, #F472B6 100%)" }}>
-            <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-          </div>
-          <p className="text-text-tertiary text-sm mt-2">Chargement...</p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center"
+        style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #B065E0 50%, #F472B6 100%)" }}>
+        <img
+          src="/shelfy-logo.png"
+          alt="Shelfy"
+          className="w-[88px] h-[88px] rounded-[22px] shadow-lg animate-pulse"
+        />
+        <p className="text-white text-2xl font-extrabold mt-4 tracking-tight">Shelfy</p>
+        <p className="text-white/70 text-sm mt-1">Votre bibliothèque de poche</p>
+        <div className="mt-8 w-6 h-6 border-[2.5px] border-white/25 border-t-white/80 rounded-full animate-spin" />
       </div>
     );
   }
@@ -115,7 +115,7 @@ export default function App() {
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)" }}>
+            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #B065E0 100%)" }}>
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>

@@ -125,7 +125,7 @@ export function BadgeBanner() {
               className="h-full rounded-full"
               style={{
                 width: `${progress}%`,
-                background: "linear-gradient(90deg, #A78BFA, #C4B5FD)",
+                background: "linear-gradient(90deg, #B065E0, #D4A0E8)",
                 transition: "width 30ms linear",
               }}
             />
