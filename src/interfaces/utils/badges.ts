@@ -11,8 +11,8 @@ export interface BadgeDef {
   progress?: (books: ComicBook[], streakData?: StreakData) => { current: number; target: number };
 }
 
-const rated = (x: ComicBook) => x.rating != null && x.rating > 0;
-const hasComment = (x: ComicBook) => !!x.comment?.trim();
+const rated = (x: ComicBook) => typeof x.rating === "number" && x.rating > 0;
+const hasComment = (x: ComicBook) => typeof x.comment === "string" && x.comment.trim().length > 0;
 
 export const BADGES: BadgeDef[] = [
   // --- Collection ---
@@ -67,7 +67,7 @@ export const BADGES: BadgeDef[] = [
   },
   {
     id: "top", name: "Coup de coeur", description: "Donner un 5/5", emoji: "❤️",
-    check: (b) => b.some((x) => x.rating === 5),
+    check: (b) => b.some((x) => typeof x.rating === "number" && x.rating === 5),
   },
 
   // --- Commentaires ---

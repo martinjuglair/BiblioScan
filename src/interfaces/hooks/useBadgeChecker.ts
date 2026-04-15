@@ -6,6 +6,15 @@ import { BADGES } from "@interfaces/utils/badges";
 
 const EARNED_BADGES_KEY = "shelfy-earned-badges";
 
+/**
+ * Badge schema version — bump this whenever BADGES list changes
+ * (new badges added, existing badges removed/renamed).
+ * On version mismatch we do a silent catch-up save so that
+ * existing-but-untracked badges don't trigger false "newly earned" banners.
+ */
+const BADGE_SCHEMA_VERSION = 2;
+const SCHEMA_KEY = "shelfy-badge-schema-version";
+
 function getEarnedBadgeIds(): string[] {
   try {
     return JSON.parse(localStorage.getItem(EARNED_BADGES_KEY) ?? "[]");
@@ -45,8 +54,19 @@ export function useBadgeChecker() {
       if (key === checkedRef.current) return;
       checkedRef.current = key;
 
-      const prevIds = getEarnedBadgeIds();
       const currentIds = earned.map((b) => b.id);
+
+      // Check badge schema version — silent catch-up on mismatch
+      const savedVersion = localStorage.getItem(SCHEMA_KEY);
+      if (savedVersion !== String(BADGE_SCHEMA_VERSION)) {
+        // Schema changed (or first run): save current state silently,
+        // don't trigger any "newly earned" notifications
+        saveEarnedBadgeIds(currentIds);
+        localStorage.setItem(SCHEMA_KEY, String(BADGE_SCHEMA_VERSION));
+        return;
+      }
+
+      const prevIds = getEarnedBadgeIds();
       const newlyEarned = earned.filter((b) => !prevIds.includes(b.id));
       saveEarnedBadgeIds(currentIds);
 
@@ -59,7 +79,6 @@ export function useBadgeChecker() {
     check();
 
     // Re-check periodically (web doesn't have a library event bus like mobile)
-    // We use a simple interval as a fallback
     const interval = setInterval(check, 10000);
     return () => clearInterval(interval);
   }, []);
