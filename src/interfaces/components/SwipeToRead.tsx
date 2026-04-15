@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { hapticSuccess, hapticLight } from "@interfaces/utils/haptics";
 
 interface SwipeToReadProps {
@@ -12,6 +12,7 @@ const TRACK_HEIGHT = THUMB_SIZE + PADDING * 2;
 
 /**
  * Elegant swipe-to-read toggle.
+ * Supports both touch and mouse interactions.
  * Clean grape gradient, SVG icons, shimmer effect, celebration particles.
  */
 export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
@@ -21,6 +22,7 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
   const [celebrating, setCelebrating] = useState(false);
   const startX = useRef(0);
   const hasMoved = useRef(false);
+  const touchStartTime = useRef(0);
   const maxRef = useRef(200);
 
   const measureMax = () => {
@@ -30,46 +32,56 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
     return maxRef.current;
   };
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.stopPropagation();
-    startX.current = e.touches[0]!.clientX;
-    hasMoved.current = false;
-    setDragging(true);
-    setOffset(0);
-    measureMax();
-  }, []);
+  const trigger = useCallback(
+    (newVal: boolean) => {
+      if (newVal) {
+        hapticSuccess();
+        setCelebrating(true);
+        setTimeout(() => setCelebrating(false), 800);
+      } else {
+        hapticLight();
+      }
+      onChange(newVal);
+      setOffset(0);
+    },
+    [onChange]
+  );
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    e.stopPropagation();
-    const dx = e.touches[0]!.clientX - startX.current;
-    if (Math.abs(dx) > 4) hasMoved.current = true;
-    const max = maxRef.current;
+  // --- Shared pointer handlers (work for both touch and mouse) ---
+  const handlePointerDown = useCallback(
+    (clientX: number) => {
+      startX.current = clientX;
+      hasMoved.current = false;
+      touchStartTime.current = Date.now();
+      setDragging(true);
+      setOffset(0);
+      measureMax();
+    },
+    []
+  );
 
-    if (isRead) {
-      setOffset(Math.max(-max, Math.min(0, dx)));
-    } else {
-      setOffset(Math.max(0, Math.min(max, dx)));
-    }
-  }, [isRead]);
+  const handlePointerMove = useCallback(
+    (clientX: number) => {
+      const dx = clientX - startX.current;
+      if (Math.abs(dx) > 4) hasMoved.current = true;
+      const max = maxRef.current;
 
-  const trigger = useCallback((newVal: boolean) => {
-    if (newVal) {
-      hapticSuccess();
-      setCelebrating(true);
-      setTimeout(() => setCelebrating(false), 800);
-    } else {
-      hapticLight();
-    }
-    onChange(newVal);
-    setOffset(0);
-  }, [onChange]);
+      if (isRead) {
+        setOffset(Math.max(-max, Math.min(0, dx)));
+      } else {
+        setOffset(Math.max(0, Math.min(max, dx)));
+      }
+    },
+    [isRead]
+  );
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    e.stopPropagation();
+  const handlePointerUp = useCallback(() => {
     setDragging(false);
     const max = maxRef.current;
+    const isTap =
+      !hasMoved.current && Date.now() - touchStartTime.current < 300;
 
-    if (!hasMoved.current) {
+    if (isTap) {
       trigger(!isRead);
       return;
     }
@@ -81,6 +93,55 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
     }
   }, [isRead, offset, trigger]);
 
+  // --- Touch events ---
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.stopPropagation();
+      handlePointerDown(e.touches[0]!.clientX);
+    },
+    [handlePointerDown]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      e.stopPropagation();
+      handlePointerMove(e.touches[0]!.clientX);
+    },
+    [handlePointerMove]
+  );
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      e.stopPropagation();
+      handlePointerUp();
+    },
+    [handlePointerUp]
+  );
+
+  // --- Mouse events ---
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      handlePointerDown(e.clientX);
+    },
+    [handlePointerDown]
+  );
+
+  // Bind mousemove/mouseup to window during drag
+  useEffect(() => {
+    if (!dragging) return;
+
+    const onMove = (e: MouseEvent) => handlePointerMove(e.clientX);
+    const onUp = () => handlePointerUp();
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [dragging, handlePointerMove, handlePointerUp]);
+
   const max = maxRef.current;
   const thumbPos = isRead ? max + offset : offset;
   const progress = max > 0 ? Math.max(0, Math.min(1, thumbPos / max)) : 0;
@@ -91,19 +152,25 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
     <div
       ref={trackRef}
       className="relative w-full select-none touch-none overflow-hidden"
-      style={{ height: TRACK_HEIGHT, borderRadius: TRACK_HEIGHT / 2 }}
+      style={{
+        height: TRACK_HEIGHT,
+        borderRadius: TRACK_HEIGHT / 2,
+        willChange: "transform",
+      }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
     >
       {/* Track background */}
       <div
         className="absolute inset-0"
         style={{
           borderRadius: TRACK_HEIGHT / 2,
-          background: progress > 0.02
-            ? `linear-gradient(90deg, rgba(139,92,246,0.15) 0%, rgba(139,92,246,0.1) ${gradientStop}%, #F0F0F3 ${gradientStop}%)`
-            : "#F0F0F3",
+          background:
+            progress > 0.02
+              ? `linear-gradient(90deg, rgba(139,92,246,0.15) 0%, rgba(139,92,246,0.1) ${gradientStop}%, #F0F0F3 ${gradientStop}%)`
+              : "#F0F0F3",
           transition: dragging ? "none" : "background 400ms ease-out",
         }}
       />
@@ -114,7 +181,8 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
           className="absolute inset-0 pointer-events-none"
           style={{
             borderRadius: TRACK_HEIGHT / 2,
-            background: "linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.12) 45%, rgba(139,92,246,0.15) 55%, transparent 100%)",
+            background:
+              "linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.12) 45%, rgba(139,92,246,0.15) 55%, transparent 100%)",
             backgroundSize: "250% 100%",
             animation: "shimmer 2.5s ease-in-out infinite",
           }}
@@ -149,37 +217,60 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
           borderRadius: THUMB_SIZE / 2,
           top: PADDING,
           left: PADDING + Math.max(0, Math.min(max, thumbPos)),
+          willChange: "transform, left",
           transition: dragging
             ? "background 150ms, box-shadow 150ms"
             : "left 400ms cubic-bezier(0.34, 1.56, 0.64, 1), background 300ms, box-shadow 300ms",
-          background: progress > 0.3
-            ? `rgba(139,92,246,${0.6 + progress * 0.4})`
-            : "white",
-          boxShadow: progress > 0.3
-            ? `0 4px 15px rgba(139,92,246,${progress * 0.4})`
-            : "0 2px 8px rgba(0,0,0,0.1)",
+          background:
+            progress > 0.3
+              ? `rgba(139,92,246,${0.6 + progress * 0.4})`
+              : "white",
+          boxShadow:
+            progress > 0.3
+              ? `0 4px 15px rgba(139,92,246,${progress * 0.4})`
+              : "0 2px 8px rgba(0,0,0,0.1)",
+          cursor: dragging ? "grabbing" : "grab",
         }}
       >
         {progress > 0.3 ? (
           <svg
-            className={`w-5 h-5 text-white transition-transform duration-200 ${celebrating ? "scale-125" : "scale-100"}`}
+            className={`w-5 h-5 text-white transition-transform duration-200 ${
+              celebrating ? "scale-125" : "scale-100"
+            }`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={2.5}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 13l4 4L19 7"
+            />
           </svg>
         ) : (
-          <svg className="w-5 h-5 text-brand-grape" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          <svg
+            className="w-5 h-5 text-brand-grape"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         )}
       </div>
 
       {/* Celebration particles */}
       {celebrating && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ borderRadius: TRACK_HEIGHT / 2 }}>
+        <div
+          className="absolute inset-0 pointer-events-none overflow-hidden"
+          style={{ borderRadius: TRACK_HEIGHT / 2 }}
+        >
           {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
             <div
               key={deg}

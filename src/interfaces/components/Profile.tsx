@@ -1,11 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToast } from "./Toast";
-import { hapticLight, hapticSuccess } from "@interfaces/utils/haptics";
+import { hapticLight } from "@interfaces/utils/haptics";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary } from "@infrastructure/container";
-import { LEVEL_ICONS, getLevel, getNextLevel, BADGES, BadgeDef, computeStreak, getReadingLog } from "./Stats";
-
-const EARNED_BADGES_KEY = "biblioscan-earned-badges";
+import { LEVEL_ICONS, getLevel, getNextLevel, BADGES, computeStreak, getReadingLog } from "./Stats";
 
 interface ProfileProps {
   email: string;
@@ -46,23 +44,6 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
   const streak = useMemo(() => computeStreak(getReadingLog()), []);
   const earnedBadges = useMemo(() => BADGES.filter((b) => b.check(books, streak)), [books, streak]);
   const lockedBadges = useMemo(() => BADGES.filter((b) => !b.check(books, streak)), [books, streak]);
-
-  // New badge celebration
-  const [celebratingBadge, setCelebratingBadge] = useState<BadgeDef | null>(null);
-
-  useEffect(() => {
-    if (earnedBadges.length === 0) return;
-    const prevIds: string[] = JSON.parse(localStorage.getItem(EARNED_BADGES_KEY) ?? "[]");
-    const currentIds = earnedBadges.map((b) => b.id);
-    const newlyEarned = earnedBadges.filter((b) => !prevIds.includes(b.id));
-    localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(currentIds));
-    if (newlyEarned.length > 0) {
-      hapticSuccess();
-      setCelebratingBadge(newlyEarned[0]!);
-    }
-  }, [earnedBadges]);
-
-  const dismissCelebration = useCallback(() => setCelebratingBadge(null), []);
 
   const handleSave = async () => {
     if (!nameInput.trim()) return;
@@ -165,64 +146,6 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Badge celebration overlay */}
-      {celebratingBadge && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center px-6" onClick={dismissCelebration}>
-          <div className="absolute inset-0 bg-black/50" style={{ animation: "fade-in 300ms ease-out" }} />
-          <div
-            className="relative bg-white rounded-3xl p-6 text-center shadow-hero max-w-xs w-full"
-            style={{ animation: "badge-pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards" }}
-          >
-            {/* Confetti particles */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
-              {[
-                { x: -30, y: -50, c: "#8B5CF6", d: 0 },
-                { x: 30, y: -50, c: "#F472B6", d: 50 },
-                { x: -50, y: -20, c: "#FBBF24", d: 100 },
-                { x: 50, y: -20, c: "#34D399", d: 150 },
-                { x: -40, y: -40, c: "#F472B6", d: 80 },
-                { x: 40, y: -40, c: "#8B5CF6", d: 120 },
-                { x: -20, y: -55, c: "#38BDF8", d: 60 },
-                { x: 20, y: -55, c: "#FBBF24", d: 140 },
-                { x: 0, y: -60, c: "#34D399", d: 30 },
-                { x: -55, y: -10, c: "#F472B6", d: 180 },
-                { x: 55, y: -10, c: "#8B5CF6", d: 200 },
-                { x: 0, y: -45, c: "#38BDF8", d: 90 },
-              ].map((p, i) => (
-                <div
-                  key={i}
-                  className="absolute rounded-full"
-                  style={{
-                    width: 6 + (i % 3) * 2,
-                    height: 6 + (i % 3) * 2,
-                    left: "50%",
-                    top: "35%",
-                    background: p.c,
-                    animation: `confetti-particle 700ms ease-out ${p.d}ms forwards`,
-                    "--tx": `${p.x}px`,
-                    "--ty": `${p.y}px`,
-                    opacity: 0,
-                  } as React.CSSProperties}
-                />
-              ))}
-            </div>
-
-            <div className="text-5xl mb-3" style={{ animation: "badge-emoji 600ms ease-out 200ms both" }}>
-              {celebratingBadge.emoji}
-            </div>
-            <p className="text-xs font-bold text-brand-grape uppercase tracking-widest mb-1">Nouveau badge !</p>
-            <p className="text-lg font-bold text-text-primary mb-1">{celebratingBadge.name}</p>
-            <p className="text-sm text-text-secondary mb-4">{celebratingBadge.description}</p>
-            <button
-              onClick={dismissCelebration}
-              className="btn-primary px-6"
-            >
-              Super !
-            </button>
-          </div>
         </div>
       )}
 

@@ -40,7 +40,7 @@ export function BottomNav({ active, onChange }: BottomNavProps) {
           <svg className="w-5 h-5 sm:w-[22px] sm:h-[22px] mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M3 17v2a2 2 0 002 2h2M17 21h2a2 2 0 002-2v-2M7 12h10" />
           </svg>
-          Scanner
+          Ajouter
         </button>
 
         {/* Stats */}

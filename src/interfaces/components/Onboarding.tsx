@@ -23,8 +23,8 @@ const STEPS = [
   {
     type: "tab" as const,
     tab: "scanner",
-    title: "Scanner",
-    description: "Scannez un code-barres ou recherchez par titre pour ajouter un livre en un instant.",
+    title: "Ajouter",
+    description: "Ajoutez un livre en scannant son code-barres ou en cherchant par titre. Rapide et simple.",
   },
   {
     type: "tab" as const,
@@ -35,8 +35,8 @@ const STEPS = [
   {
     type: "tab" as const,
     tab: "groups",
-    title: "Groupes",
-    description: "Partagez vos livres avec vos amis, votre famille ou un club de lecture.",
+    title: "Social",
+    description: "Retrouvez vos amis, rejoignez des groupes de lecture et partagez vos collections.",
   },
   {
     type: "tab" as const,
