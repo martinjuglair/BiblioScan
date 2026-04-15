@@ -418,6 +418,23 @@ export class SupabaseReadingGroupRepository {
 
   // ─── Helpers ───────────────────────────────────────────
 
+  /** Get the friend's display name for a private group (the other member) */
+  async getFriendName(groupId: string): Promise<string | null> {
+    try {
+      const userId = await getUserId();
+      const { data } = await supabase
+        .from("group_members")
+        .select("first_name, email")
+        .eq("group_id", groupId)
+        .neq("user_id", userId)
+        .single();
+      if (!data) return null;
+      return data.first_name || data.email?.split("@")[0] || "Ami";
+    } catch {
+      return null;
+    }
+  }
+
   private rowToGroup(row: Record<string, unknown>): ReadingGroup {
     return {
       id: row.id as string,
@@ -426,6 +443,7 @@ export class SupabaseReadingGroupRepository {
       emoji: (row.emoji as string) ?? "📚",
       createdBy: row.created_by as string,
       inviteCode: row.invite_code as string,
+      isPrivate: (row.is_private as boolean) ?? false,
       createdAt: new Date(row.created_at as string),
     };
   }

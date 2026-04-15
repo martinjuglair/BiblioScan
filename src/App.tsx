@@ -5,7 +5,7 @@ import { Scanner } from "@interfaces/components/Scanner";
 import { Library } from "@interfaces/components/Library";
 import { CategoryDetail } from "@interfaces/components/CategoryDetail";
 import { BookDetail } from "@interfaces/components/BookDetail";
-import { Social } from "@interfaces/components/Social";
+import { Groups } from "@interfaces/components/Groups";
 import { GroupDetail } from "@interfaces/components/GroupDetail";
 import { Profile } from "@interfaces/components/Profile";
 import { Stats } from "@interfaces/components/Stats";
@@ -140,7 +140,7 @@ export default function App() {
       )}
 
       {tab === "groups" && view.screen === "main" && (
-        <Social onSelectGroup={(groupId) => setView({ screen: "group", groupId })} />
+        <Groups onSelectGroup={(groupId) => setView({ screen: "group", groupId })} />
       )}
 
       {tab === "groups" && view.screen === "group" && (

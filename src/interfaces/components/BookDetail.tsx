@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
 import { ReadingGroup } from "@domain/entities/ReadingGroup";
-import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, readingGroupRepository, friendshipRepository } from "@infrastructure/container";
-import { Friend, DirectShareType } from "@domain/entities/Friendship";
+import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, readingGroupRepository } from "@infrastructure/container";
 import { CoverLightbox } from "./CoverLightbox";
 import { BottomSheet } from "./BottomSheet";
 import { BookDetailSkeleton } from "./Skeleton";
@@ -69,12 +68,11 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [showSocialShare, setShowSocialShare] = useState(false);
   const [generatingCard, setGeneratingCard] = useState(false);
 
-  // Send to friend
+  // Send to friend/group
   const [showSendFriend, setShowSendFriend] = useState(false);
-  const [friendList, setFriendList] = useState<Friend[]>([]);
+  const [allGroups, setAllGroups] = useState<(ReadingGroup & { friendName?: string })[]>([]);
   const [friendMessage, setFriendMessage] = useState("");
-  const [friendShareType, setFriendShareType] = useState<DirectShareType>("share");
-  const [sendingToFriend, setSendingToFriend] = useState<string | null>(null);
+  const [sendingToGroup, setSendingToGroup] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -526,29 +524,38 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const handleOpenSendFriend = async () => {
     hapticLight();
     setFriendMessage("");
-    setFriendShareType("share");
     setShowSendFriend(true);
-    const result = await friendshipRepository.getMyFriends();
-    if (result.ok) setFriendList(result.value);
+    const result = await readingGroupRepository.findMyGroups();
+    if (result.ok) {
+      const enriched = await Promise.all(
+        result.value.map(async (g) => {
+          if (g.isPrivate) {
+            const friendName = await readingGroupRepository.getFriendName(g.id);
+            return { ...g, friendName: friendName ?? "Ami" };
+          }
+          return g;
+        }),
+      );
+      setAllGroups(enriched);
+    }
   };
 
-  const handleSendToFriend = async (friend: Friend) => {
+  const handleSendToGroup = async (group: ReadingGroup & { friendName?: string }) => {
     if (!book) return;
-    setSendingToFriend(friend.userId);
-    const result = await friendshipRepository.sendShare({
-      toUserId: friend.userId,
-      isbn: book.isbn,
-      title: book.title,
-      coverUrl: book.coverUrl,
-      message: friendMessage.trim() || null,
-      rating: rating,
-      comment: comment.trim() || null,
-      type: friendShareType,
-    });
-    setSendingToFriend(null);
+    setSendingToGroup(group.id);
+    const result = await readingGroupRepository.shareBook(
+      group.id,
+      book.isbn,
+      book.title,
+      book.coverUrl,
+      friendMessage.trim() || null,
+      friendMessage.trim() || null,
+    );
+    setSendingToGroup(null);
     if (result.ok) {
       hapticMedium();
-      toast(`Envoy\u00e9 \u00e0 ${friend.displayName} !`, "success");
+      const displayName = group.isPrivate ? group.friendName : group.name;
+      toast(`Partage avec ${displayName} !`, "success");
       setShowSendFriend(false);
     } else {
       toast(result.error, "error");
@@ -986,8 +993,8 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         </div>
       </BottomSheet>
 
-      {/* Send to friend bottom sheet */}
-      <BottomSheet isOpen={showSendFriend} onClose={() => setShowSendFriend(false)} title="Envoyer \u00e0 un ami">
+      {/* Send to friend/group bottom sheet */}
+      <BottomSheet isOpen={showSendFriend} onClose={() => setShowSendFriend(false)} title="Partager ce livre">
         <div className="pb-4 space-y-3">
           {/* Message input */}
           <div>
@@ -1004,52 +1011,40 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             />
           </div>
 
-          {/* Share/Lend toggle */}
-          <div>
-            <label className="text-xs text-text-secondary block mb-1.5 font-medium">Type d'envoi</label>
-            <div className="flex bg-surface-subtle rounded-xl p-1">
-              {([
-                { key: "share" as DirectShareType, label: "Partager" },
-                { key: "lend" as DirectShareType, label: "Pr\u00eater" },
-              ]).map((opt) => (
-                <button
-                  key={opt.key}
-                  onClick={() => setFriendShareType(opt.key)}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                    friendShareType === opt.key
-                      ? "bg-white text-text-primary shadow-sm"
-                      : "text-text-tertiary"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="border-t border-border-light my-2" />
 
-          {friendList.length === 0 ? (
+          {allGroups.length === 0 ? (
             <p className="text-sm text-text-tertiary text-center py-4">
-              Vous n'avez pas encore d'amis. Ajoutez-en depuis l'onglet Social !
+              Ajoutez des amis ou creez un groupe depuis l'onglet Social !
             </p>
           ) : (
             <div className="flex flex-col gap-1">
-              <p className="text-xs text-text-muted mb-1">Choisissez un ami :</p>
-              {friendList.map((f) => (
+              <p className="text-xs text-text-muted mb-1">Choisissez un destinataire :</p>
+              {allGroups.map((g) => (
                 <button
-                  key={f.userId}
-                  onClick={() => handleSendToFriend(f)}
-                  disabled={sendingToFriend !== null}
+                  key={g.id}
+                  onClick={() => handleSendToGroup(g)}
+                  disabled={sendingToGroup !== null}
                   className="flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-surface-subtle active:scale-[0.98] transition-all text-left"
                 >
-                  <div className="w-10 h-10 rounded-full bg-surface-subtle flex items-center justify-center text-sm font-bold text-text-secondary flex-shrink-0">
-                    {f.displayName[0]?.toUpperCase() ?? "?"}
-                  </div>
+                  {g.isPrivate ? (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                      style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)" }}
+                    >
+                      {(g.friendName ?? "A")[0]!.toUpperCase()}
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-surface-subtle flex items-center justify-center text-xl flex-shrink-0">
+                      {g.emoji}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-text-primary text-sm truncate">{f.displayName}</p>
+                    <p className="font-semibold text-text-primary text-sm truncate">
+                      {g.isPrivate ? g.friendName : g.name}
+                    </p>
+                    {g.isPrivate && <p className="text-[10px] text-text-tertiary">Ami</p>}
                   </div>
-                  {sendingToFriend === f.userId ? (
+                  {sendingToGroup === g.id ? (
                     <div className="w-5 h-5 border-2 border-brand-grape border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <svg className="w-4 h-4 text-brand-mint flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

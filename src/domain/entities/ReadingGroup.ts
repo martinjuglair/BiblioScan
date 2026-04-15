@@ -5,6 +5,7 @@ export interface ReadingGroup {
   emoji: string;
   createdBy: string;
   inviteCode: string;
+  isPrivate: boolean;
   createdAt: Date;
 }
 
