@@ -168,7 +168,7 @@ function Row({
   return (
     <div className="mb-6">
       <h2 className="text-[15px] font-bold text-text-primary mb-0.5">{title}</h2>
-      {subtitle && <p className="text-xs text-text-tertiary mb-2">{subtitle}</p>}
+      {subtitle && <p className="text-xs text-text-tertiary mb-3">{subtitle}</p>}
       {!subtitle && <div className="mb-3" />}
       <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">{children}</div>
     </div>

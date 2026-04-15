@@ -855,7 +855,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           {showBuyPicker && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-float border border-border overflow-hidden z-10 animate-fadeIn">
               <a
-                href={`https://www.amazon.fr/s?k=${encodeURIComponent(book.isbn)}&tag=shelfy-21`}
+                href={`https://www.amazon.fr/s?k=${encodeURIComponent(book.title)}&tag=shelfy-21`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowBuyPicker(false)}
@@ -868,7 +868,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                 </div>
               </a>
               <a
-                href={`https://www.fnac.com/SearchResult/ResultList.aspx?Search=${encodeURIComponent(book.isbn)}`}
+                href={`https://www.fnac.com/SearchResult/ResultList.aspx?Search=${encodeURIComponent(book.title)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowBuyPicker(false)}
@@ -881,7 +881,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                 </div>
               </a>
               <a
-                href={`https://www.cultura.com/search?q=${encodeURIComponent(book.isbn)}`}
+                href={`https://www.cultura.com/search?q=${encodeURIComponent(book.title)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowBuyPicker(false)}

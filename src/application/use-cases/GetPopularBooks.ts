@@ -3,13 +3,19 @@ import { AuthorSuggestedBook } from "@domain/entities/AuthorRecommendation";
 import { Result } from "@domain/shared/Result";
 import { GoogleBooksService } from "@infrastructure/services/GoogleBooksService";
 
-/** Curated queries targeting popular French-language books */
+/** Curated queries targeting popular French-language books.
+ * Specific author/title queries give much better results than vague "best seller" queries
+ * which return industry publications (Livre Hebdo, etc.) instead of actual books.
+ */
 const POPULAR_QUERIES = [
-  "roman best seller français 2025",
-  "prix Goncourt Renaudot récent",
-  "meilleur roman français 2024",
-  "bande dessinée populaire 2025",
-  "manga populaire édition française",
+  "Astérix Obélix",
+  "Joël Dicker roman",
+  "Guillaume Musso",
+  "Amélie Nothomb roman",
+  "One Piece édition française",
+  "Lucky Luke bande dessinée",
+  "Virginie Grimaldi roman",
+  "Michel Bussi polar",
 ];
 
 /** Check if a book is likely French based on language tag or ISBN (978-2 = francophone) */
