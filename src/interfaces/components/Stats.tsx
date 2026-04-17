@@ -378,7 +378,7 @@ export function Stats({ refreshKey }: StatsProps = {}) {
           <StatBadge
             value={stats.totalValue ? formatEur(stats.totalValue) : "\u2014"}
             label="Valeur neuf"
-            color="status-success"
+            color="brand-cocoa"
           />
         </div>
 
@@ -387,7 +387,7 @@ export function Stats({ refreshKey }: StatsProps = {}) {
           <div className="grid grid-cols-2 gap-2 mb-3">
             {stats.avgPrice > 0 && (
               <div className="card text-center py-3">
-                <span className="text-lg font-bold text-brand-mint">{formatEur(stats.avgPrice)}</span>
+                <span className="text-lg font-bold text-brand-cocoa">{formatEur(stats.avgPrice)}</span>
                 <p className="text-[11px] text-text-tertiary mt-0.5">Prix moyen</p>
               </div>
             )}
@@ -406,7 +406,7 @@ export function Stats({ refreshKey }: StatsProps = {}) {
             )}
             {stats.newestBook && (
               <div className="card text-center py-3">
-                <span className="text-lg font-bold text-brand-mint">{stats.newestBook.year}</span>
+                <span className="text-lg font-bold text-brand-honey">{stats.newestBook.year}</span>
                 <p className="text-[11px] text-text-tertiary mt-0.5">Le + récent</p>
                 <p className="text-[10px] text-brand-grape truncate mt-0.5 font-medium">{truncate(stats.newestBook.title, 18)}</p>
               </div>

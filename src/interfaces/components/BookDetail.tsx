@@ -244,16 +244,16 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     canvas.height = H;
     const ctx = canvas.getContext("2d")!;
 
-    // Background — warm dark purple-ish
-    ctx.fillStyle = "#1E1B2E";
+    // Background — deep cocoa (matches new DA)
+    ctx.fillStyle = "#1A0D06";
     ctx.fillRect(0, 0, W, H);
 
     ctx.textAlign = "center";
 
     // Brand
-    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.fillStyle = "#D4B896";
     ctx.font = "700 28px Inter, -apple-system, sans-serif";
-    ctx.fillText("B I B L I O S C A N", W / 2, 60);
+    ctx.fillText("S H E L F Y", W / 2, 60);
 
     // Cover
     const cx = (W - cw) / 2, cy = 100;
@@ -308,7 +308,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       let sx = W / 2 - 150;
       ctx.textAlign = "left";
       for (let i = 0; i < 5; i++) {
-        ctx.fillStyle = i < rating ? "#FBBF24" : "rgba(255,255,255,0.2)";
+        ctx.fillStyle = i < rating ? "#FCD34D" : "rgba(255,255,255,0.2)";
         ctx.font = "56px sans-serif";
         ctx.fillText("★", sx, yPos);
         sx += 66;
@@ -748,7 +748,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             <button
               onClick={handleOpenShareGroup}
               className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
-              style={{ background: "#EEF6FF", borderColor: "rgba(56,189,248,0.25)" }}
+              style={{ background: "#FFF3E4", borderColor: "rgba(251,146,60,0.3)" }}
             >
               <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
                 👥
@@ -763,7 +763,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             <button
               onClick={handleShareLink}
               className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
-              style={{ background: "#F0FDF4", borderColor: "rgba(52,211,153,0.3)" }}
+              style={{ background: "#FFF8DC", borderColor: "rgba(252,211,77,0.45)" }}
             >
               <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
                 🔗
@@ -778,7 +778,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             <button
               onClick={() => setShowSocialShare(true)}
               className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
-              style={{ background: "#FFF7ED", borderColor: "rgba(244,114,182,0.3)" }}
+              style={{ background: "#F5EADE", borderColor: "rgba(63,40,23,0.2)" }}
             >
               <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
                 📸
@@ -916,7 +916,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                   {sharingToGroup === g.id ? (
                     <div className="w-5 h-5 border-2 border-brand-grape border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <svg className="w-4 h-4 text-brand-mint flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-4 h-4 text-brand-grape flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                   )}
@@ -959,7 +959,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             }}
             className="flex items-center gap-3 w-full py-3 px-3 rounded-xl hover:bg-surface-subtle active:scale-[0.98] transition-all text-left"
           >
-            <div className="w-10 h-10 rounded-xl bg-brand-sky/10 flex items-center justify-center text-brand-sky text-lg flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-brand-grape/10 flex items-center justify-center text-brand-grape text-lg flex-shrink-0">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
               </svg>
