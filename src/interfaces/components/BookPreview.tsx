@@ -88,6 +88,18 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
         </div>
       </div>
 
+      {/* Book summary — rendered from Google Books when available */}
+      {data.description && (
+        <div className="card mt-3">
+          <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">Résumé</h3>
+          <p className="text-sm text-text-secondary leading-relaxed">
+            {data.description.length > 400
+              ? data.description.slice(0, 400).trim() + "…"
+              : data.description}
+          </p>
+        </div>
+      )}
+
       {/* Category button */}
       <div className="mt-4">
         {categoryId && selectedCategory ? (

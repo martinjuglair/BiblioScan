@@ -71,10 +71,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [generatingCard, setGeneratingCard] = useState(false);
 
   // Send to group
-  const [showSendFriend, setShowSendFriend] = useState(false);
-  const [allGroups, setAllGroups] = useState<ReadingGroup[]>([]);
-  const [friendMessage, setFriendMessage] = useState("");
-  const [sendingToGroup, setSendingToGroup] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -537,34 +533,31 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     }
   };
 
-  const handleOpenSendFriend = async () => {
-    hapticLight();
-    setFriendMessage("");
-    setShowSendFriend(true);
-    const result = await readingGroupRepository.findMyGroups();
-    if (result.ok) {
-      setAllGroups(result.value);
-    }
-  };
-
-  const handleSendToGroup = async (group: ReadingGroup) => {
+  const handleShareLink = async () => {
     if (!book) return;
-    setSendingToGroup(group.id);
-    const result = await readingGroupRepository.shareBook(
-      group.id,
-      book.isbn,
-      book.title,
-      book.coverUrl,
-      friendMessage.trim() || null,
-      friendMessage.trim() || null,
-    );
-    setSendingToGroup(null);
-    if (result.ok) {
-      hapticMedium();
-      toast(`Partagé avec ${group.name} !`, "success");
-      setShowSendFriend(false);
+    hapticLight();
+    // Deep-link opens the add-book preview with ISBN pre-filled — works for
+    // recipients who have the app installed. For others the title+author
+    // still gives them enough to find the book.
+    const deepLink = `shelfy://add-book?mode=scan&isbn=${book.isbn}`;
+    const authors = book.authors.join(", ") || "Auteur inconnu";
+    const text =
+      `📚 ${book.title}\n${authors}\n\n` +
+      `Je te le recommande sur Shelfy :\n${deepLink}\n\n` +
+      `Pas encore Shelfy ? Télécharge l'app pour découvrir l'univers des lecteurs.`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: book.title, text });
+      } catch {
+        /* cancelled */
+      }
     } else {
-      toast(result.error, "error");
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("Lien copié dans le presse-papier", "success");
+      } catch {
+        toast("Impossible de copier le lien", "error");
+      }
     }
   };
 
@@ -837,35 +830,52 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       {/* Share actions */}
       {!editing && (
         <div className="flex flex-col gap-2 mt-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             <button
               onClick={handleOpenShareGroup}
-              className="flex-1 py-3 rounded-pill bg-brand-sky/10 text-brand-sky font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
+              className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
+              style={{ background: "#EEF6FF", borderColor: "rgba(56,189,248,0.25)" }}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-              </svg>
-              Groupe
+              <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
+                👥
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-text-primary">Partager dans un groupe</p>
+                <p className="text-xs text-text-tertiary mt-0.5">Recommander à mes groupes de lecture</p>
+              </div>
+              <span className="text-xl text-text-muted">›</span>
             </button>
+
+            <button
+              onClick={handleShareLink}
+              className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
+              style={{ background: "#F0FDF4", borderColor: "rgba(52,211,153,0.3)" }}
+            >
+              <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
+                🔗
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-text-primary">Partager via un lien</p>
+                <p className="text-xs text-text-tertiary mt-0.5">Message, WhatsApp, Mail...</p>
+              </div>
+              <span className="text-xl text-text-muted">›</span>
+            </button>
+
             <button
               onClick={() => setShowSocialShare(true)}
-              className="flex-1 py-3 rounded-pill bg-[#F472B6]/10 text-[#F472B6] font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
+              className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
+              style={{ background: "#FFF7ED", borderColor: "rgba(244,114,182,0.3)" }}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
-              </svg>
-              Ma fiche
+              <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
+                📸
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-text-primary">Partager ma fiche</p>
+                <p className="text-xs text-text-tertiary mt-0.5">Image à poster sur les réseaux</p>
+              </div>
+              <span className="text-xl text-text-muted">›</span>
             </button>
           </div>
-          <button
-            onClick={handleOpenSendFriend}
-            className="w-full py-3 rounded-pill bg-brand-mint/10 text-brand-mint font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 text-sm"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-            </svg>
-            Envoyer \u00e0 un ami
-          </button>
         </div>
       )}
 
@@ -1009,60 +1019,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                     )}
                   </div>
                   {sharingToGroup === g.id ? (
-                    <div className="w-5 h-5 border-2 border-brand-grape border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <svg className="w-4 h-4 text-brand-mint flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                    </svg>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </BottomSheet>
-
-      {/* Send to friend/group bottom sheet */}
-      <BottomSheet isOpen={showSendFriend} onClose={() => setShowSendFriend(false)} title="Partager ce livre">
-        <div className="pb-4 space-y-3">
-          {/* Message input */}
-          <div>
-            <label className="text-sm text-text-secondary block mb-1 font-medium">
-              Message (optionnel)
-            </label>
-            <input
-              type="text"
-              value={friendMessage}
-              onChange={(e) => setFriendMessage(e.target.value)}
-              placeholder="Je te recommande ce livre !"
-              className="input-field"
-              maxLength={200}
-            />
-          </div>
-
-          <div className="border-t border-border-light my-2" />
-
-          {allGroups.length === 0 ? (
-            <p className="text-sm text-text-tertiary text-center py-4">
-              Ajoutez des amis ou creez un groupe depuis l'onglet Social !
-            </p>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-text-muted mb-1">Choisissez un destinataire :</p>
-              {allGroups.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => handleSendToGroup(g)}
-                  disabled={sendingToGroup !== null}
-                  className="flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-surface-subtle active:scale-[0.98] transition-all text-left"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-surface-subtle flex items-center justify-center text-xl flex-shrink-0">
-                    {g.emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-text-primary text-sm truncate">{g.name}</p>
-                  </div>
-                  {sendingToGroup === g.id ? (
                     <div className="w-5 h-5 border-2 border-brand-grape border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <svg className="w-4 h-4 text-brand-mint flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
