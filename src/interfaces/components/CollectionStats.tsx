@@ -86,7 +86,7 @@ export function CollectionStats({ books, categoryCount }: CollectionStatsProps) 
                         style={{
                           height: `${Math.max(height, 4)}%`,
                           background: m.count > 0
-                            ? "linear-gradient(180deg, #34D399, #34D399aa)"
+                            ? "linear-gradient(180deg, #FB6538, #FB6538aa)"
                             : "#F5F3FF",
                         }}
                       />

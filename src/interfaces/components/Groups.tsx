@@ -163,7 +163,7 @@ export function Groups({ onSelectGroup }: GroupsProps) {
             onClick={() => { setShowActions(false); setTimeout(() => setShowJoin(true), 300); }}
             className="flex items-center gap-3 w-full py-3 px-1 rounded-xl hover:bg-surface-subtle transition-colors text-left"
           >
-            <div className="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center text-xl">🔗</div>
+            <div className="w-11 h-11 rounded-xl bg-brand-honey/25 flex items-center justify-center text-xl">🔗</div>
             <div>
               <p className="font-semibold text-sm text-text-primary">Rejoindre un groupe</p>
               <p className="text-xs text-text-tertiary">Avec un code d'invitation</p>

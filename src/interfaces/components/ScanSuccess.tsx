@@ -10,7 +10,7 @@ interface ScanSuccessProps {
 // Generate random confetti particles at mount time
 function useConfettiParticles(count: number) {
   return useMemo(() => {
-    const colors = ["#F59E0B", "#EF4444", "#3B82F6", "#10B981", "#FB6538", "#EC4899"];
+    const colors = ["#F59E0B", "#EF4444", "#3B82F6", "#FB6538", "#FB6538", "#EC4899"];
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       color: colors[i % colors.length],
@@ -80,7 +80,7 @@ export function ScanSuccess({ title, coverUrl, onDone }: ScanSuccessProps) {
               cx="40"
               cy="40"
               r="36"
-              stroke="#10B981"
+              stroke="#FB6538"
               strokeWidth="3"
               strokeLinecap="round"
               strokeDasharray="166"
@@ -89,7 +89,7 @@ export function ScanSuccess({ title, coverUrl, onDone }: ScanSuccessProps) {
             />
             <path
               d="M25 42L35 52L55 30"
-              stroke="#10B981"
+              stroke="#FB6538"
               strokeWidth="3.5"
               strokeLinecap="round"
               strokeLinejoin="round"

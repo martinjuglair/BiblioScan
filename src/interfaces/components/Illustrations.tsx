@@ -1,6 +1,6 @@
 /**
  * Custom SVG illustrations for empty states and onboarding.
- * Bubblegum palette: Grape #FB6538, Bubblegum #FF8B5F, Mint #34D399, Lemon #FBBF24, Sky #38BDF8
+ * Bubblegum palette: Grape #FB6538, Bubblegum #FF8B5F, Mint #FB6538, Lemon #FBBF24, Sky #38BDF8
  */
 
 /** Stack of books illustration */
@@ -14,7 +14,7 @@ export function BookStackIllustration({ className }: { className?: string }) {
       <rect x="15" y="52" width="85" height="16" rx="3" fill="#FF8B5F" opacity="0.85" transform="rotate(-3 57 60)" />
       <rect x="22" y="57" width="25" height="3" rx="1.5" fill="white" opacity="0.6" transform="rotate(-3 34 58)" />
       {/* Top book */}
-      <rect x="25" y="32" width="70" height="16" rx="3" fill="#34D399" opacity="0.85" transform="rotate(2 60 40)" />
+      <rect x="25" y="32" width="70" height="16" rx="3" fill="#FB6538" opacity="0.85" transform="rotate(2 60 40)" />
       <rect x="30" y="37" width="20" height="3" rx="1.5" fill="white" opacity="0.6" transform="rotate(2 40 38)" />
       {/* Bookmark */}
       <path d="M75 28V15a2 2 0 014 0v13l-2-2-2 2z" fill="#FF8B5F" />
@@ -84,7 +84,7 @@ export function ScanIllustration({ className }: { className?: string }) {
       <rect x="44" y="50" width="32" height="2" rx="1" fill="#FB6538" opacity="0.8" />
       {/* Sparkle */}
       <circle cx="88" cy="30" r="3" fill="#FBBF24" opacity="0.6" />
-      <circle cx="30" cy="50" r="2" fill="#34D399" opacity="0.4" />
+      <circle cx="30" cy="50" r="2" fill="#FB6538" opacity="0.4" />
     </svg>
   );
 }
@@ -96,7 +96,7 @@ export function StatsIllustration({ className }: { className?: string }) {
       {/* Bars */}
       <rect x="20" y="60" width="16" height="40" rx="3" fill="#FB6538" opacity="0.8" />
       <rect x="42" y="40" width="16" height="60" rx="3" fill="#FF8B5F" opacity="0.8" />
-      <rect x="64" y="25" width="16" height="75" rx="3" fill="#34D399" opacity="0.8" />
+      <rect x="64" y="25" width="16" height="75" rx="3" fill="#FB6538" opacity="0.8" />
       <rect x="86" y="50" width="16" height="50" rx="3" fill="#38BDF8" opacity="0.8" />
       {/* Star */}
       <path d="M50 18l2 4 5 1-4 3 1 5-4-2-4 2 1-5-4-3 5-1z" fill="#FBBF24" opacity="0.6" />

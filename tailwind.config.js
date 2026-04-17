@@ -46,14 +46,14 @@ export default {
           strong: "#E0DCE5",
         },
         status: {
-          success: "#34D399",
-          "success-bg": "#ECFDF5",
+          success: "#FB6538",
+          "success-bg": "#FFF1EC",
           warning: "#FFC83D",
           "warning-bg": "#FFFBEB",
           error: "#F87171",
           "error-bg": "#FEF2F2",
-          info: "#38BDF8",
-          "info-bg": "#EFF6FF",
+          info: "#FB6538",
+          "info-bg": "#FFF1EC",
         },
       },
       borderRadius: {

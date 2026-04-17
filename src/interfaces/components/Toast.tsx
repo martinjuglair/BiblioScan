@@ -88,8 +88,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 function ToastIcon({ type }: { type: ToastType }) {
   if (type === "success") {
     return (
-      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-        <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <div className="w-6 h-6 rounded-full bg-brand-grape/15 flex items-center justify-center flex-shrink-0">
+        <svg className="w-4 h-4 text-brand-grape" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </div>

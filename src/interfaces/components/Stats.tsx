@@ -278,7 +278,7 @@ export function Stats({ refreshKey }: StatsProps = {}) {
               disabled={loggedToday}
               className="flex-shrink-0 px-4 py-2 rounded-full font-bold text-[13px] transition-all active:scale-95"
               style={{
-                background: loggedToday ? "rgba(34,197,94,0.35)" : "rgba(255,255,255,0.25)",
+                background: loggedToday ? "rgba(255,200,61,0.45)" : "rgba(255,255,255,0.25)",
                 backdropFilter: "blur(4px)",
               }}
             >
@@ -324,11 +324,11 @@ export function Stats({ refreshKey }: StatsProps = {}) {
                   {goalPercent}% — {goal - yearReadCount > 0 ? `${goal - yearReadCount} livres restants` : ""}
                 </p>
                 {goalPercent >= 100 ? (
-                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success">
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-grape/10 text-brand-grape">
                     Objectif atteint !
                   </span>
                 ) : goalPercent >= 50 ? (
-                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success">
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-grape/10 text-brand-grape">
                     En bonne voie
                   </span>
                 ) : null}
