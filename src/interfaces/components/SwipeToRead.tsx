@@ -33,7 +33,7 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
       }
       style={
         isRead
-          ? { boxShadow: "0 4px 14px rgba(139,92,246,0.25)" }
+          ? { boxShadow: "0 4px 14px rgba(234,88,12,0.25)" }
           : undefined
       }
     >
@@ -41,7 +41,7 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
         <span
           className="absolute inset-y-0 w-20 pointer-events-none"
           style={{
-            background: "rgba(139,92,246,0.08)",
+            background: "rgba(234,88,12,0.08)",
             transform: "skewX(-20deg)",
             animation: "read-shimmer 2.4s ease-in-out infinite",
           }}
@@ -54,7 +54,7 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
         <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
           <path
             d="M5 13l4 4L19 7"
-            stroke="#A855F7"
+            stroke="#EA580C"
             strokeWidth={isRead ? 3 : 2.4}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -69,7 +69,7 @@ export function SwipeToRead({ isRead, onChange }: SwipeToReadProps) {
         <svg width={18} height={18} viewBox="0 0 24 24" fill="none" className="relative">
           <path
             d="M9 6l6 6-6 6"
-            stroke="#A855F7"
+            stroke="#EA580C"
             strokeWidth={2.2}
             strokeLinecap="round"
             strokeLinejoin="round"

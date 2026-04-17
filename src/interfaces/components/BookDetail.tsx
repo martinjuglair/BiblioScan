@@ -327,7 +327,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       const barH = commentLines.length * lineH;
 
       // Draw bar
-      ctx.fillStyle = "#8B5CF6";
+      ctx.fillStyle = "#EA580C";
       ctx.beginPath();
       ctx.roundRect(barX, yPos - 6, 8, barH, 4);
       ctx.fill();

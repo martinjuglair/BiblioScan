@@ -6,7 +6,7 @@ export function ReadBadge() {
   return (
     <div
       className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-sm"
-      style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%)" }}
+      style={{ background: "linear-gradient(135deg, #EA580C 0%, #FB923C 100%)" }}
     >
       Lu
     </div>

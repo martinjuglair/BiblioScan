@@ -151,7 +151,7 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
       <button
         onClick={handleConfirm}
         className="mt-4 w-full flex items-center justify-center gap-2.5 rounded-2xl py-4 bg-brand-grape text-white font-bold text-[17px] tracking-[0.2px] active:scale-[0.98] transition-transform"
-        style={{ boxShadow: "0 8px 28px rgba(139,92,246,0.35)" }}
+        style={{ boxShadow: "0 8px 28px rgba(234,88,12,0.35)" }}
       >
         <span className="text-2xl leading-none font-bold">+</span>
         Ajouter à ma collection
