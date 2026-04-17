@@ -28,12 +28,6 @@ export function LevelHeroCard({ readCount }: LevelHeroCardProps) {
           boxShadow: `0 8px 28px ${level.color}40`,
         }}
       >
-        {/* Decorative blob */}
-        <div
-          className="absolute -top-16 -right-10 w-44 h-44 rounded-full opacity-60 pointer-events-none"
-          style={{ background: `${level.color}55` }}
-        />
-
         <div className="relative flex items-center gap-4">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"

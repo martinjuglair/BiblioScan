@@ -59,9 +59,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [shareRating, setShareRating] = useState(0);
   const [shareComment, setShareComment] = useState("");
 
-  // Tags
-  const [showTagInput, setShowTagInput] = useState(false);
-  const [newTag, setNewTag] = useState("");
 
   // Buy picker
   const [showBuyPicker, setShowBuyPicker] = useState(false);
@@ -188,32 +185,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       setBook(result.value);
       onUpdated();
       toast("Avis enregistré", "success");
-    }
-  };
-
-  const handleAddTag = async () => {
-    if (!book || !newTag.trim()) return;
-    const tag = newTag.trim().toLowerCase();
-    if ((book.tags ?? []).includes(tag)) { setNewTag(""); return; }
-    const updated = [...(book.tags ?? []), tag];
-    const result = await updateBook.execute(isbn, { tags: updated });
-    if (result.ok) {
-      hapticLight();
-      setBook(result.value);
-      onUpdated();
-      toast(`Tag "${tag}" ajouté`, "success");
-    }
-    setNewTag("");
-    setShowTagInput(false);
-  };
-
-  const handleRemoveTag = async (tag: string) => {
-    if (!book) return;
-    const updated = (book.tags ?? []).filter((t) => t !== tag);
-    const result = await updateBook.execute(isbn, { tags: updated });
-    if (result.ok) {
-      setBook(result.value);
-      onUpdated();
     }
   };
 
@@ -728,57 +699,6 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           </button>
         </div>
         </>
-      )}
-
-      {/* Tags */}
-      {!editing && (
-        <div className="card mt-4 space-y-3">
-          <h3 className="text-sm font-semibold text-text-tertiary uppercase tracking-wide">Tags</h3>
-          <div className="flex flex-wrap gap-2">
-            {(book.tags ?? []).map((tag) => (
-              <button
-                key={tag}
-                onClick={() => handleRemoveTag(tag)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-brand-grape/10 text-brand-grape text-xs font-medium transition-all hover:bg-brand-grape/20 active:scale-95"
-              >
-                {tag}
-                <svg className="w-3 h-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            ))}
-            {showTagInput ? (
-              <form
-                onSubmit={(e) => { e.preventDefault(); handleAddTag(); }}
-                className="flex items-center gap-1.5"
-              >
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="ex: prêté, collector..."
-                  className="w-32 px-2.5 py-1 text-xs rounded-pill border border-brand-grape focus:outline-none focus:ring-1 focus:ring-brand-grape"
-                  autoFocus
-                  maxLength={30}
-                  onBlur={() => { if (!newTag.trim()) setShowTagInput(false); }}
-                />
-                <button
-                  type="submit"
-                  className="w-6 h-6 rounded-full bg-brand-grape text-white text-xs flex items-center justify-center"
-                >
-                  +
-                </button>
-              </form>
-            ) : (
-              <button
-                onClick={() => setShowTagInput(true)}
-                className="px-3 py-1.5 rounded-pill border border-dashed border-border text-brand-grape text-xs font-medium transition-all hover:border-brand-grape active:scale-95"
-              >
-                + Ajouter un tag
-              </button>
-            )}
-          </div>
-        </div>
       )}
 
       {/* Rating & Comment */}

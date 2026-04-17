@@ -106,7 +106,7 @@ export function BadgeBanner() {
             {/* Text */}
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold text-purple-300 uppercase tracking-[1.5px] mb-0.5">
-                Badge debloque !
+                Badge débloqué !
               </p>
               <p className="text-base font-bold text-white truncate">
                 {current.name}

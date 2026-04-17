@@ -414,32 +414,6 @@ export function Stats({ refreshKey }: StatsProps = {}) {
           </div>
         )}
 
-        {/* Publisher distribution */}
-        {stats.publishers.length > 0 && (
-          <div className="card mb-3">
-            <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">Top éditeurs</h3>
-            <div className="space-y-2">
-              {stats.publishers.slice(0, 5).map((pub) => (
-                <div key={pub.name}>
-                  <div className="flex justify-between text-sm mb-0.5">
-                    <span className="text-text-primary font-medium truncate mr-2">{pub.name}</span>
-                    <span className="text-text-tertiary text-xs flex-shrink-0">{pub.count} livre{pub.count > 1 ? "s" : ""}</span>
-                  </div>
-                  <div className="h-1.5 bg-surface-subtle rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${(pub.count / stats.totalBooks) * 100}%`,
-                        background: "linear-gradient(90deg, #8B5CF6, #F472B6)",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Rating distribution */}
         {stats.ratingDistribution.some((r) => r > 0) && (
           <div className="card mb-3">
