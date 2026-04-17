@@ -4,7 +4,8 @@ import { hapticLight } from "@interfaces/utils/haptics";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary } from "@infrastructure/container";
 import { supabase } from "@infrastructure/supabase/client";
-import { LEVEL_ICONS, getLevel, getNextLevel, BADGES, computeStreak, getReadingLog } from "./Stats";
+import { BADGES, computeStreak, getReadingLog } from "./Stats";
+import { LevelHeroCard } from "./LevelHeroCard";
 
 interface ProfileProps {
   email: string;
@@ -47,9 +48,6 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
   }, []);
 
   const readCount = useMemo(() => books.filter((b) => b.isRead).length, [books]);
-  const level = getLevel(readCount);
-  const nextLevel = getNextLevel(readCount);
-  const levelProgress = nextLevel ? ((readCount - level.min) / (nextLevel.min - level.min)) * 100 : 100;
   const streak = useMemo(() => computeStreak(getReadingLog()), []);
   const earnedBadges = useMemo(() => BADGES.filter((b) => b.check(books, streak)), [books, streak]);
   const lockedBadges = useMemo(() => BADGES.filter((b) => !b.check(books, streak)), [books, streak]);
@@ -107,36 +105,10 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
         <p className="text-sm text-text-tertiary">{email}</p>
       </div>
 
-      {/* Level card */}
+      {/* Level hero card — prominent, full gamified */}
       {books.length > 0 && (
-        <div className="card mb-4">
-          <div className="flex items-center gap-3">
-            <div className="text-3xl">{LEVEL_ICONS[level.icon]}</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brand-grape uppercase">Niveau {level.level}</span>
-                <span className="text-sm font-bold text-text-primary">{level.name}</span>
-              </div>
-              {nextLevel ? (
-                <>
-                  <div className="h-2 bg-surface-subtle rounded-full overflow-hidden mt-1.5">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${levelProgress}%`,
-                        background: "linear-gradient(90deg, #8B5CF6, #F472B6)",
-                      }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-text-muted mt-1">
-                    {readCount}/{nextLevel.min} livres lus pour "{nextLevel.name}" {LEVEL_ICONS[nextLevel.icon]}
-                  </p>
-                </>
-              ) : (
-                <p className="text-[10px] text-status-success font-semibold mt-1">Niveau maximum atteint !</p>
-              )}
-            </div>
-          </div>
+        <div className="mb-4">
+          <LevelHeroCard readCount={readCount} />
         </div>
       )}
 

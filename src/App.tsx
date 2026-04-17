@@ -14,7 +14,9 @@ import { BottomNav } from "@interfaces/components/BottomNav";
 import { ToastProvider } from "@interfaces/components/Toast";
 import { Onboarding } from "@interfaces/components/Onboarding";
 import { BadgeBanner } from "@interfaces/components/BadgeBanner";
+import { LevelUpBanner } from "@interfaces/components/LevelUpBanner";
 import { useBadgeChecker } from "@interfaces/hooks/useBadgeChecker";
+import { useLevelChecker } from "@interfaces/hooks/useLevelChecker";
 
 type Tab = "discover" | "groups" | "library" | "stats" | "profile";
 
@@ -48,8 +50,9 @@ type View =
 export default function App() {
   const { user, firstName, loading, error, signIn, signUp, signOut, updateFirstName, resetPassword, updatePassword } = useAuth();
 
-  // Global badge detection — safe to call unconditionally, the hook checks library internally
+  // Global badge + level detection — safe to call unconditionally, hooks check library internally
   useBadgeChecker();
+  useLevelChecker();
 
   const [tab, setTab] = useState<Tab>("library");
   const [addMode, setAddMode] = useState<"scan" | "search" | "manual" | null>(null);
@@ -109,6 +112,7 @@ export default function App() {
   return (
     <ToastProvider>
     <BadgeBanner />
+    <LevelUpBanner />
     {showOnboarding && (
       <Onboarding firstName={firstName} onComplete={handleOnboardingComplete} />
     )}
