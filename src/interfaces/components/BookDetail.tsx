@@ -815,10 +815,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                 className="flex items-center gap-3 px-4 py-3 hover:bg-surface-subtle transition-colors"
               >
                 <span className="text-xl">🛒</span>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm text-text-primary">Amazon</p>
-                  <p className="text-xs text-text-tertiary">Livraison rapide, large choix</p>
-                </div>
+                <p className="font-semibold text-sm text-text-primary flex-1">Amazon</p>
               </a>
               <a
                 href={`https://www.fnac.com/SearchResult/ResultList.aspx?Search=${encodeURIComponent(book.title)}`}
@@ -828,23 +825,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                 className="flex items-center gap-3 px-4 py-3 hover:bg-surface-subtle transition-colors border-t border-border-light"
               >
                 <span className="text-xl">📦</span>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm text-text-primary">Fnac</p>
-                  <p className="text-xs text-text-tertiary">Retrait en magasin, carte fidélité</p>
-                </div>
-              </a>
-              <a
-                href={`https://www.cultura.com/search?q=${encodeURIComponent(book.title)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowBuyPicker(false)}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-surface-subtle transition-colors border-t border-border-light"
-              >
-                <span className="text-xl">🏪</span>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm text-text-primary">Cultura</p>
-                  <p className="text-xs text-text-tertiary">Culture et loisirs</p>
-                </div>
+                <p className="font-semibold text-sm text-text-primary flex-1">Fnac</p>
               </a>
             </div>
           )}
