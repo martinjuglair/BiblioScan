@@ -8,7 +8,6 @@ import { BottomSheet } from "./BottomSheet";
 import { LibrarySkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
 import { hapticLight } from "@interfaces/utils/haptics";
-import { BookStackIllustration, ScanIllustration } from "./Illustrations";
 import { ShareCollection } from "./ShareCollection";
 import { LazyImage } from "./LazyImage";
 import { ReadBadge } from "./ReadBadge";
@@ -193,44 +192,63 @@ export function Library({ refreshKey, onSelectBook, onAddBook }: LibraryProps) {
       </div>
 
       {allBooks.length === 0 ? (
-        /* ── Empty state ── */
-        <div className="py-8 sm:py-12 text-center">
-          <BookStackIllustration className="w-32 h-32 mx-auto mb-4 opacity-90" />
-          <h2 className="text-lg font-bold text-text-primary mb-2">Votre bibliothèque est vide</h2>
-          <p className="text-text-tertiary text-sm mb-6 max-w-xs mx-auto">
-            Commencez par scanner un livre ou rechercher par titre pour l'ajouter à votre collection.
-          </p>
-          <div className="flex flex-col gap-4 max-w-xs mx-auto text-left">
-            <div className="flex items-center gap-3">
-              <ScanIllustration className="w-12 h-12 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-text-primary text-sm">Scannez un code-barres</h3>
-                <p className="text-xs text-text-tertiary">Pointez la caméra ou tapez l'ISBN</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-brand-grape/10 flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-brand-grape" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-text-primary text-sm">Classez par catégorie</h3>
-                <p className="text-xs text-text-tertiary">BD, Romans, Mangas, et plus</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-brand-lemon/10 flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-brand-lemon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-text-primary text-sm">Notez et commentez</h3>
-                <p className="text-xs text-text-tertiary">Donnez votre avis sur chaque livre</p>
-              </div>
-            </div>
+        /* ── Rich empty state — shown when the library is brand new ── */
+        <div className="pt-6 pb-12 px-2">
+          <div
+            className="w-20 h-20 mx-auto mb-4 rounded-3xl flex items-center justify-center"
+            style={{ background: "rgba(139,92,246,0.12)" }}
+          >
+            <span className="text-[44px] leading-none">📚</span>
           </div>
+          <h2 className="text-center text-[22px] font-extrabold text-text-primary tracking-tight mb-2">
+            Commence ta bibliothèque
+          </h2>
+          <p className="text-center text-sm text-text-secondary leading-relaxed max-w-sm mx-auto mb-6">
+            Ajoute ton premier livre pour lancer ton parcours de lecteur.
+            Tu pourras le noter, le classer, et suivre ta progression.
+          </p>
+
+          <div className="flex flex-col gap-2 max-w-sm mx-auto">
+            <button
+              onClick={() => onAddBook?.("scan")}
+              className="flex items-center gap-3 rounded-2xl p-4 text-left bg-brand-grape border border-brand-grape active:scale-[0.98] transition-transform"
+            >
+              <span className="text-[28px]">📷</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-white">Scanner le code-barres</p>
+                <p className="text-xs text-white/80 mt-0.5">Le plus rapide</p>
+              </div>
+              <span className="text-[22px] text-white/90">›</span>
+            </button>
+
+            <button
+              onClick={() => onAddBook?.("search")}
+              className="flex items-center gap-3 rounded-2xl p-4 text-left bg-white border border-border active:scale-[0.98] transition-transform"
+            >
+              <span className="text-[28px]">🔍</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-text-primary">Chercher par titre</p>
+                <p className="text-xs text-text-tertiary mt-0.5">Si tu n'as pas le livre sous la main</p>
+              </div>
+              <span className="text-[22px] text-text-muted">›</span>
+            </button>
+
+            <button
+              onClick={() => onAddBook?.("manual")}
+              className="flex items-center gap-3 rounded-2xl p-4 text-left bg-white border border-border active:scale-[0.98] transition-transform"
+            >
+              <span className="text-[28px]">✍️</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-text-primary">Ajouter manuellement</p>
+                <p className="text-xs text-text-tertiary mt-0.5">Pour les livres introuvables</p>
+              </div>
+              <span className="text-[22px] text-text-muted">›</span>
+            </button>
+          </div>
+
+          <p className="text-xs text-text-tertiary text-center mt-5 leading-snug">
+            💡 Astuce : passe en onglet <span className="font-bold">Découvrir</span> pour voir des idées de lecture populaires.
+          </p>
         </div>
       ) : (
         <>

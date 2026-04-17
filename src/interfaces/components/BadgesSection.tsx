@@ -105,18 +105,33 @@ function BadgesFullSheet({
             <h4 className="text-[11px] font-semibold text-text-tertiary uppercase tracking-[0.5px] mb-2">
               Débloqués ({earned.length})
             </h4>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="space-y-2">
               {earned.map((badge) => (
-                <div key={badge.id} className="text-center">
+                <div
+                  key={badge.id}
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl border"
+                  style={{
+                    background: "rgba(139,92,246,0.08)",
+                    borderColor: "rgba(139,92,246,0.18)",
+                  }}
+                >
                   <div
-                    className="w-12 h-12 rounded-2xl mx-auto mb-1 flex items-center justify-center"
-                    style={{ background: "rgba(139,92,246,0.12)" }}
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: "rgba(139,92,246,0.2)" }}
                   >
-                    <span className="text-2xl leading-none">{badge.emoji}</span>
+                    <span className="text-[22px] leading-none">{badge.emoji}</span>
                   </div>
-                  <p className="text-[10px] font-semibold text-text-primary leading-tight line-clamp-2">
-                    {badge.name}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[13px] font-bold text-text-primary truncate">
+                        {badge.name}
+                      </p>
+                      <span className="text-[13px] font-bold text-brand-grape flex-shrink-0">✓</span>
+                    </div>
+                    <p className="text-[11px] text-text-secondary mt-0.5 line-clamp-2">
+                      {badge.description}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>

@@ -73,7 +73,6 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
   const [editEmoji, setEditEmoji] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
-  const [friendName, setFriendName] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -90,10 +89,6 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
     if (groupsResult.ok) {
       const found = groupsResult.value.find((g) => g.id === groupId) ?? null;
       setGroup(found);
-      if (found?.isPrivate) {
-        const fname = await readingGroupRepository.getFriendName(groupId);
-        setFriendName(fname);
-      }
     }
     if (membersResult.ok) setMembers(membersResult.value);
     if (booksResult.ok) setBooks(booksResult.value);
@@ -172,23 +167,11 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
   };
 
   const handleLeave = async () => {
-    const msg = group?.isPrivate
-      ? "Retirer cet ami ? La conversation sera supprimee."
-      : "Quitter ce groupe ?";
-    if (!confirm(msg)) return;
-
-    if (group?.isPrivate) {
-      const result = await readingGroupRepository.deleteGroup(groupId);
-      if (result.ok) {
-        toast("Ami retire", "success");
-        onBack();
-      }
-    } else {
-      const result = await readingGroupRepository.leaveGroup(groupId);
-      if (result.ok) {
-        toast("Groupe quitte", "success");
-        onBack();
-      }
+    if (!confirm("Quitter ce groupe ?")) return;
+    const result = await readingGroupRepository.leaveGroup(groupId);
+    if (result.ok) {
+      toast("Groupe quitté", "success");
+      onBack();
     }
   };
 
@@ -272,35 +255,22 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
       </button>
 
       <div className="flex items-center gap-3 mb-4">
-        {group.isPrivate ? (
-          <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #B065E0 100%)" }}
-          >
-            {(friendName ?? "A")[0]!.toUpperCase()}
-          </div>
-        ) : (
-          <div className="w-14 h-14 rounded-2xl bg-surface-subtle flex items-center justify-center text-3xl">
-            {group.emoji}
-          </div>
-        )}
+        <div className="w-14 h-14 rounded-2xl bg-surface-subtle flex items-center justify-center text-3xl">
+          {group.emoji}
+        </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-text-primary truncate">
-            {group.isPrivate ? friendName ?? "Ami" : group.name}
-          </h1>
-          {!group.isPrivate && group.description && (
+          <h1 className="text-xl font-bold text-text-primary truncate">{group.name}</h1>
+          {group.description && (
             <p className="text-text-tertiary text-sm truncate">{group.description}</p>
           )}
           <p className="text-text-muted text-xs mt-0.5">
-            {group.isPrivate
-              ? `${books.length} livre${books.length > 1 ? "s" : ""} partage${books.length > 1 ? "s" : ""}`
-              : `${members.length} membre${members.length > 1 ? "s" : ""} · ${books.length} livre${books.length > 1 ? "s" : ""}`}
+            {members.length} membre{members.length > 1 ? "s" : ""} · {books.length} livre{books.length > 1 ? "s" : ""}
           </p>
         </div>
       </div>
 
-      {/* Action buttons (not for private groups) */}
-      {!group.isPrivate && (
-        <div className="flex gap-2 mb-4">
+      {/* Action buttons */}
+      <div className="flex gap-2 mb-4">
           <button
             onClick={() => setShowInvite(true)}
             className="flex-1 card flex items-center justify-center gap-2 py-3 active:scale-[0.97] transition-all"
@@ -332,7 +302,6 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
             </button>
           )}
         </div>
-      )}
 
       {/* Activity feed */}
       {activity.length > 0 && (
@@ -410,12 +379,12 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
         </div>
       )}
 
-      {/* Leave group / Remove friend */}
+      {/* Leave group */}
       <button
         onClick={handleLeave}
         className="w-full mt-6 py-3 rounded-pill bg-status-error-bg text-status-error font-semibold transition-all duration-200 active:scale-95 text-sm"
       >
-        {group.isPrivate ? "Retirer cet ami" : "Quitter le groupe"}
+        Quitter le groupe
       </button>
 
       {/* Invite sheet */}

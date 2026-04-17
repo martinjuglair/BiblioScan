@@ -40,7 +40,7 @@ export function LevelUpBanner() {
     setVisible(true);
 
     const start = Date.now();
-    const duration = 5000;
+    const duration = 8000;
     progressInterval.current = setInterval(() => {
       const elapsed = Date.now() - start;
       const remaining = Math.max(0, 100 - (elapsed / duration) * 100);

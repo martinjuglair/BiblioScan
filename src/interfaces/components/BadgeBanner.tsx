@@ -42,7 +42,7 @@ export function BadgeBanner() {
 
     // Progress bar countdown
     const start = Date.now();
-    const duration = 4000;
+    const duration = 6000;
     progressInterval.current = setInterval(() => {
       const elapsed = Date.now() - start;
       const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
@@ -52,7 +52,7 @@ export function BadgeBanner() {
       }
     }, 30);
 
-    // Auto-dismiss after 4s
+    // Auto-dismiss after 6s
     dismissTimer.current = setTimeout(() => {
       dismiss();
     }, duration);

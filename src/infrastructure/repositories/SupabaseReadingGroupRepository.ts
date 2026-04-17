@@ -98,7 +98,12 @@ export class SupabaseReadingGroupRepository {
         .order("created_at", { ascending: false });
 
       if (error) return Result.fail(error.message);
-      return Result.ok((data ?? []).map((r) => this.rowToGroup(r)));
+      // Filter out legacy private (1-on-1 "friend") groups — the friend system
+      // has been removed; those rows can still exist in the DB for old users.
+      const groups = (data ?? [])
+        .map((r) => this.rowToGroup(r))
+        .filter((g) => !g.isPrivate);
+      return Result.ok(groups);
     } catch (e) {
       return Result.fail(e instanceof Error ? e.message : "Erreur");
     }

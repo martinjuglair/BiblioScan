@@ -68,9 +68,9 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [showSocialShare, setShowSocialShare] = useState(false);
   const [generatingCard, setGeneratingCard] = useState(false);
 
-  // Send to friend/group
+  // Send to group
   const [showSendFriend, setShowSendFriend] = useState(false);
-  const [allGroups, setAllGroups] = useState<(ReadingGroup & { friendName?: string })[]>([]);
+  const [allGroups, setAllGroups] = useState<ReadingGroup[]>([]);
   const [friendMessage, setFriendMessage] = useState("");
   const [sendingToGroup, setSendingToGroup] = useState<string | null>(null);
 
@@ -527,20 +527,11 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     setShowSendFriend(true);
     const result = await readingGroupRepository.findMyGroups();
     if (result.ok) {
-      const enriched = await Promise.all(
-        result.value.map(async (g) => {
-          if (g.isPrivate) {
-            const friendName = await readingGroupRepository.getFriendName(g.id);
-            return { ...g, friendName: friendName ?? "Ami" };
-          }
-          return g;
-        }),
-      );
-      setAllGroups(enriched);
+      setAllGroups(result.value);
     }
   };
 
-  const handleSendToGroup = async (group: ReadingGroup & { friendName?: string }) => {
+  const handleSendToGroup = async (group: ReadingGroup) => {
     if (!book) return;
     setSendingToGroup(group.id);
     const result = await readingGroupRepository.shareBook(
@@ -554,8 +545,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     setSendingToGroup(null);
     if (result.ok) {
       hapticMedium();
-      const displayName = group.isPrivate ? group.friendName : group.name;
-      toast(`Partage avec ${displayName} !`, "success");
+      toast(`Partagé avec ${group.name} !`, "success");
       setShowSendFriend(false);
     } else {
       toast(result.error, "error");
@@ -1027,22 +1017,11 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                   disabled={sendingToGroup !== null}
                   className="flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-surface-subtle active:scale-[0.98] transition-all text-left"
                 >
-                  {g.isPrivate ? (
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                      style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #B065E0 100%)" }}
-                    >
-                      {(g.friendName ?? "A")[0]!.toUpperCase()}
-                    </div>
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-surface-subtle flex items-center justify-center text-xl flex-shrink-0">
-                      {g.emoji}
-                    </div>
-                  )}
+                  <div className="w-10 h-10 rounded-xl bg-surface-subtle flex items-center justify-center text-xl flex-shrink-0">
+                    {g.emoji}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-text-primary text-sm truncate">
-                      {g.isPrivate ? g.friendName : g.name}
-                    </p>
-                    {g.isPrivate && <p className="text-[10px] text-text-tertiary">Ami</p>}
+                    <p className="font-semibold text-text-primary text-sm truncate">{g.name}</p>
                   </div>
                   {sendingToGroup === g.id ? (
                     <div className="w-5 h-5 border-2 border-brand-grape border-t-transparent rounded-full animate-spin" />
