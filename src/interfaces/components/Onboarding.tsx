@@ -122,7 +122,7 @@ export function Onboarding({ firstName, onComplete }: OnboardingProps) {
         <rect
           width="100%"
           height="100%"
-          fill="rgba(30, 27, 75, 0.65)"
+          fill="rgba(26, 11, 24, 0.65)"
           mask="url(#onboarding-mask)"
         />
       </svg>
@@ -153,7 +153,7 @@ export function Onboarding({ firstName, onComplete }: OnboardingProps) {
           >
             <div
               className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-float mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 50%, #FF8B5F 100%)" }}
+              style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 50%, #FFC83D 100%)" }}
             >
               <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />

@@ -79,16 +79,6 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
     });
   };
 
-  const sourceLabel = (source: string) => {
-    switch (source) {
-      case "google": return { text: "Google", bg: "bg-brand-grape/15 text-brand-grape" };
-      case "bnf": return { text: "BnF", bg: "bg-brand-mint/10 text-brand-mint" };
-      case "openlib": return { text: "OpenLib", bg: "bg-brand-sky/10 text-brand-sky" };
-      case "gcd": return { text: "GCD", bg: "bg-brand-sky/10 text-brand-sky" };
-      default: return { text: source, bg: "bg-surface-subtle text-text-muted" };
-    }
-  };
-
   return (
     <div className="w-full">
       <div className="flex gap-2 mb-3">
@@ -96,7 +86,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Titre, auteur, ISBN..."
+          placeholder="Titre, auteur..."
           className="input-field flex-1"
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSearch();
@@ -125,7 +115,6 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
       {!loading && results.length > 0 && (
         <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto">
           {results.map((item, i) => {
-            const badge = sourceLabel(item.source);
             return (
               <button
                 key={`${item.source}-${i}-${item.title}`}
@@ -155,12 +144,7 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="font-semibold text-sm leading-tight text-text-primary truncate">{item.title}</h3>
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded-pill font-medium flex-shrink-0 ${badge.bg}`}>
-                      {badge.text}
-                    </span>
-                  </div>
+                  <h3 className="font-semibold text-sm leading-tight text-text-primary truncate">{item.title}</h3>
                   <p className="text-text-tertiary text-xs truncate">
                     {item.authors.length > 0 ? item.authors.join(", ") : item.publisher || "Éditeur inconnu"}
                     {item.authors.length > 0 && item.publisher ? ` · ${item.publisher}` : ""}
