@@ -10,12 +10,24 @@ const API_KEY = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY as string | undefined;
 const keyParam = API_KEY ? `&key=${API_KEY}` : "";
 
 /**
- * Upgrade Google Books cover thumbnail URL to higher quality.
- * Default zoom=1 gives ~128px wide. zoom=2 gives ~300px, zoom=3 gives ~400px.
- * Also removes edge=curl effect.
+ * Upgrade Google Books cover thumbnail URL to higher quality, and reject
+ * known placeholder patterns that would render as a generic "image not
+ * available" card in the UI.
  */
 function upgradeCoverUrl(url: string | null): string | null {
   if (!url) return null;
+
+  const lower = url.toLowerCase();
+  if (
+    lower.includes("image_not_available") ||
+    lower.includes("no_cover") ||
+    lower.includes("nocover") ||
+    lower.includes("no-cover") ||
+    lower.includes("placeholder")
+  ) {
+    return null;
+  }
+
   let upgraded = url.replace(/&zoom=\d/, "&zoom=2");
   if (!upgraded.includes("zoom=")) upgraded += "&zoom=2";
   upgraded = upgraded.replace(/&edge=curl/, "");
@@ -349,6 +361,7 @@ export class GoogleBooksService implements IBookLookupService {
       publishedDate: info.publishedDate,
       coverUrl,
       retailPrice,
+      description: info.description,
     });
   }
 

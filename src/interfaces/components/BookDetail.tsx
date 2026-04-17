@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
 import { ReadingGroup } from "@domain/entities/ReadingGroup";
-import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, readingGroupRepository } from "@infrastructure/container";
+import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, readingGroupRepository, googleBooksSearch } from "@infrastructure/container";
 import { CoverLightbox } from "./CoverLightbox";
 import { BottomSheet } from "./BottomSheet";
 import { BookDetailSkeleton } from "./Skeleton";
@@ -24,6 +24,8 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [description, setDescription] = useState<string | null>(null);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   // Edit form state
   const [priceInput, setPriceInput] = useState("");
@@ -95,6 +97,20 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       }
       setLoading(false);
     });
+  }, [isbn]);
+
+  // Fetch description on-the-fly (cached server-side).
+  useEffect(() => {
+    if (!isbn) return;
+    let cancelled = false;
+    googleBooksSearch.lookupByISBN(isbn).then((res) => {
+      if (!cancelled && res.ok && res.value.description) {
+        setDescription(res.value.description.trim());
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [isbn]);
 
   const initForm = (b: ComicBook) => {
@@ -666,6 +682,28 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           }}
         />
       ) : (
+        <>
+        {description && (
+          <div className="card mb-3">
+            <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">Résumé</h3>
+            <p
+              className={
+                "text-sm text-text-secondary leading-relaxed " +
+                (descriptionExpanded ? "" : "line-clamp-6")
+              }
+            >
+              {description}
+            </p>
+            {description.length > 320 && (
+              <button
+                onClick={() => setDescriptionExpanded((v) => !v)}
+                className="mt-2 text-[13px] font-semibold text-brand-grape active:opacity-70"
+              >
+                {descriptionExpanded ? "Voir moins" : "Voir plus"}
+              </button>
+            )}
+          </div>
+        )}
         <div className="card space-y-3">
           <InfoRow label="ISBN" value={book.isbn} />
           <InfoRow label="Auteur(s)" value={book.authors.join(", ") || "Inconnu"} />
@@ -702,6 +740,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             Modifier
           </button>
         </div>
+        </>
       )}
 
       {/* Tags */}

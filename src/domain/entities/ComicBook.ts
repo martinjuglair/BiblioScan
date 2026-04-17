@@ -31,6 +31,8 @@ export interface ComicBookCreateInput {
   coverUrl: string | null;
   retailPrice: { amount: number; currency?: string } | null;
   categoryId?: string | null;
+  /** Short synopsis from the book provider. Not persisted, displayed on-the-fly. */
+  description?: string;
 }
 
 export class ComicBook {
