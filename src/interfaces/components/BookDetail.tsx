@@ -244,19 +244,34 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     canvas.height = H;
     const ctx = canvas.getContext("2d")!;
 
-    // Background — deep cocoa (matches new DA)
-    ctx.fillStyle = "#1A0B18";
+    // Background — Solar Pop gradient (orange → magenta → sun)
+    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+    bgGrad.addColorStop(0, "#FB6538");
+    bgGrad.addColorStop(0.5, "#FF3C7A");
+    bgGrad.addColorStop(1, "#FFC83D");
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
     ctx.textAlign = "center";
 
-    // Brand
-    ctx.fillStyle = "#FFC83D";
-    ctx.font = "700 28px Inter, -apple-system, sans-serif";
-    ctx.fillText("S H E L F Y", W / 2, 60);
+    // Brand row: SHELFY • MA LECTURE
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "800 32px Inter, -apple-system, sans-serif";
+    ctx.fillText("SHELFY  •  MA LECTURE", W / 2, 70);
 
-    // Cover
-    const cx = (W - cw) / 2, cy = 100;
+    // Cover — with a soft white frame & drop shadow
+    const cx = (W - cw) / 2, cy = 120;
+
+    // Drop shadow behind cover
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetY = 16;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(cx - 18, cy - 18, cw + 36, ch + 36, 24);
+    ctx.fill();
+    ctx.restore();
 
     if (book?.coverUrl) {
       try {
@@ -269,7 +284,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         });
         ctx.save();
         ctx.beginPath();
-        ctx.roundRect(cx, cy, cw, ch, 28);
+        ctx.roundRect(cx, cy, cw, ch, 16);
         ctx.clip();
         ctx.drawImage(img, cx, cy, cw, ch);
         ctx.restore();
@@ -277,9 +292,9 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     }
 
     // Title
-    let yPos = cy + ch + 60;
+    let yPos = cy + ch + 80;
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "800 64px Inter, -apple-system, sans-serif";
+    ctx.font = "800 68px Inter, -apple-system, sans-serif";
     if (tctx.measureText(titleText).width > maxTitleW) {
       const words = titleText.split(" ");
       let line = "";
@@ -288,65 +303,87 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
         if (ctx.measureText(test).width > maxTitleW && line) {
           ctx.fillText(line, W / 2, yPos);
           line = word;
-          yPos += 76;
+          yPos += 80;
         } else { line = test; }
       }
       ctx.fillText(line, W / 2, yPos);
     } else {
       ctx.fillText(titleText, W / 2, yPos);
     }
-    yPos += 48;
+    yPos += 50;
 
     // Author
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.font = "400 38px Inter, -apple-system, sans-serif";
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "600 38px Inter, -apple-system, sans-serif";
     ctx.fillText(book?.authors.join(", ") || "Auteur inconnu", W / 2, yPos);
-    yPos += 56;
+    yPos += 64;
 
-    // Stars
+    // Stars — white on gradient for contrast
     if (rating && rating > 0) {
       let sx = W / 2 - 150;
       ctx.textAlign = "left";
       for (let i = 0; i < 5; i++) {
-        ctx.fillStyle = i < rating ? "#FFC83D" : "rgba(255,255,255,0.2)";
-        ctx.font = "56px sans-serif";
+        ctx.fillStyle = i < rating ? "#FFFFFF" : "rgba(255,255,255,0.35)";
+        ctx.font = "62px sans-serif";
         ctx.fillText("★", sx, yPos);
         sx += 66;
       }
       ctx.textAlign = "center";
-      yPos += 70;
+      yPos += 76;
     }
 
-    // Review block with left accent bar
+    // Review — glass card on top of the gradient
     if (comment && commentLines.length > 0) {
-      const barX = 100;
-      const textX = 126;
-      yPos += 10;
-
+      const boxPadX = 80;
+      const boxPadY = 28;
+      const boxX = 80;
+      const boxW = W - 160;
       const lineH = 62;
-      const barH = commentLines.length * lineH;
+      const boxH = commentLines.length * lineH + boxPadY * 2;
 
-      // Draw bar
-      ctx.fillStyle = "#FB6538";
+      // Glass panel
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
+      ctx.strokeStyle = "rgba(255,255,255,0.4)";
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(barX, yPos - 6, 8, barH, 4);
+      ctx.roundRect(boxX, yPos - 6, boxW, boxH, 28);
       ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Big opening quote
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      ctx.font = "800 100px Georgia, serif";
+      ctx.textAlign = "left";
+      ctx.fillText("“", boxX + 20, yPos + 60);
 
       // Draw text lines
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.font = "400 44px Inter, -apple-system, sans-serif";
-      ctx.textAlign = "left";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "500 44px Inter, -apple-system, sans-serif";
+      let ty = yPos + boxPadY + 44;
       for (const l of commentLines) {
-        ctx.fillText(l, textX, yPos + 38);
-        yPos += lineH;
+        ctx.fillText(l, boxX + boxPadX, ty);
+        ty += lineH;
       }
       ctx.textAlign = "center";
+      yPos += boxH + 24;
     }
 
-    // Footer
-    ctx.fillStyle = "rgba(255,255,255,0.2)";
-    ctx.font = "500 26px Inter, -apple-system, sans-serif";
-    ctx.fillText("MA FICHE DE LECTURE", W / 2, H - 40);
+    // Footer chip
+    const chipW = 280, chipH = 44;
+    const chipX = (W - chipW) / 2;
+    const chipY = H - 70;
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.22)";
+    ctx.beginPath();
+    ctx.roundRect(chipX, chipY, chipW, chipH, 999);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "700 22px Inter, -apple-system, sans-serif";
+    ctx.fillText("MA FICHE DE LECTURE", W / 2, chipY + 30);
 
     return canvas.toDataURL("image/png");
   };
