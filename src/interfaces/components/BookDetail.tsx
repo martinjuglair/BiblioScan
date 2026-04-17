@@ -505,6 +505,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   const handleShareToGroup = async (groupId: string) => {
     if (!book) return;
     setSharingToGroup(groupId);
+    // Single call: persists book + optional review + ONE combined activity.
     const result = await readingGroupRepository.shareBook(
       groupId,
       book.isbn,
@@ -512,17 +513,10 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       book.coverUrl,
       book.comment,
       shareMessage.trim() || null,
+      shareRating > 0
+        ? { rating: shareRating, comment: shareComment.trim() || null }
+        : null,
     );
-    // Also post review if rating > 0
-    if (shareRating > 0) {
-      await readingGroupRepository.addReview(
-        groupId,
-        book.isbn,
-        shareRating,
-        shareComment.trim() || null,
-        book.title,
-      );
-    }
     setSharingToGroup(null);
     if (result.ok) {
       hapticMedium();

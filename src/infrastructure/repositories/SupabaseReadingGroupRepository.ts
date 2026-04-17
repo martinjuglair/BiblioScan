@@ -252,6 +252,10 @@ export class SupabaseReadingGroupRepository {
     coverUrl: string | null,
     noteText: string | null,
     message: string | null = null,
+    /** Optional reading-sheet payload posted alongside the share. When
+     * provided, the rating/comment are persisted in group_reviews and a
+     * single combined activity entry is logged (no duplicate feed spam). */
+    review?: { rating: number; comment: string | null } | null,
   ): Promise<Result<void>> {
     try {
       const user = await getUserMeta();
@@ -271,8 +275,29 @@ export class SupabaseReadingGroupRepository {
 
       if (error) return Result.fail(error.message);
 
-      // Log activity
-      await this.logActivity(groupId, user, "share_book", message, title, isbn);
+      if (review && review.rating > 0) {
+        await supabase.from("group_reviews").upsert(
+          {
+            group_id: groupId,
+            isbn,
+            user_id: user.id,
+            user_name: user.firstName,
+            rating: review.rating,
+            comment: review.comment,
+          },
+          { onConflict: "group_id,isbn,user_id" },
+        );
+      }
+
+      const parts: string[] = [];
+      if (message && message.trim()) parts.push(message.trim());
+      if (review && review.rating > 0) {
+        const stars = "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
+        parts.push(review.comment && review.comment.trim() ? `${stars} — ${review.comment.trim()}` : stars);
+      }
+      const combinedMessage = parts.length > 0 ? parts.join("\n") : null;
+
+      await this.logActivity(groupId, user, "share_book", combinedMessage, title, isbn);
 
       return Result.ok(undefined);
     } catch (e) {
