@@ -236,22 +236,35 @@ export function Stats({ refreshKey }: StatsProps = {}) {
     <PullToRefresh onRefresh={load}>
       <div className="px-3 sm:px-4 py-4">
 
-        {/* Hero: Streak + Daily CTA */}
+        {/* Level hero — identity */}
+        <div className="mb-3">
+          <LevelHeroCard readCount={books.filter((b) => b.isRead).length} />
+        </div>
+
+        {/* Badges (compact) — progression, right below identity */}
+        <BadgesSection books={books} streak={streak} />
+
+        {/* Streak compact — habit */}
         <div
-          className="rounded-2xl p-4 mb-4 text-white"
+          className="rounded-2xl px-4 py-3 mb-3 text-white"
           style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #F472B6 100%)" }}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold opacity-80">Streak en cours</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-2xl">{streak.current > 0 ? "\ud83d\udd25" : "\u2744\ufe0f"}</span>
-                <span className="text-3xl font-extrabold leading-none">{streak.current} j</span>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl flex-shrink-0">
+              {streak.current > 0 ? "🔥" : "❄️"}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl font-extrabold leading-none">{streak.current}</span>
+                <span className="text-xs font-semibold opacity-90">
+                  {streak.current > 1 ? "jours d'affilée" : "jour d'affilée"}
+                </span>
               </div>
-              <div className="flex items-center gap-3 mt-1 text-[11px] opacity-75">
-                {streak.best > streak.current && <span>Record : {streak.best} j</span>}
-                <span>{streak.total} jour{streak.total > 1 ? "s" : ""} au total</span>
-              </div>
+              <p className="text-[10px] opacity-70 mt-0.5">
+                {streak.best > streak.current
+                  ? `Record : ${streak.best} j · ${streak.total} j au total`
+                  : `${streak.total} jour${streak.total > 1 ? "s" : ""} au total`}
+              </p>
             </div>
             <button
               onClick={() => {
@@ -263,22 +276,15 @@ export function Stats({ refreshKey }: StatsProps = {}) {
                 }
               }}
               disabled={loggedToday}
-              className="flex-shrink-0 px-5 py-3 rounded-full font-bold text-sm transition-all active:scale-95"
+              className="flex-shrink-0 px-4 py-2 rounded-full font-bold text-[13px] transition-all active:scale-95"
               style={{
-                background: loggedToday ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.2)",
+                background: loggedToday ? "rgba(34,197,94,0.35)" : "rgba(255,255,255,0.25)",
                 backdropFilter: "blur(4px)",
               }}
             >
-              {loggedToday
-                ? justLogged ? "✓ Noté !" : "✓ Lu"
-                : "J'ai lu"}
+              {loggedToday ? (justLogged ? "✓ Noté !" : "✓ Lu") : "J'ai lu"}
             </button>
           </div>
-        </div>
-
-        {/* Level hero */}
-        <div className="mb-4">
-          <LevelHeroCard readCount={stats.totalBooks > 0 ? books.filter((b) => b.isRead).length : 0} />
         </div>
 
         <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">Statistiques</h1>
@@ -467,9 +473,6 @@ export function Stats({ refreshKey }: StatsProps = {}) {
             )}
           </div>
         )}
-
-        {/* Badges (compact) */}
-        <BadgesSection books={books} streak={streak} />
 
         {/* Reading history timeline */}
         {history.length > 0 && (

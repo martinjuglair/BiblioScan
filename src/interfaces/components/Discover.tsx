@@ -7,6 +7,7 @@ import {
 import type { SeriesRecommendation } from "@domain/entities/SeriesRecommendation";
 import type { AuthorRecommendation, AuthorSuggestedBook } from "@domain/entities/AuthorRecommendation";
 import { LazyImage } from "./LazyImage";
+import { LoadingLogo } from "./LoadingLogo";
 
 interface DiscoverProps {
   onAddBook?: (mode: "scan" | "search" | "manual") => void;
@@ -66,14 +67,17 @@ export function Discover({ onAddBook }: DiscoverProps) {
     onAddBook?.("search");
   };
 
-  // ── Loading skeleton ──
+  // ── Loading state (branded) ──
   if (loading && series.length === 0 && authors.length === 0 && popular.length === 0) {
     return (
       <div className="px-4 pt-2">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold text-text-primary">Découvrir</h1>
         </div>
-        <SkeletonRows />
+        <LoadingLogo
+          message="Préparation de vos recommandations"
+          hint="On fouille vos livres préférés 📚"
+        />
       </div>
     );
   }
@@ -243,19 +247,3 @@ function EmptyState() {
   );
 }
 
-function SkeletonRows() {
-  return (
-    <div className="space-y-8 mt-4">
-      {[0, 1, 2].map((row) => (
-        <div key={row}>
-          <div className="w-44 h-4 rounded bg-surface-subtle animate-pulse mb-3" />
-          <div className="flex gap-3 overflow-hidden">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="shrink-0 w-[100px] aspect-[0.65] rounded-lg bg-surface-subtle animate-pulse" />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
