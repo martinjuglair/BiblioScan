@@ -20,7 +20,7 @@ export function LoadingLogo({
         <div
           className="absolute w-[120px] h-[120px] rounded-[30px]"
           style={{
-            background: "rgba(234, 88, 12, 0.25)",
+            background: "rgba(251, 101, 56, 0.25)",
             animation: "loading-glow 2.8s ease-in-out infinite",
           }}
         />

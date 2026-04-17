@@ -74,7 +74,7 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
       <div className="flex flex-col items-center mb-6">
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-hero"
-          style={{ background: "linear-gradient(135deg, #EA580C 0%, #FB923C 100%)" }}
+          style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 100%)" }}
         >
           {(firstName ?? email)[0]?.toUpperCase() ?? "?"}
         </div>

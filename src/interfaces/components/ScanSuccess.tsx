@@ -10,7 +10,7 @@ interface ScanSuccessProps {
 // Generate random confetti particles at mount time
 function useConfettiParticles(count: number) {
   return useMemo(() => {
-    const colors = ["#F59E0B", "#EF4444", "#3B82F6", "#10B981", "#EA580C", "#EC4899"];
+    const colors = ["#F59E0B", "#EF4444", "#3B82F6", "#10B981", "#FB6538", "#EC4899"];
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       color: colors[i % colors.length],

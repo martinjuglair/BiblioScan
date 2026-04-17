@@ -245,13 +245,13 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     const ctx = canvas.getContext("2d")!;
 
     // Background — deep cocoa (matches new DA)
-    ctx.fillStyle = "#1A0D06";
+    ctx.fillStyle = "#1A0B18";
     ctx.fillRect(0, 0, W, H);
 
     ctx.textAlign = "center";
 
     // Brand
-    ctx.fillStyle = "#D4B896";
+    ctx.fillStyle = "#FFC83D";
     ctx.font = "700 28px Inter, -apple-system, sans-serif";
     ctx.fillText("S H E L F Y", W / 2, 60);
 
@@ -308,7 +308,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       let sx = W / 2 - 150;
       ctx.textAlign = "left";
       for (let i = 0; i < 5; i++) {
-        ctx.fillStyle = i < rating ? "#FCD34D" : "rgba(255,255,255,0.2)";
+        ctx.fillStyle = i < rating ? "#FFC83D" : "rgba(255,255,255,0.2)";
         ctx.font = "56px sans-serif";
         ctx.fillText("★", sx, yPos);
         sx += 66;
@@ -327,7 +327,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       const barH = commentLines.length * lineH;
 
       // Draw bar
-      ctx.fillStyle = "#EA580C";
+      ctx.fillStyle = "#FB6538";
       ctx.beginPath();
       ctx.roundRect(barX, yPos - 6, 8, barH, 4);
       ctx.fill();
@@ -748,7 +748,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             <button
               onClick={handleOpenShareGroup}
               className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
-              style={{ background: "#FFF3E4", borderColor: "rgba(251,146,60,0.3)" }}
+              style={{ background: "#FFF3E4", borderColor: "rgba(255,139,95,0.3)" }}
             >
               <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
                 👥
@@ -763,7 +763,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             <button
               onClick={handleShareLink}
               className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
-              style={{ background: "#FFF8DC", borderColor: "rgba(252,211,77,0.45)" }}
+              style={{ background: "#FFF8DC", borderColor: "rgba(255,200,61,0.45)" }}
             >
               <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
                 🔗
@@ -778,7 +778,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
             <button
               onClick={() => setShowSocialShare(true)}
               className="flex items-center gap-3 p-3 rounded-2xl text-left border transition-transform active:scale-[0.98]"
-              style={{ background: "#F5EADE", borderColor: "rgba(63,40,23,0.2)" }}
+              style={{ background: "#F5EADE", borderColor: "rgba(255,60,122,0.2)" }}
             >
               <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[22px]">
                 📸

@@ -48,7 +48,7 @@ export function BadgesSection({ books, streak }: BadgesSectionProps) {
               <div
                 key={badge.id}
                 className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(234,88,12,0.12)" }}
+                style={{ background: "rgba(251,101,56,0.12)" }}
               >
                 <span className="text-[22px] leading-none">{badge.emoji}</span>
               </div>
@@ -111,13 +111,13 @@ function BadgesFullSheet({
                   key={badge.id}
                   className="flex items-center gap-2.5 p-2.5 rounded-xl border"
                   style={{
-                    background: "rgba(234,88,12,0.08)",
-                    borderColor: "rgba(234,88,12,0.18)",
+                    background: "rgba(251,101,56,0.08)",
+                    borderColor: "rgba(251,101,56,0.18)",
                   }}
                 >
                   <div
                     className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: "rgba(234,88,12,0.2)" }}
+                    style={{ background: "rgba(251,101,56,0.2)" }}
                   >
                     <span className="text-[22px] leading-none">{badge.emoji}</span>
                   </div>

@@ -181,7 +181,7 @@ export function Library({ refreshKey, onSelectBook, onAddBook }: LibraryProps) {
             <button
               onClick={() => setShowAddSheet(true)}
               className="w-11 h-11 rounded-full flex items-center justify-center shadow-card transition-all active:scale-90"
-              style={{ background: "linear-gradient(135deg, #EA580C 0%, #FB923C 100%)" }}
+              style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 100%)" }}
             >
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -196,7 +196,7 @@ export function Library({ refreshKey, onSelectBook, onAddBook }: LibraryProps) {
         <div className="pt-6 pb-12 px-2">
           <div
             className="w-20 h-20 mx-auto mb-4 rounded-3xl flex items-center justify-center"
-            style={{ background: "rgba(234,88,12,0.12)" }}
+            style={{ background: "rgba(251,101,56,0.12)" }}
           >
             <span className="text-[44px] leading-none">📚</span>
           </div>

@@ -7,44 +7,48 @@ export default {
         sans: ["'Nunito'", "sans-serif"],
       },
       colors: {
-        // Brand — Peach × Cocoa DA.
-        // Legacy names (grape / bubblegum / lemon) retained so existing class
-        // references still compile, but values now live in the warm peach family.
+        // Brand — Solar Pop DA.
+        // Modern vibrant orange + magenta + sun. Legacy names kept for
+        // backward compat with existing class references.
         brand: {
-          grape: "#EA580C",         // ember (primary) — ex-purple
-          "grape-light": "#FDBA74", // apricot (ex grape-light)
-          bubblegum: "#FB923C",     // peach (secondary)
-          peach: "#FB923C",
-          apricot: "#FDBA74",
-          ember: "#EA580C",
-          honey: "#FCD34D",
-          lemon: "#FCD34D",
-          cocoa: "#3F2817",
-          "cocoa-deep": "#1A0D06",
-          "cocoa-soft": "#D4B896",
+          grape: "#FB6538",         // solar (primary)
+          "grape-light": "#FFAF85", // apricot
+          bubblegum: "#FF3C7A",     // magenta (secondary accent)
+          magenta: "#FF3C7A",
+          peach: "#FF8B5F",
+          apricot: "#FFAF85",
+          ember: "#FB6538",
+          solar: "#FB6538",
+          honey: "#FFC83D",
+          sun: "#FFC83D",
+          lemon: "#FFC83D",
+          cocoa: "#FF3C7A",          // was cocoa, now magenta (kills brown)
+          "cocoa-deep": "#1A0B18",   // night plum (banner bg)
+          "cocoa-soft": "#FFC83D",   // sun yellow label
+          plum: "#3C1329",
           mint: "#34D399",
           sky: "#38BDF8",
         },
         text: {
-          primary: "#1F1612",
-          secondary: "#6B5E57",
-          tertiary: "#9B8B81",
-          muted: "#B8A89C",
+          primary: "#14131A",
+          secondary: "#5C5963",
+          tertiary: "#8F8B94",
+          muted: "#C4C1CA",
         },
         surface: {
           white: "#FFFFFF",
-          light: "#FFF8F1",
-          subtle: "#FEF3E7",
-          input: "#FBF1E5",
+          light: "#FAF7F4",
+          subtle: "#FFF1EC",
+          input: "#FBEDE4",
         },
         border: {
-          DEFAULT: "#F3E4D4",
-          strong: "#EADAC4",
+          DEFAULT: "#ECE9EE",
+          strong: "#E0DCE5",
         },
         status: {
           success: "#34D399",
           "success-bg": "#ECFDF5",
-          warning: "#FCD34D",
+          warning: "#FFC83D",
           "warning-bg": "#FFFBEB",
           error: "#F87171",
           "error-bg": "#FEF2F2",
@@ -57,11 +61,11 @@ export default {
         card: "20px",
       },
       boxShadow: {
-        card: "0 2px 12px rgba(234, 88, 12, 0.08)",
-        float: "0 8px 30px rgba(234, 88, 12, 0.12)",
-        dropdown: "0 4px 16px rgba(234, 88, 12, 0.15)",
-        hero: "0 8px 30px rgba(234, 88, 12, 0.25)",
-        glow: "0 0 20px rgba(234, 88, 12, 0.20)",
+        card: "0 2px 12px rgba(251, 101, 56, 0.10)",
+        float: "0 8px 30px rgba(251, 101, 56, 0.15)",
+        dropdown: "0 4px 16px rgba(251, 101, 56, 0.18)",
+        hero: "0 12px 36px rgba(251, 101, 56, 0.30)",
+        glow: "0 0 20px rgba(251, 101, 56, 0.25)",
       },
     },
   },

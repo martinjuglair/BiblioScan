@@ -82,7 +82,7 @@ export default function App() {
   if (loading && !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center"
-        style={{ background: "linear-gradient(135deg, #EA580C 0%, #FB923C 50%, #FCD34D 100%)" }}>
+        style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 50%, #FFC83D 100%)" }}>
         <img
           src="/shelfy-logo.png"
           alt="Shelfy"

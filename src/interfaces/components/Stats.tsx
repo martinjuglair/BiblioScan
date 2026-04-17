@@ -247,7 +247,7 @@ export function Stats({ refreshKey }: StatsProps = {}) {
         {/* Streak compact — habit */}
         <div
           className="rounded-2xl px-4 py-3 mb-3 text-white"
-          style={{ background: "linear-gradient(135deg, #EA580C 0%, #FB923C 100%)" }}
+          style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 100%)" }}
         >
           <div className="flex items-center gap-3">
             <span className="text-2xl flex-shrink-0">
@@ -309,8 +309,8 @@ export function Stats({ refreshKey }: StatsProps = {}) {
                   />
                   <defs>
                     <linearGradient id="goalGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#EA580C" />
-                      <stop offset="100%" stopColor="#FB923C" />
+                      <stop offset="0%" stopColor="#FB6538" />
+                      <stop offset="100%" stopColor="#FF8B5F" />
                     </linearGradient>
                   </defs>
                 </svg>

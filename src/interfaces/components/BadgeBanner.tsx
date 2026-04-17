@@ -87,14 +87,14 @@ export function BadgeBanner() {
       >
         <div
           className="rounded-[20px] overflow-hidden shadow-hero"
-          style={{ background: "linear-gradient(135deg, #1A0D06 0%, #2C1810 100%)" }}
+          style={{ background: "linear-gradient(135deg, #1A0B18 0%, #3C1329 100%)" }}
         >
           <div className="flex items-center gap-3.5 px-4 py-3.5">
             {/* Emoji with glow */}
             <div
               className="w-11 h-11 rounded-[14px] flex items-center justify-center flex-shrink-0"
               style={{
-                background: "rgba(234, 88, 12, 0.25)",
+                background: "rgba(251, 101, 56, 0.25)",
                 animation: visible ? "badge-glow 1.6s ease-in-out infinite" : "none",
               }}
             >
@@ -105,7 +105,7 @@ export function BadgeBanner() {
 
             {/* Text */}
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-[#D4B896] uppercase tracking-[1.5px] mb-0.5">
+              <p className="text-[10px] font-bold text-[#FFC83D] uppercase tracking-[1.5px] mb-0.5">
                 Badge débloqué !
               </p>
               <p className="text-base font-bold text-white truncate">
@@ -125,7 +125,7 @@ export function BadgeBanner() {
               className="h-full rounded-full"
               style={{
                 width: `${progress}%`,
-                background: "linear-gradient(90deg, #FB923C, #FCD34D)",
+                background: "linear-gradient(90deg, #FF8B5F, #FFC83D)",
                 transition: "width 30ms linear",
               }}
             />
@@ -135,8 +135,8 @@ export function BadgeBanner() {
 
       <style>{`
         @keyframes badge-glow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
-          50% { box-shadow: 0 0 12px 4px rgba(234, 88, 12, 0.3); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(251, 101, 56, 0); }
+          50% { box-shadow: 0 0 12px 4px rgba(251, 101, 56, 0.3); }
         }
         @keyframes badge-emoji-bounce {
           0% { transform: scale(0.5); opacity: 0; }

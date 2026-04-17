@@ -175,7 +175,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep
       {showNamePrompt && !firstName && state.step === "idle" && (
         <div className="card w-full max-w-sm text-center space-y-3">
           <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #EA580C 0%, #FB923C 50%, #FB923C 100%)" }}>
+            style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 50%, #FF8B5F 100%)" }}>
             <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
             </svg>
@@ -235,7 +235,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep
               className="card text-center py-6 active:scale-[0.97] transition-all duration-200 hover:shadow-float group"
             >
               <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center transition-transform group-active:scale-90"
-                style={{ background: "linear-gradient(135deg, #EA580C 0%, #FB923C 100%)" }}>
+                style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 100%)" }}>
                 <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M3 17v2a2 2 0 002 2h2M17 21h2a2 2 0 002-2v-2" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 12h10" />
@@ -250,7 +250,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep
               className="card text-center py-6 active:scale-[0.97] transition-all duration-200 hover:shadow-float group"
             >
               <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center transition-transform group-active:scale-90"
-                style={{ background: "linear-gradient(135deg, #FB923C 0%, #EC4899 100%)" }}>
+                style={{ background: "linear-gradient(135deg, #FF8B5F 0%, #EC4899 100%)" }}>
                 <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>

@@ -58,7 +58,7 @@ export function CollectionStats({ books, categoryCount }: CollectionStatsProps) 
                         className="h-full rounded-full transition-all duration-500"
                         style={{
                           width: `${(pub.count / stats.totalBooks) * 100}%`,
-                          background: `linear-gradient(90deg, #EA580C, #FB923C)`,
+                          background: `linear-gradient(90deg, #FB6538, #FF8B5F)`,
                         }}
                       />
                     </div>
