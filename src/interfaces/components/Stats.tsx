@@ -3,6 +3,8 @@ import { ComicBook } from "@domain/entities/ComicBook";
 import { getCategorizedLibrary } from "@infrastructure/container";
 import { PullToRefresh } from "./PullToRefresh";
 import { LazyImage } from "./LazyImage";
+import { LevelHeroCard } from "./LevelHeroCard";
+import { BadgesSection } from "./BadgesSection";
 import { hapticSuccess } from "@interfaces/utils/haptics";
 
 // --- Reading Goal persistence (localStorage) ---
@@ -151,7 +153,13 @@ function getReadingHistory(books: ComicBook[]): { month: string; books: ComicBoo
   return result;
 }
 
-export function Stats() {
+interface StatsProps {
+  /** Bumped by App whenever the library changes — forces a reload so the
+   * level hero / badges / charts stay in sync. */
+  refreshKey?: number;
+}
+
+export function Stats({ refreshKey }: StatsProps = {}) {
   const [books, setBooks] = useState<ComicBook[]>([]);
   const [categoryCount, setCategoryCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -174,7 +182,7 @@ export function Stats() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   const stats = useMemo(() => computeStats(books, categoryCount), [books, categoryCount]);
 
@@ -266,6 +274,11 @@ export function Stats() {
                 : "J'ai lu"}
             </button>
           </div>
+        </div>
+
+        {/* Level hero */}
+        <div className="mb-4">
+          <LevelHeroCard readCount={stats.totalBooks > 0 ? books.filter((b) => b.isRead).length : 0} />
         </div>
 
         <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-4">Statistiques</h1>
@@ -421,32 +434,6 @@ export function Stats() {
           </div>
         )}
 
-        {/* Monthly additions */}
-        {stats.monthlyData.length > 0 && (
-          <div className="card mb-3">
-            <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">Ajouts par mois</h3>
-            <div className="flex items-end gap-1 h-20">
-              {stats.monthlyData.map((m, i) => {
-                const maxCount = Math.max(...stats.monthlyData.map((d) => d.count), 1);
-                const height = (m.count / maxCount) * 100;
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] text-text-tertiary font-medium">{m.count > 0 ? m.count : ""}</span>
-                    <div
-                      className="w-full rounded-t-sm transition-all duration-500"
-                      style={{
-                        height: `${Math.max(height, 4)}%`,
-                        background: m.count > 0 ? "linear-gradient(180deg, #34D399, #34D399aa)" : "#F5F3FF",
-                      }}
-                    />
-                    <span className="text-[9px] text-text-muted">{m.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Rating distribution */}
         {stats.ratingDistribution.some((r) => r > 0) && (
           <div className="card mb-3">
@@ -480,6 +467,9 @@ export function Stats() {
             )}
           </div>
         )}
+
+        {/* Badges (compact) */}
+        <BadgesSection books={books} streak={streak} />
 
         {/* Reading history timeline */}
         {history.length > 0 && (

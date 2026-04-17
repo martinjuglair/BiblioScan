@@ -1,11 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { useToast } from "./Toast";
 import { hapticLight } from "@interfaces/utils/haptics";
-import { ComicBook } from "@domain/entities/ComicBook";
-import { getCategorizedLibrary } from "@infrastructure/container";
 import { supabase } from "@infrastructure/supabase/client";
-import { BADGES, computeStreak, getReadingLog } from "./Stats";
-import { LevelHeroCard } from "./LevelHeroCard";
 
 interface ProfileProps {
   email: string;
@@ -25,7 +21,6 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
-  const [books, setBooks] = useState<ComicBook[]>([]);
   const { toast } = useToast();
 
   // Feedback
@@ -35,22 +30,6 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
   const [feedbackSending, setFeedbackSending] = useState(false);
   const [feedbackHover, setFeedbackHover] = useState(0);
 
-  useEffect(() => {
-    getCategorizedLibrary.execute().then((result) => {
-      if (result.ok) {
-        setBooks([
-          ...result.value.categories.flatMap((c) => c.books),
-          ...result.value.uncategorized,
-        ]);
-      }
-    });
-
-  }, []);
-
-  const readCount = useMemo(() => books.filter((b) => b.isRead).length, [books]);
-  const streak = useMemo(() => computeStreak(getReadingLog()), []);
-  const earnedBadges = useMemo(() => BADGES.filter((b) => b.check(books, streak)), [books, streak]);
-  const lockedBadges = useMemo(() => BADGES.filter((b) => !b.check(books, streak)), [books, streak]);
 
   const handleSave = async () => {
     if (!nameInput.trim()) return;
@@ -104,65 +83,6 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
         )}
         <p className="text-sm text-text-tertiary">{email}</p>
       </div>
-
-      {/* Level hero card — prominent, full gamified */}
-      {books.length > 0 && (
-        <div className="mb-4">
-          <LevelHeroCard readCount={readCount} />
-        </div>
-      )}
-
-      {/* Badges */}
-      {books.length > 0 && (
-        <div className="card mb-4">
-          <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">
-            Badges ({earnedBadges.length}/{BADGES.length})
-          </h3>
-
-          {/* Earned */}
-          {earnedBadges.length > 0 && (
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              {earnedBadges.map((badge) => (
-                <div key={badge.id} className="text-center">
-                  <div className="text-2xl mb-0.5">{badge.emoji}</div>
-                  <p className="text-[10px] text-text-primary font-semibold leading-tight">{badge.name}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Locked — show description + progression */}
-          {lockedBadges.length > 0 && (
-            <div className="space-y-2">
-              {earnedBadges.length > 0 && <div className="border-t border-border pt-2" />}
-              <p className="text-[10px] text-text-muted uppercase tracking-wide font-semibold">À débloquer</p>
-              {lockedBadges.map((badge) => {
-                const prog = badge.progress?.(books, streak);
-                return (
-                  <div key={badge.id} className="flex items-start gap-2.5">
-                    <div className="text-xl grayscale opacity-40 flex-shrink-0 mt-0.5">{badge.emoji}</div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-text-secondary font-semibold leading-tight">{badge.name}</p>
-                      <p className="text-[10px] text-text-muted leading-tight">{badge.description}</p>
-                      {prog && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="h-1 flex-1 bg-surface-subtle rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${Math.min(100, (prog.current / prog.target) * 100)}%`, backgroundColor: "rgba(139,92,246,0.4)" }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-text-muted font-semibold">{prog.current}/{prog.target}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Edit name */}
       <div className="card space-y-3 mb-4">

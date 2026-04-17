@@ -207,7 +207,7 @@ export default function App() {
         />
       )}
 
-      {tab === "stats" && <Stats />}
+      {tab === "stats" && <Stats refreshKey={refreshKey} />}
 
       {tab === "profile" && (
         <Profile
