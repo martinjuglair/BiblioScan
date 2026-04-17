@@ -85,11 +85,11 @@ export default function App() {
       <div className="min-h-screen flex flex-col items-center justify-center"
         style={{ background: "linear-gradient(135deg, #FB6538 0%, #FF8B5F 50%, #FFC83D 100%)" }}>
         <img
-          src="/shelfy-logo.png"
-          alt="Shelfy"
+          src="/plumy-logo.png"
+          alt="Plumy"
           className="w-[88px] h-[88px] rounded-[22px] shadow-lg animate-pulse"
         />
-        <p className="text-white text-2xl font-extrabold mt-4 tracking-tight">Shelfy</p>
+        <p className="text-white text-2xl font-extrabold mt-4 tracking-tight">Plumy</p>
         <p className="text-white/70 text-sm mt-1">Votre bibliothèque de poche</p>
         <div className="mt-8 w-6 h-6 border-[2.5px] border-white/25 border-t-white/80 rounded-full animate-spin" />
       </div>
@@ -122,7 +122,7 @@ export default function App() {
       {/* Header bar */}
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-2">
-          <img src="/shelfy-logo.png" alt="Shelfy" className="w-8 h-8 rounded-lg" />
+          <img src="/plumy-logo.png" alt="Plumy" className="w-8 h-8 rounded-lg" />
           {firstName && (
             <span className="text-sm font-medium text-text-secondary">
               Salut, <span className="text-text-primary font-semibold">{firstName}</span>

@@ -1,5 +1,5 @@
-// Service Worker for Shelfy — caches cover images
-const CACHE_NAME = "shelfy-covers-v1";
+// Service Worker for Plumy — caches cover images
+const CACHE_NAME = "plumy-covers-v1";
 
 // Cover image domains to cache
 const COVER_DOMAINS = [
@@ -18,7 +18,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key.startsWith("shelfy-covers-") && key !== CACHE_NAME)
+          .filter((key) => (key.startsWith("plumy-covers-") || key.startsWith("shelfy-covers-")) && key !== CACHE_NAME)
           .map((key) => caches.delete(key))
       )
     ).then(() => self.clients.claim())

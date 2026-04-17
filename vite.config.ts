@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
-        name: "Shelfy",
-        short_name: "Shelfy",
+        name: "Plumy",
+        short_name: "Plumy",
         description: "Scannez et gérez votre collection de bandes dessinées",
         theme_color: "#FFB800",
         background_color: "#F9F9F9",
