@@ -15,6 +15,7 @@ import { ToastProvider } from "@interfaces/components/Toast";
 import { Onboarding } from "@interfaces/components/Onboarding";
 import { BadgeBanner } from "@interfaces/components/BadgeBanner";
 import { LevelUpBanner } from "@interfaces/components/LevelUpBanner";
+import { ResetPasswordModal } from "@interfaces/components/ResetPasswordModal";
 import { useBadgeChecker } from "@interfaces/hooks/useBadgeChecker";
 import { useLevelChecker } from "@interfaces/hooks/useLevelChecker";
 
@@ -113,6 +114,7 @@ export default function App() {
     <ToastProvider>
     <BadgeBanner />
     <LevelUpBanner />
+    <ResetPasswordModal />
     {showOnboarding && (
       <Onboarding firstName={firstName} onComplete={handleOnboardingComplete} />
     )}

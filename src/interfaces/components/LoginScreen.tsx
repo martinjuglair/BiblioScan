@@ -91,7 +91,7 @@ export function LoginScreen({ onSignIn, onSignUp, onResetPassword, loading, erro
             placeholder="••••••••"
             className="input-field"
             autoComplete={isSignUp ? "new-password" : "current-password"}
-            minLength={6}
+            minLength={isSignUp ? 8 : undefined}
             required
           />
         </div>

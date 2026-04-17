@@ -241,9 +241,9 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="6 caractères minimum"
+                placeholder="8 caractères min. avec un chiffre"
                 className="input-field w-full"
-                minLength={6}
+                minLength={8}
                 autoFocus
               />
             </div>
@@ -256,7 +256,7 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Retapez le mot de passe"
                 className="input-field w-full"
-                minLength={6}
+                minLength={8}
               />
             </div>
 
@@ -267,8 +267,12 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
               <button
                 onClick={async () => {
                   setPasswordError(null);
-                  if (newPassword.length < 6) {
-                    setPasswordError("Le mot de passe doit faire au moins 6 caractères");
+                  if (newPassword.length < 8) {
+                    setPasswordError("Le mot de passe doit faire au moins 8 caractères");
+                    return;
+                  }
+                  if (!/[0-9]/.test(newPassword)) {
+                    setPasswordError("Ajoute au moins un chiffre pour renforcer ton mot de passe");
                     return;
                   }
                   if (newPassword !== confirmPassword) {
