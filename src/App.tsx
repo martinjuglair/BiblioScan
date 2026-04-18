@@ -16,6 +16,7 @@ import { Onboarding } from "@interfaces/components/Onboarding";
 import { BadgeBanner } from "@interfaces/components/BadgeBanner";
 import { LevelUpBanner } from "@interfaces/components/LevelUpBanner";
 import { ResetPasswordModal } from "@interfaces/components/ResetPasswordModal";
+import { LegalPages } from "@interfaces/components/LegalPages";
 import { useBadgeChecker } from "@interfaces/hooks/useBadgeChecker";
 import { useLevelChecker } from "@interfaces/hooks/useLevelChecker";
 
@@ -59,6 +60,8 @@ export default function App() {
   const [addMode, setAddMode] = useState<"scan" | "search" | "manual" | null>(null);
   const [view, setView] = useState<View>({ screen: "main" });
   const [refreshKey, setRefreshKey] = useState(0);
+  // Legal pages overlay — takes precedence over the rest of the UI.
+  const [legalPage, setLegalPage] = useState<"privacy" | "terms" | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem("shelfy-onboarding-v1");
   });
@@ -96,6 +99,12 @@ export default function App() {
     );
   }
 
+  // Legal pages — reachable whether logged in or not (footer link on login
+  // screen + Profile link when authenticated).
+  if (legalPage) {
+    return <LegalPages page={legalPage} onBack={() => setLegalPage(null)} />;
+  }
+
   // Not authenticated
   if (!user) {
     return (
@@ -105,6 +114,7 @@ export default function App() {
         onResetPassword={resetPassword}
         loading={loading}
         error={error}
+        onOpenLegal={setLegalPage}
       />
     );
   }
@@ -219,6 +229,7 @@ export default function App() {
           onUpdatePassword={updatePassword}
           onSignOut={signOut}
           onStartOnboarding={handleStartOnboarding}
+          onOpenLegal={setLegalPage}
         />
       )}
 

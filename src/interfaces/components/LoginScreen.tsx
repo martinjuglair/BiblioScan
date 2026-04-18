@@ -8,11 +8,12 @@ interface LoginScreenProps {
     firstName?: string,
   ) => Promise<{ ok: boolean; needsConfirmation?: boolean; error?: string }>;
   onResetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  onOpenLegal: (page: "privacy" | "terms") => void;
   loading: boolean;
   error: string | null;
 }
 
-export function LoginScreen({ onSignIn, onSignUp, onResetPassword, loading, error }: LoginScreenProps) {
+export function LoginScreen({ onSignIn, onSignUp, onResetPassword, onOpenLegal, loading, error }: LoginScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -172,6 +173,17 @@ export function LoginScreen({ onSignIn, onSignUp, onResetPassword, loading, erro
         </p>
       </form>
       )}
+
+      {/* Legal footer — required to reference from App Store metadata */}
+      <div className="mt-8 flex justify-center gap-4 text-xs text-text-tertiary">
+        <button onClick={() => onOpenLegal("privacy")} className="hover:text-text-secondary">
+          Confidentialité
+        </button>
+        <span>·</span>
+        <button onClick={() => onOpenLegal("terms")} className="hover:text-text-secondary">
+          Conditions
+        </button>
+      </div>
 
       {/* Reset password modal */}
       {showReset && (

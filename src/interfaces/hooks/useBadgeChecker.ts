@@ -78,8 +78,24 @@ export function useBadgeChecker() {
 
     check();
 
-    // Re-check periodically (web doesn't have a library event bus like mobile)
-    const interval = setInterval(check, 10000);
-    return () => clearInterval(interval);
+    // Re-check on a long cadence (web has no library event bus like mobile).
+    // 60s is more than enough: badges update when the user comes back to the
+    // tab (see visibilitychange below) so they never wait longer than a tick
+    // after adding a book. 10s was eating Supabase bandwidth needlessly
+    // (720 req/h/user in background).
+    const interval = setInterval(check, 60000);
+
+    // Pause while the tab is hidden; refresh immediately when it becomes
+    // visible again. Covers the "user marked book read on mobile then came
+    // back to web" case.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 }

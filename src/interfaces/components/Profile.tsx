@@ -10,9 +10,10 @@ interface ProfileProps {
   onUpdatePassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   onSignOut: () => Promise<void>;
   onStartOnboarding: () => void;
+  onOpenLegal: (page: "privacy" | "terms") => void;
 }
 
-export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword, onSignOut, onStartOnboarding }: ProfileProps) {
+export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword, onSignOut, onStartOnboarding, onOpenLegal }: ProfileProps) {
   const [nameInput, setNameInput] = useState(firstName ?? "");
   const [saving, setSaving] = useState(false);
   const [edited, setEdited] = useState(false);
@@ -29,6 +30,33 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [feedbackSending, setFeedbackSending] = useState(false);
   const [feedbackHover, setFeedbackHover] = useState(0);
+
+  // Delete account
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "SUPPRIMER") {
+      setDeleteError("Tape SUPPRIMER pour confirmer.");
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    // Supabase Postgres function delete_my_account() (SECURITY DEFINER)
+    // deletes the user's data across tables + the auth.users row, so a
+    // client call is enough. See supabase/security-hardening.sql.
+    const { error } = await supabase.rpc("delete_my_account");
+    if (error) {
+      setDeleting(false);
+      setDeleteError(error.message);
+      return;
+    }
+    // Session is gone — sign out locally to clear any cached state and
+    // bounce the user back to the login screen.
+    await onSignOut();
+  };
 
 
   const handleSave = async () => {
@@ -223,6 +251,74 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
       >
         Se déconnecter
       </button>
+
+      {/* Delete account — required for App Store compliance (5.1.1(v)) */}
+      <button
+        onClick={() => { setShowDeleteModal(true); setDeleteConfirm(""); setDeleteError(null); }}
+        className="w-full py-2.5 text-xs text-text-tertiary underline hover:text-status-error transition-colors"
+      >
+        Supprimer mon compte
+      </button>
+
+      {/* Legal links — required for stores + useful footer */}
+      <div className="flex justify-center gap-4 pt-4 text-xs text-text-tertiary">
+        <button onClick={() => onOpenLegal("privacy")} className="hover:text-text-secondary">
+          Politique de confidentialité
+        </button>
+        <span>·</span>
+        <button onClick={() => onOpenLegal("terms")} className="hover:text-text-secondary">
+          Conditions d'utilisation
+        </button>
+      </div>
+
+      {/* Delete account modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !deleting && setShowDeleteModal(false)} />
+          <div className="relative bg-white rounded-2xl w-full max-w-sm mx-auto p-5 space-y-4 shadow-hero">
+            <div className="w-12 h-12 rounded-full bg-status-error-bg flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-status-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-text-primary text-center">Supprimer ton compte</h2>
+            <p className="text-sm text-text-secondary">
+              Cette action est <strong className="text-text-primary">définitive</strong>. Tous tes livres, catégories, groupes, badges et statistiques seront effacés et ne pourront pas être récupérés.
+            </p>
+            <p className="text-sm text-text-secondary">
+              Tape <strong className="text-status-error">SUPPRIMER</strong> pour confirmer&nbsp;:
+            </p>
+            {deleteError && (
+              <p className="text-status-error text-sm bg-status-error-bg rounded-xl p-2.5">{deleteError}</p>
+            )}
+            <input
+              type="text"
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="SUPPRIMER"
+              className="input-field w-full"
+              autoFocus
+              disabled={deleting}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="btn-secondary flex-1"
+                disabled={deleting}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting || deleteConfirm !== "SUPPRIMER"}
+                className="flex-1 py-2.5 rounded-xl bg-status-error text-white font-semibold text-sm disabled:opacity-50"
+              >
+                {deleting ? "Suppression..." : "Supprimer définitivement"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Password change modal */}
       {showPasswordModal && (

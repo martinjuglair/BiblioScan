@@ -66,8 +66,16 @@ export function useLevelChecker() {
     };
 
     check();
-    // Web has no library event bus — poll on same cadence as useBadgeChecker.
-    const interval = setInterval(check, 10000);
-    return () => clearInterval(interval);
+    // Long cadence + refresh on tab visibility (same approach as
+    // useBadgeChecker). See that file for rationale on the 60s bump.
+    const interval = setInterval(check, 60000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 }

@@ -33,6 +33,10 @@ export function initSentry(): void {
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
 
+    // Don't send Personally Identifiable Information (user email, IP, etc.)
+    // — RGPD minimum viable. Flip if you need it for a specific debug session.
+    sendDefaultPii: false,
+
     // Filter: don't send expected errors (network hiccups, cancelled promises)
     ignoreErrors: [
       "ResizeObserver loop limit exceeded",
@@ -46,6 +50,11 @@ export function initSentry(): void {
       // Ignore cancelled fetches — they're normal navigation side-effects
       if (err && typeof err === "object" && "name" in err && err.name === "AbortError") {
         return null;
+      }
+      // Extra safety: scrub PII that might have been attached manually.
+      if (event.user) {
+        delete event.user.email;
+        delete event.user.ip_address;
       }
       return event;
     },
