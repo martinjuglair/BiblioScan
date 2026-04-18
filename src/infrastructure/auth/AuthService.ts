@@ -12,7 +12,11 @@ export class AuthService {
     return Result.ok(data.user);
   }
 
-  async signUp(email: string, password: string, firstName?: string): Promise<Result<User>> {
+  async signUp(
+    email: string,
+    password: string,
+    firstName?: string,
+  ): Promise<Result<{ user: User; needsConfirmation: boolean }>> {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -20,7 +24,10 @@ export class AuthService {
     });
     if (error) return Result.fail(error.message);
     if (!data.user) return Result.fail("Erreur lors de la création du compte");
-    return Result.ok(data.user);
+    // Supabase returns session === null when email confirmation is required.
+    // We key off that rather than a flag so it auto-adapts to project config.
+    const needsConfirmation = data.session === null;
+    return Result.ok({ user: data.user, needsConfirmation });
   }
 
   async updateFirstName(firstName: string): Promise<Result<User>> {

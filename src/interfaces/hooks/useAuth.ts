@@ -8,7 +8,11 @@ interface UseAuthReturn {
   loading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, firstName?: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    firstName?: string,
+  ) => Promise<{ ok: boolean; needsConfirmation?: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateFirstName: (name: string) => Promise<void>;
   resetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
@@ -52,10 +56,12 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     setLoading(true);
     const result = await authService.signUp(email, password, name);
+    setLoading(false);
     if (!result.ok) {
       setError(result.error);
+      return { ok: false, error: result.error };
     }
-    setLoading(false);
+    return { ok: true, needsConfirmation: result.value.needsConfirmation };
   }, []);
 
   const signOut = useCallback(async () => {

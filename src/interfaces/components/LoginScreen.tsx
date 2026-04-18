@@ -2,7 +2,11 @@ import { useState } from "react";
 
 interface LoginScreenProps {
   onSignIn: (email: string, password: string) => Promise<void>;
-  onSignUp: (email: string, password: string, firstName?: string) => Promise<void>;
+  onSignUp: (
+    email: string,
+    password: string,
+    firstName?: string,
+  ) => Promise<{ ok: boolean; needsConfirmation?: boolean; error?: string }>;
   onResetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
   loading: boolean;
   error: string | null;
@@ -19,11 +23,18 @@ export function LoginScreen({ onSignIn, onSignUp, onResetPassword, loading, erro
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Email confirmation: set after a successful signup requiring email validation.
+  // Blocks the form and shows the "check your inbox" panel.
+  const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;
     if (isSignUp) {
-      onSignUp(email.trim(), password.trim(), firstName.trim() || undefined);
+      const result = await onSignUp(email.trim(), password.trim(), firstName.trim() || undefined);
+      if (result.ok && result.needsConfirmation) {
+        setPendingConfirmationEmail(email.trim());
+      }
     } else {
       onSignIn(email.trim(), password.trim());
     }
@@ -43,7 +54,36 @@ export function LoginScreen({ onSignIn, onSignUp, onResetPassword, loading, erro
         <p className="text-text-tertiary text-sm mt-1.5">Scannez, classez, partagez vos livres</p>
       </div>
 
-      {/* Form */}
+      {/* Email confirmation pane — shown after signup when email validation is required */}
+      {pendingConfirmationEmail ? (
+        <div className="card w-full max-w-sm text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-status-success-bg flex items-center justify-center mx-auto">
+            <svg className="w-7 h-7 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75l9.75 6.75 9.75-6.75M2.25 6.75v10.5A2.25 2.25 0 004.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75M2.25 6.75A2.25 2.25 0 014.5 4.5h15a2.25 2.25 0 012.25 2.25" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-bold text-text-primary">Vérifie ta boîte mail</h2>
+          <p className="text-sm text-text-secondary">
+            On vient d'envoyer un email de confirmation à{" "}
+            <strong className="text-text-primary">{pendingConfirmationEmail}</strong>. Clique sur le lien pour activer ton compte et commencer à scanner tes livres.
+          </p>
+          <p className="text-xs text-text-tertiary">
+            Pas d'email après 2 min ? Regarde dans tes spams ou réessaie avec une autre adresse.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setPendingConfirmationEmail(null);
+              setIsSignUp(false);
+              setPassword("");
+              setFirstName("");
+            }}
+            className="btn-primary w-full"
+          >
+            J'ai confirmé, me connecter
+          </button>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="card w-full max-w-sm space-y-4">
         <h2 className="text-lg font-bold text-text-primary text-center">
           {isSignUp ? "Créer un compte" : "Connexion"}
@@ -132,6 +172,7 @@ export function LoginScreen({ onSignIn, onSignUp, onResetPassword, loading, erro
           </button>
         </p>
       </form>
+      )}
 
       {/* Reset password modal */}
       {showReset && (
