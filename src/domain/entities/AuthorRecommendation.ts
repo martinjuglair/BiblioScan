@@ -1,7 +1,7 @@
-/** Recommendation row for a single author the user has read */
+/** Recommendation row for a single author the user has at least 2 books from */
 export interface AuthorRecommendation {
   authorName: string;
-  readCount: number;
+  bookCount: number;
   suggestions: AuthorSuggestedBook[];
 }
 

@@ -17,7 +17,7 @@ const TAB_NAV_INDEX: Record<string, number> = {
 const STEPS = [
   {
     type: "welcome" as const,
-    title: "Bienvenue sur Plumy",
+    title: "Bienvenue sur Ploom",
     description: "Votre bibliothèque numérique personnelle. Scannez, classez et partagez tous vos livres en quelques secondes.",
   },
   {

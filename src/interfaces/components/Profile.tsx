@@ -125,7 +125,7 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-text-secondary">Moteur</span>
-          <span className="text-sm text-text-primary font-medium">Plumy PWA</span>
+          <span className="text-sm text-text-primary font-medium">Ploom PWA</span>
         </div>
       </div>
 
@@ -136,7 +136,7 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
           <div className="text-center py-4">
             <div className="text-3xl mb-2">🎉</div>
             <p className="text-base font-bold text-text-primary">Merci pour votre avis !</p>
-            <p className="text-xs text-text-tertiary mt-1">Votre retour nous aide à améliorer Plumy.</p>
+            <p className="text-xs text-text-tertiary mt-1">Votre retour nous aide à améliorer Ploom.</p>
             <button
               onClick={() => { setFeedbackSent(false); setFeedbackRating(0); setFeedbackMsg(""); }}
               className="mt-3 text-sm font-semibold text-brand-grape"
@@ -146,7 +146,7 @@ export function Profile({ email, firstName, onUpdateFirstName, onUpdatePassword,
           </div>
         ) : (
           <>
-            <p className="text-sm text-text-secondary">Comment trouvez-vous Plumy ?</p>
+            <p className="text-sm text-text-secondary">Comment trouvez-vous Ploom ?</p>
             <div className="flex justify-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- Plumy — Security hardening patch (to run in Supabase SQL Editor)
+-- Ploom — Security hardening patch (to run in Supabase SQL Editor)
 -- Date: 2026-04-17
 --
 -- Addresses 3 findings from the security audit:

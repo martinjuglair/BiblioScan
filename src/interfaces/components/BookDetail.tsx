@@ -254,10 +254,10 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
     ctx.textAlign = "center";
 
-    // Brand row: PLUMY • MA LECTURE
+    // Brand row: PLOOM • MA LECTURE
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "800 32px Inter, -apple-system, sans-serif";
-    ctx.fillText("PLUMY  •  MA LECTURE", W / 2, 70);
+    ctx.fillText("PLOOM  •  MA LECTURE", W / 2, 70);
 
     // Cover — with a soft white frame & drop shadow
     const cx = (W - cw) / 2, cy = 120;
@@ -394,7 +394,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     try {
       const dataUrl = await generateShareCard();
       const link = document.createElement("a");
-      link.download = `plumy-${book.isbn}.png`;
+      link.download = `ploom-${book.isbn}.png`;
       link.href = dataUrl;
       link.click();
       toast("Image téléchargée ! Partagez-la sur Instagram", "success");
@@ -406,12 +406,12 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
 
   const handleShareNative = async () => {
     if (!book) return;
-    const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via Plumy`;
+    const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via Ploom`;
 
     try {
       const dataUrl = await generateShareCard();
       const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], `plumy-${book.isbn}.png`, { type: "image/png" });
+      const file = new File([blob], `ploom-${book.isbn}.png`, { type: "image/png" });
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
@@ -541,12 +541,12 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     // Deep-link opens the add-book preview with ISBN pre-filled — works for
     // recipients who have the app installed. For others the title+author
     // still gives them enough to find the book.
-    const deepLink = `plumy://add-book?mode=scan&isbn=${book.isbn}`;
+    const deepLink = `ploom://add-book?mode=scan&isbn=${book.isbn}`;
     const authors = book.authors.join(", ") || "Auteur inconnu";
     const text =
       `📚 ${book.title}\n${authors}\n\n` +
-      `Je te le recommande sur Plumy :\n${deepLink}\n\n` +
-      `Pas encore Plumy ? Télécharge l'app pour découvrir l'univers des lecteurs.`;
+      `Je te le recommande sur Ploom :\n${deepLink}\n\n` +
+      `Pas encore Ploom ? Télécharge l'app pour découvrir l'univers des lecteurs.`;
     if (navigator.share) {
       try {
         await navigator.share({ title: book.title, text });
@@ -1010,7 +1010,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           {/* Copy text */}
           <button
             onClick={() => {
-              const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via Plumy`;
+              const text = `📖 ${book.title} — ${book.authors.join(", ")}${rating ? `\n⭐ ${rating}/5` : ""}${comment ? `\n"${comment}"` : ""}\n\nPartagé via Ploom`;
               navigator.clipboard.writeText(text);
               toast("Texte copié !", "success");
               setShowSocialShare(false);

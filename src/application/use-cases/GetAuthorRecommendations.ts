@@ -4,6 +4,7 @@ import { Result } from "@domain/shared/Result";
 import { GoogleBooksService } from "@infrastructure/services/GoogleBooksService";
 
 const MAX_AUTHORS = 3;
+const MIN_BOOKS_PER_AUTHOR = 2;
 
 /** Check if a book is likely French based on language tag or ISBN (978-2 = francophone) */
 function isLikelyFrench(result: { language?: string; isbn: string | null }): boolean {
@@ -13,6 +14,16 @@ function isLikelyFrench(result: { language?: string; isbn: string | null }): boo
     if (clean.startsWith("9782")) return true;
   }
   return false;
+}
+
+/** Fisher-Yates shuffle — fresh random order at each call */
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j]!, a[i]!];
+  }
+  return a;
 }
 
 export class GetAuthorRecommendations {
@@ -32,32 +43,34 @@ export class GetAuthorRecommendations {
       const ownedIsbns = new Set(allBooks.map((b) => b.isbn));
       const ownedTitles = new Set(allBooks.map((b) => b.title.toLowerCase().trim()));
 
-      // Count read books per author (only books marked as read)
-      const authorReadCount = new Map<string, number>();
+      // Count ALL books per author (read or not)
+      const authorBookCount = new Map<string, number>();
       for (const book of allBooks) {
-        if (!book.isRead) continue;
         for (const author of book.authors) {
           const norm = author.trim();
           if (!norm) continue;
-          authorReadCount.set(norm, (authorReadCount.get(norm) ?? 0) + 1);
+          authorBookCount.set(norm, (authorBookCount.get(norm) ?? 0) + 1);
         }
       }
 
-      if (authorReadCount.size === 0) {
+      // Keep only authors with at least MIN_BOOKS_PER_AUTHOR books
+      const eligibleAuthors = [...authorBookCount.entries()].filter(
+        ([, count]) => count >= MIN_BOOKS_PER_AUTHOR,
+      );
+
+      if (eligibleAuthors.length === 0) {
         return Result.ok([]);
       }
 
-      // Pick top authors by read count
-      const topAuthors = [...authorReadCount.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, MAX_AUTHORS);
+      // Randomize which authors get prioritized this session
+      const pickedAuthors = shuffle(eligibleAuthors).slice(0, MAX_AUTHORS);
 
       const recommendations: AuthorRecommendation[] = [];
 
       // Sequential to avoid rate limiting
-      for (const [authorName, readCount] of topAuthors) {
+      for (const [authorName, bookCount] of pickedAuthors) {
         try {
-          const rec = await this.searchAuthor(authorName, readCount, ownedIsbns, ownedTitles);
+          const rec = await this.searchAuthor(authorName, bookCount, ownedIsbns, ownedTitles);
           if (rec) recommendations.push(rec);
         } catch {
           // Skip this author
@@ -72,7 +85,7 @@ export class GetAuthorRecommendations {
 
   private async searchAuthor(
     authorName: string,
-    readCount: number,
+    bookCount: number,
     ownedIsbns: Set<string>,
     ownedTitles: Set<string>,
   ): Promise<AuthorRecommendation | null> {
@@ -114,6 +127,6 @@ export class GetAuthorRecommendations {
 
     if (suggestions.length === 0) return null;
 
-    return { authorName, readCount, suggestions };
+    return { authorName, bookCount, suggestions };
   }
 }

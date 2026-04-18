@@ -123,7 +123,7 @@ export function Discover({ onAddBook }: DiscoverProps) {
           <Row
             key={rec.authorName}
             title={`🖊️ De ${rec.authorName}`}
-            subtitle={`Vous avez lu ${rec.readCount} ${rec.readCount > 1 ? "livres" : "livre"}`}
+            subtitle={`Vous avez ${rec.bookCount} livres de cet auteur`}
           >
             {rec.suggestions.map((book, i) => (
               <BookCard

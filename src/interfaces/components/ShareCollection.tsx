@@ -21,7 +21,7 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
 
   const generateText = () => {
     const lines: string[] = [
-      `Ma collection Plumy`,
+      `Ma collection Ploom`,
       `${books.length} livres \u00b7 ${categoryCount} cat\u00e9gories`,
       totalValue > 0 ? `Valeur : ${formatEur(totalValue)}` : "",
       avgRating > 0 ? `Note moyenne : ${avgRating.toFixed(1)}/5` : "",
@@ -60,7 +60,7 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Ma collection Plumy",
+          title: "Ma collection Ploom",
           text,
         });
       } catch {
@@ -79,7 +79,7 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `plumy-collection-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `ploom-collection-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -216,7 +216,7 @@ async function generatePDF(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(28);
   doc.setFont("helvetica", "bold");
-  doc.text("Plumy", pageW / 2, 28, { align: "center" });
+  doc.text("Ploom", pageW / 2, 28, { align: "center" });
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.text("Ma Collection", pageW / 2, 40, { align: "center" });
@@ -393,10 +393,10 @@ async function generatePDF(
   doc.line(margin, y - 5, pageW - margin, y - 5);
   doc.setTextColor(...gray);
   doc.setFontSize(7);
-  doc.text(`Plumy \u2014 ${dateStr} \u2014 ${books.length} livres`, pageW / 2, y, { align: "center" });
+  doc.text(`Ploom \u2014 ${dateStr} \u2014 ${books.length} livres`, pageW / 2, y, { align: "center" });
 
   // Save
-  doc.save(`plumy-collection-${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`ploom-collection-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 function formatEur(amount: number): string {

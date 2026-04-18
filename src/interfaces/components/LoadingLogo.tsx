@@ -6,7 +6,7 @@ interface LoadingLogoProps {
 }
 
 /**
- * Branded loading indicator: pulses the Plumy logo and shows a message.
+ * Branded loading indicator: pulses the Ploom logo and shows a message.
  * Use for screens that may take a couple seconds to hydrate (e.g. Discover
  * recommendations calling Google Books / Supabase).
  */
@@ -25,8 +25,8 @@ export function LoadingLogo({
           }}
         />
         <img
-          src="/plumy-logo.png"
-          alt="Plumy"
+          src="/ploom-logo.png"
+          alt="Ploom"
           className="relative w-[72px] h-[72px] rounded-[18px]"
           style={{
             animation: "loading-pulse 1.8s ease-in-out infinite",
