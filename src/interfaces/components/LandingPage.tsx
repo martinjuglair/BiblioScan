@@ -1,4 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 
 /**
  * Marketing landing page shown at `/` to unauthenticated visitors.
@@ -102,6 +108,169 @@ function coverStyle(key: keyof typeof COVERS) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   Hooks — reveal on scroll, count up, parallax tilt
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * Returns a ref + boolean `inView`. Once the element enters the viewport it
+ * stays true (we only play the reveal once per session).
+ */
+function useInView<T extends HTMLElement>(
+  rootMargin = "0px 0px -10% 0px",
+  threshold = 0.15,
+): [React.RefObject<T>, boolean] {
+  const ref = useRef<T>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    if (prefersReducedMotion()) {
+      setInView(true);
+      return;
+    }
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setInView(true);
+            obs.disconnect();
+            break;
+          }
+        }
+      },
+      { rootMargin, threshold },
+    );
+    obs.observe(node);
+    return () => obs.disconnect();
+  }, [rootMargin, threshold]);
+
+  return [ref, inView];
+}
+
+/**
+ * Animates from 0 → `target` once `trigger` flips true. Uses easeOutCubic for
+ * the punchy-then-settle feel product counters love.
+ */
+function useCountUp(target: number, duration: number, trigger: boolean): number {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!trigger) return;
+    if (prefersReducedMotion()) {
+      setValue(target);
+      return;
+    }
+
+    const start = performance.now();
+    const from = 0;
+    const to = target;
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(from + (to - from) * eased));
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, duration, trigger]);
+
+  return value;
+}
+
+/**
+ * Subtle 3D tilt on desktop mousemove. Returns a ref to attach to the tilted
+ * element and a style object to spread. Disabled on touch / reduced motion.
+ */
+function useMouseTilt<T extends HTMLElement>(
+  maxDeg = 5,
+): [React.RefObject<T>, CSSProperties, (e: React.MouseEvent) => void, () => void] {
+  const ref = useRef<T>(null);
+  const [style, setStyle] = useState<CSSProperties>({
+    transform: "perspective(1200px) rotateX(0deg) rotateY(0deg)",
+    transition: "transform 600ms cubic-bezier(0.22, 1, 0.36, 1)",
+  });
+
+  const onMove = (e: React.MouseEvent) => {
+    const node = ref.current;
+    if (!node) return;
+    if (prefersReducedMotion()) return;
+    if (window.matchMedia("(hover: none)").matches) return;
+
+    const rect = node.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width; // 0..1
+    const py = (e.clientY - rect.top) / rect.height; // 0..1
+    const ry = (px - 0.5) * (maxDeg * 2);
+    const rx = -(py - 0.5) * (maxDeg * 2);
+    setStyle({
+      transform: `perspective(1200px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`,
+      transition: "transform 120ms linear",
+    });
+  };
+
+  const onLeave = () => {
+    setStyle({
+      transform: "perspective(1200px) rotateX(0deg) rotateY(0deg)",
+      transition: "transform 600ms cubic-bezier(0.22, 1, 0.36, 1)",
+    });
+  };
+
+  return [ref, style, onMove, onLeave];
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Reveal wrapper — applies scroll-triggered fade+slide with optional stagger
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function Reveal({
+  children,
+  delay = 0,
+  as: As = "div",
+  className = "",
+  y = 30,
+}: {
+  children: ReactNode;
+  delay?: number;
+  as?: "div" | "section" | "li" | "p" | "span";
+  className?: string;
+  y?: number;
+}) {
+  const [ref, inView] = useInView<HTMLDivElement>();
+  const style: CSSProperties = {
+    opacity: inView ? 1 : 0,
+    transform: inView ? "translateY(0)" : `translateY(${y}px)`,
+    transition: `opacity 800ms cubic-bezier(.4,0,.2,1) ${delay}ms, transform 800ms cubic-bezier(.4,0,.2,1) ${delay}ms`,
+    willChange: "opacity, transform",
+  };
+  // React treats `as` prop via element type; cast to any since union is narrow.
+  const Component = As as unknown as "div";
+  return (
+    <Component
+      ref={ref as React.RefObject<HTMLDivElement>}
+      className={className}
+      style={style}
+    >
+      {children}
+    </Component>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    Root component
    ═══════════════════════════════════════════════════════════════════════ */
 
@@ -114,7 +283,65 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-surface-light overflow-x-hidden">
+    <div className="min-h-screen bg-surface-light landing-root">
+      {/* Global styles scoped to the landing page */}
+      <style>{`
+        html, body { margin: 0; padding: 0; }
+        .landing-root { overflow-x: clip; }
+        @keyframes ploom-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        @keyframes ploom-breath {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.012); }
+        }
+        @keyframes ploom-pulse-ring {
+          0% { transform: scale(0.95); opacity: 0.7; }
+          70% { transform: scale(1.15); opacity: 0; }
+          100% { transform: scale(1.15); opacity: 0; }
+        }
+        @keyframes ploom-word-rise {
+          0% { opacity: 0; transform: translateY(14px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .ploom-word {
+          display: inline-block;
+          opacity: 0;
+          transform: translateY(14px);
+          animation: ploom-word-rise 700ms cubic-bezier(.22,1,.36,1) forwards;
+        }
+        .ploom-breath {
+          animation: ploom-breath 5s ease-in-out infinite;
+        }
+        .ploom-cover-tile {
+          transition: transform 240ms cubic-bezier(.22,1,.36,1), filter 240ms ease;
+        }
+        .ploom-cover-grid:hover .ploom-cover-tile { filter: brightness(0.85); }
+        .ploom-cover-grid .ploom-cover-tile:hover {
+          transform: translateY(-4px);
+          filter: brightness(1.05);
+          z-index: 2;
+        }
+        .ploom-mockup-wrap {
+          transition: transform 400ms cubic-bezier(.22,1,.36,1), box-shadow 400ms ease;
+        }
+        @media (hover: hover) {
+          .ploom-mockup-wrap:hover { transform: translateY(-4px) scale(1.02); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ploom-word,
+          .ploom-breath,
+          .ploom-mockup-wrap,
+          .ploom-cover-tile {
+            animation: none !important;
+            transition: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+        }
+      `}</style>
+
       {/* ─── NAV ─── */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 h-16 transition-all duration-300 ${
@@ -151,13 +378,13 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
       {/* ─── HERO ─── */}
       <section
         id="hero"
-        className="relative pt-16 pb-16 md:pb-24 px-5"
+        className="relative pt-16 pb-16 md:pb-24 px-5 overflow-hidden"
       >
         {/* Decorative blobs — positioned so they don't push layout */}
         <div className="absolute top-16 -left-20 w-80 h-80 rounded-full bg-brand-grape/15 blur-[80px] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-brand-sun/20 blur-[100px] pointer-events-none" />
 
-        <div className="max-w-6xl mx-auto pt-8 md:pt-16 grid md:grid-cols-2 gap-12 md:gap-16 items-center relative">
+        <div className="max-w-6xl mx-auto pt-6 md:pt-12 grid md:grid-cols-2 gap-12 md:gap-16 items-center relative">
           {/* Left: text */}
           <div className="text-center md:text-left order-2 md:order-1">
             <div className="inline-flex items-center gap-2 bg-brand-grape/10 text-brand-grape text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-pill mb-6">
@@ -165,17 +392,12 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               <span>100% Gratuit · Zéro pub</span>
             </div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-text-primary tracking-tighter leading-[1.02] mb-5">
-              Ton compagnon
-              <br />
-              <span
-                className="inline-block bg-clip-text text-transparent"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, #FB6538 0%, #FF3C7A 50%, #FFC83D 100%)",
-                }}
-              >
-                de lecture.
-              </span>
+              <AnimatedHeadline
+                lines={[
+                  ["Ton", "compagnon"],
+                  ["de", "lecture."],
+                ]}
+              />
             </h1>
             <p className="text-lg md:text-xl text-text-secondary max-w-lg mx-auto md:mx-0 mb-8 leading-relaxed">
               Scanne, note, partage. Toute ta bibliothèque dans ta poche —
@@ -221,39 +443,8 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
           </div>
 
           {/* Right: hero phone mockup showing Collection */}
-          <div className="flex justify-center md:justify-end order-1 md:order-2">
-            <div className="relative">
-              <PhoneMockup size="lg" tint="orange">
-                <CollectionScreen activeTab={2} />
-              </PhoneMockup>
-
-              {/* Floating level badge — decorative */}
-              <div
-                className="absolute -top-4 -right-2 md:-right-6 bg-white rounded-2xl shadow-float px-4 py-3 flex items-center gap-3 z-20"
-                style={{ animation: "ploom-bounce 2.5s ease-in-out infinite" }}
-              >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-grape to-brand-sun flex items-center justify-center">
-                  <span className="text-lg">🛡️</span>
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold text-brand-grape uppercase tracking-wider leading-none">
-                    Niveau 4
-                  </p>
-                  <p className="text-xs font-extrabold text-text-primary mt-0.5">
-                    Gardien des récits
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <HeroMockup />
         </div>
-
-        <style>{`
-          @keyframes ploom-bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
-          }
-        `}</style>
       </section>
 
       {/* ─── SECTION 1: Book detail ─── */}
@@ -277,9 +468,11 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
           "Partage direct sur Instagram, WhatsApp, X",
         ]}
         mockup={
-          <PhoneMockup>
-            <BookDetailScreen />
-          </PhoneMockup>
+          <TiltedMockup>
+            <PhoneMockup>
+              <BookDetailScreen />
+            </PhoneMockup>
+          </TiltedMockup>
         }
       />
 
@@ -303,9 +496,11 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
           "Répartition de tes notes",
         ]}
         mockup={
-          <PhoneMockup tint="violet">
-            <StatsScreen />
-          </PhoneMockup>
+          <TiltedMockup>
+            <PhoneMockup tint="violet">
+              <StatsScreen />
+            </PhoneMockup>
+          </TiltedMockup>
         }
       />
 
@@ -329,9 +524,11 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
           "Ajout en 1 tap à ta wishlist",
         ]}
         mockup={
-          <PhoneMockup>
-            <DiscoverScreen />
-          </PhoneMockup>
+          <TiltedMockup>
+            <PhoneMockup>
+              <DiscoverScreen />
+            </PhoneMockup>
+          </TiltedMockup>
         }
       />
 
@@ -355,9 +552,11 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
           "Notifications douces (pas de spam)",
         ]}
         mockup={
-          <PhoneMockup tint="magenta">
-            <SocialScreen />
-          </PhoneMockup>
+          <TiltedMockup>
+            <PhoneMockup tint="magenta">
+              <SocialScreen />
+            </PhoneMockup>
+          </TiltedMockup>
         }
       />
 
@@ -371,9 +570,26 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
       >
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-3 gap-6 md:gap-12 text-center">
-            <StatCard value="100%" label="Gratuit" hint="Pour toujours." />
-            <StatCard value="0" label="Publicité" hint="On respecte ta lecture." />
-            <StatCard value="∞" label="Livres" hint="Ta collection illimitée." />
+            <AnimatedStatCard
+              value={100}
+              suffix="%"
+              label="Gratuit"
+              hint="Pour toujours."
+              delay={0}
+            />
+            <AnimatedStatCard
+              value={0}
+              label="Publicité"
+              hint="On respecte ta lecture."
+              delay={120}
+            />
+            <AnimatedStatCard
+              value={null}
+              overrideDisplay="∞"
+              label="Livres"
+              hint="Ta collection illimitée."
+              delay={240}
+            />
           </div>
         </div>
       </section>
@@ -386,16 +602,16 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
             "linear-gradient(135deg, #FB6538 0%, #FF3C7A 50%, #FFC83D 100%)",
         }}
       >
-        <div className="max-w-3xl mx-auto text-center text-white relative">
+        <Reveal as="div" className="max-w-3xl mx-auto text-center text-white relative">
           <img
             src="/ploom-logo.png"
             alt="Ploom"
             className="w-20 h-20 rounded-2xl mx-auto mb-6 shadow-hero"
           />
           <h2 className="text-4xl md:text-6xl font-extrabold tracking-tighter leading-[1.05] mb-5">
-            Prête à transformer
+            Transforme
             <br />
-            ta lecture ?
+            ta façon de lire.
           </h2>
           <p className="text-lg md:text-xl opacity-95 mb-8 max-w-xl mx-auto">
             Plus jamais le même livre racheté deux fois. Plus jamais l'oubli
@@ -423,7 +639,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               Sans engagement · Sans pub · Pour toujours
             </p>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ─── FOOTER ─── */}
@@ -521,6 +737,146 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   Hero headline — word-by-word stagger reveal
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function AnimatedHeadline({ lines }: { lines: string[][] }) {
+  // Flat index controls stagger across both lines
+  let wordIndex = 0;
+  return (
+    <>
+      {lines.map((words, lineIdx) => (
+        <span key={lineIdx} className="block">
+          {lineIdx === 1 ? (
+            <span
+              className="inline-block bg-clip-text text-transparent"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, #FB6538 0%, #FF3C7A 50%, #FFC83D 100%)",
+              }}
+            >
+              {words.map((w, i) => {
+                const delay = wordIndex++ * 90;
+                return (
+                  <span key={`${lineIdx}-${i}`}>
+                    <span
+                      className="ploom-word"
+                      style={{ animationDelay: `${delay}ms` }}
+                    >
+                      {w}
+                    </span>
+                    {i < words.length - 1 && " "}
+                  </span>
+                );
+              })}
+            </span>
+          ) : (
+            words.map((w, i) => {
+              const delay = wordIndex++ * 90;
+              return (
+                <span key={`${lineIdx}-${i}`}>
+                  <span
+                    className="ploom-word"
+                    style={{ animationDelay: `${delay}ms` }}
+                  >
+                    {w}
+                  </span>
+                  {i < words.length - 1 && " "}
+                </span>
+              );
+            })
+          )}
+        </span>
+      ))}
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HeroMockup — phone + floating badge, contained inside column grid
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function HeroMockup() {
+  const [tiltRef, tiltStyle, onMove, onLeave] =
+    useMouseTilt<HTMLDivElement>(4);
+  const [viewRef, inView] = useInView<HTMLDivElement>();
+
+  return (
+    <div
+      ref={viewRef}
+      className="flex justify-center md:justify-end order-1 md:order-2"
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateY(0)" : "translateY(30px)",
+        transition:
+          "opacity 800ms cubic-bezier(.4,0,.2,1) 150ms, transform 800ms cubic-bezier(.4,0,.2,1) 150ms",
+      }}
+    >
+      {/* Column-scoped wrapper so the floating badge can anchor to the
+          phone's right edge without escaping the grid cell. */}
+      <div
+        className="relative inline-block"
+        onMouseMove={onMove}
+        onMouseLeave={onLeave}
+      >
+        <div
+          ref={tiltRef}
+          className="ploom-breath"
+          style={{ ...tiltStyle, transformStyle: "preserve-3d" }}
+        >
+          <PhoneMockup size="lg" tint="orange">
+            <CollectionScreen activeTab={2} animateStats={inView} />
+          </PhoneMockup>
+        </div>
+
+        {/* Floating level badge — anchored slightly outside the phone but
+            inside the column wrapper so it never escapes the grid. */}
+        <div
+          className="absolute -top-3 right-0 translate-x-3 md:translate-x-5 bg-white rounded-2xl shadow-float px-4 py-3 flex items-center gap-3 z-20"
+          style={{ animation: "ploom-bounce 2.5s ease-in-out infinite" }}
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-grape to-brand-sun flex items-center justify-center">
+            <span className="text-lg">🛡️</span>
+          </div>
+          <div>
+            <p className="text-[9px] font-bold text-brand-grape uppercase tracking-wider leading-none">
+              Niveau 4
+            </p>
+            <p className="text-xs font-extrabold text-text-primary mt-0.5">
+              Gardien des récits
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TiltedMockup — reusable tilt+breath+reveal wrapper for feature sections
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function TiltedMockup({ children }: { children: ReactNode }) {
+  const [tiltRef, tiltStyle, onMove, onLeave] =
+    useMouseTilt<HTMLDivElement>(5);
+  return (
+    <div
+      className="relative inline-block ploom-mockup-wrap"
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+    >
+      <div
+        ref={tiltRef}
+        className="ploom-breath"
+        style={{ ...tiltStyle, transformStyle: "preserve-3d" }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    FeatureSection — two-column alternating layout
    ═══════════════════════════════════════════════════════════════════════ */
 
@@ -553,7 +909,7 @@ function FeatureSection({
           }`}
         >
           {/* Text column */}
-          <div>
+          <Reveal>
             <p className="text-xs font-bold text-brand-grape uppercase tracking-widest mb-4">
               {eyebrow}
             </p>
@@ -564,22 +920,23 @@ function FeatureSection({
               {description}
             </p>
             <ul className="space-y-3">
-              {bullets.map((b) => (
-                <li
-                  key={b}
-                  className="flex items-start gap-3 text-text-primary"
-                >
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-grape/15 text-brand-grape flex items-center justify-center text-sm font-extrabold mt-0.5">
-                    ✓
-                  </span>
-                  <span className="text-base leading-relaxed">{b}</span>
-                </li>
+              {bullets.map((b, i) => (
+                <Reveal key={b} as="li" delay={80 + i * 90}>
+                  <div className="flex items-start gap-3 text-text-primary">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-grape/15 text-brand-grape flex items-center justify-center text-sm font-extrabold mt-0.5">
+                      ✓
+                    </span>
+                    <span className="text-base leading-relaxed">{b}</span>
+                  </div>
+                </Reveal>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
           {/* Mockup column */}
-          <div className="flex justify-center">{mockup}</div>
+          <Reveal delay={120} className="flex justify-center">
+            {mockup}
+          </Reveal>
         </div>
       </div>
     </section>
@@ -820,7 +1177,13 @@ function TabBar({ active }: { active: 0 | 1 | 2 | 3 | 4 }) {
 
 /* ───────────────────────── Collection screen ─────────────────────────── */
 
-function CollectionScreen({ activeTab = 2 }: { activeTab?: 0 | 1 | 2 | 3 | 4 }) {
+function CollectionScreen({
+  activeTab = 2,
+  animateStats = false,
+}: {
+  activeTab?: 0 | 1 | 2 | 3 | 4;
+  animateStats?: boolean;
+}) {
   const books: { key: keyof typeof COVERS; read: boolean }[] = [
     { key: "dune", read: true },
     { key: "lapena", read: true },
@@ -832,6 +1195,10 @@ function CollectionScreen({ activeTab = 2 }: { activeTab?: 0 | 1 | 2 | 3 | 4 }) 
     { key: "nineteen84", read: false },
     { key: "littlePrince", read: false },
   ];
+
+  const total = useCountUp(142, 1500, animateStats);
+  const read = useCountUp(33, 1500, animateStats);
+  const cats = useCountUp(8, 1500, animateStats);
 
   return (
     <>
@@ -851,12 +1218,12 @@ function CollectionScreen({ activeTab = 2 }: { activeTab?: 0 | 1 | 2 | 3 | 4 }) 
         {/* Stat bar */}
         <div className="bg-white rounded-xl px-3 py-2.5 mb-2.5 shadow-card flex justify-around">
           {[
-            { n: "142", l: "Livres" },
-            { n: "33", l: "Lus" },
-            { n: "8", l: "Catégories" },
+            { n: total, l: "Livres" },
+            { n: read, l: "Lus" },
+            { n: cats, l: "Catégories" },
           ].map((s) => (
             <div key={s.l} className="text-center">
-              <p className="text-[17px] font-extrabold text-text-primary leading-none tracking-tight">
+              <p className="text-[17px] font-extrabold text-text-primary leading-none tracking-tight tabular-nums">
                 {s.n}
               </p>
               <p className="text-[9px] text-text-tertiary uppercase tracking-wider font-semibold mt-1">
@@ -882,12 +1249,12 @@ function CollectionScreen({ activeTab = 2 }: { activeTab?: 0 | 1 | 2 | 3 | 4 }) 
           </span>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* Grid with per-cover hover lift effect */}
+        <div className="grid grid-cols-3 gap-2 ploom-cover-grid">
           {books.map((b) => (
             <div
               key={b.key}
-              className="aspect-[2/3] rounded-lg shadow-card relative overflow-hidden"
+              className="aspect-[2/3] rounded-lg shadow-card relative overflow-hidden ploom-cover-tile"
               style={coverStyle(b.key)}
             >
               {b.read && (
@@ -934,7 +1301,7 @@ function BookDetailScreen() {
               boxShadow: "0 12px 24px rgba(0,0,0,0.22)",
             }}
           />
-          <div className="flex-1 pt-0.5">
+          <div className="flex-1 pt-0.5 min-w-0">
             <div className="text-[20px] font-extrabold text-text-primary tracking-tight leading-[1.15]">
               Dune
             </div>
@@ -1036,7 +1403,7 @@ function StatsScreen() {
             <div className="w-11 h-11 rounded-xl bg-[rgba(167,139,250,0.33)] flex items-center justify-center text-[26px]">
               🛡️
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="text-[9px] font-extrabold text-[#A78BFA] uppercase tracking-widest">
                 Niveau 4
               </div>
@@ -1471,24 +1838,42 @@ function StoreBadge({ type }: { type: "apple" | "google" }) {
   );
 }
 
-function StatCard({
+/* Animated stat card used in the "100% Gratuit / 0 Pub / ∞ Livres" strip. */
+function AnimatedStatCard({
   value,
+  suffix = "",
+  overrideDisplay,
   label,
   hint,
+  delay = 0,
 }: {
-  value: string;
+  value: number | null;
+  suffix?: string;
+  overrideDisplay?: string;
   label: string;
   hint: string;
+  delay?: number;
 }) {
+  const [ref, inView] = useInView<HTMLDivElement>();
+  const animated = useCountUp(value ?? 0, 1500, inView && value !== null);
+  const display = overrideDisplay ?? `${animated}${suffix}`;
+
   return (
-    <div>
+    <div
+      ref={ref}
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateY(0)" : "translateY(20px)",
+        transition: `opacity 800ms cubic-bezier(.4,0,.2,1) ${delay}ms, transform 800ms cubic-bezier(.4,0,.2,1) ${delay}ms`,
+      }}
+    >
       <p
-        className="text-5xl md:text-7xl font-extrabold tracking-tighter leading-none bg-clip-text text-transparent"
+        className="text-5xl md:text-7xl font-extrabold tracking-tighter leading-none bg-clip-text text-transparent tabular-nums"
         style={{
           backgroundImage: "linear-gradient(135deg, #FB6538 0%, #FF3C7A 100%)",
         }}
       >
-        {value}
+        {display}
       </p>
       <p className="text-base md:text-lg font-bold text-text-primary mt-2">
         {label}
