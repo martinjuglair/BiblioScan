@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { onLevelUp } from "@interfaces/utils/levelEvent";
 import type { LevelDef } from "@interfaces/utils/levels";
 import { hapticSuccess, hapticMedium } from "@interfaces/utils/haptics";
+import { setLevelBannerVisible } from "@interfaces/utils/bannerCoordinator";
 
 /**
  * Full-width banner that slides down when the user reaches a new level.
@@ -32,6 +33,9 @@ export function LevelUpBanner() {
 
   useEffect(() => {
     if (!current) return;
+
+    // Claim the top-of-screen slot so BadgeBanner pauses its queue.
+    setLevelBannerVisible(true);
 
     hapticSuccess();
     setTimeout(() => hapticMedium(), 180);
@@ -64,7 +68,11 @@ export function LevelUpBanner() {
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
     if (progressInterval.current) clearInterval(progressInterval.current);
     setVisible(false);
-    setTimeout(() => setCurrent(null), 350);
+    setTimeout(() => {
+      setCurrent(null);
+      // Release the slot so any queued BadgeBanner can now show.
+      setLevelBannerVisible(false);
+    }, 350);
   }, []);
 
   if (!current) return null;

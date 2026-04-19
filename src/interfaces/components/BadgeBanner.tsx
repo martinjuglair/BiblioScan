@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { onBadgeEarned } from "@interfaces/utils/badgeEvent";
 import type { BadgeDef } from "@interfaces/utils/badges";
 import { hapticSuccess } from "@interfaces/utils/haptics";
+import {
+  subscribeLevelBannerVisibility,
+  isLevelBannerVisible,
+} from "@interfaces/utils/bannerCoordinator";
 
 /**
  * Global animated badge banner for web.
@@ -13,6 +17,8 @@ export function BadgeBanner() {
   const [current, setCurrent] = useState<BadgeDef | null>(null);
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
+  // Locked while a LevelUpBanner is up (see bannerCoordinator).
+  const [levelShowing, setLevelShowing] = useState<boolean>(isLevelBannerVisible());
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -24,13 +30,30 @@ export function BadgeBanner() {
     return unsub;
   }, []);
 
-  // Process queue
+  // Track level banner visibility to avoid overlapping banners.
   useEffect(() => {
-    if (current || queue.length === 0) return;
+    return subscribeLevelBannerVisibility(setLevelShowing);
+  }, []);
+
+  // Process queue: show next badge when current is empty AND no level banner.
+  useEffect(() => {
+    if (current || queue.length === 0 || levelShowing) return;
     const [next, ...rest] = queue;
     setCurrent(next!);
     setQueue(rest);
-  }, [queue, current]);
+  }, [queue, current, levelShowing]);
+
+  // If a level banner lands while we're showing a badge, yield the slot:
+  // re-queue the current badge at the front so it plays after the level.
+  useEffect(() => {
+    if (levelShowing && current) {
+      setQueue((q) => [current, ...q]);
+      if (dismissTimer.current) clearTimeout(dismissTimer.current);
+      if (progressInterval.current) clearInterval(progressInterval.current);
+      setVisible(false);
+      setTimeout(() => setCurrent(null), 250);
+    }
+  }, [levelShowing]);
 
   // Animate when current badge changes
   useEffect(() => {

@@ -3,6 +3,7 @@ import { getCategorizedLibrary } from "@infrastructure/container";
 import { getReadingLog, computeStreak } from "@interfaces/components/Stats";
 import { emitBadgeEarned } from "@interfaces/utils/badgeEvent";
 import { BADGES } from "@interfaces/utils/badges";
+import { scopedGet, scopedSet } from "@interfaces/utils/userScopedStorage";
 
 const EARNED_BADGES_KEY = "shelfy-earned-badges";
 
@@ -15,16 +16,17 @@ const EARNED_BADGES_KEY = "shelfy-earned-badges";
 const BADGE_SCHEMA_VERSION = 2;
 const SCHEMA_KEY = "shelfy-badge-schema-version";
 
-function getEarnedBadgeIds(): string[] {
+async function getEarnedBadgeIds(): Promise<string[]> {
   try {
-    return JSON.parse(localStorage.getItem(EARNED_BADGES_KEY) ?? "[]");
+    const raw = await scopedGet(EARNED_BADGES_KEY);
+    return JSON.parse(raw ?? "[]");
   } catch {
     return [];
   }
 }
 
-function saveEarnedBadgeIds(ids: string[]) {
-  localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(ids));
+async function saveEarnedBadgeIds(ids: string[]): Promise<void> {
+  await scopedSet(EARNED_BADGES_KEY, JSON.stringify(ids));
 }
 
 /**
@@ -45,6 +47,14 @@ export function useBadgeChecker() {
         ...result.value.uncategorized,
       ];
 
+      // Guard: empty library + saved badges = loading state, not a wipe.
+      // See the mobile version for the full rationale — same bug
+      // (re-fire-everything on logout/login) was reproducible on web.
+      if (books.length === 0) {
+        const existing = await getEarnedBadgeIds();
+        if (existing.length > 0) return;
+      }
+
       const log = getReadingLog();
       const streak = computeStreak(log);
       const earned = BADGES.filter((b) => b.check(books, streak));
@@ -57,18 +67,16 @@ export function useBadgeChecker() {
       const currentIds = earned.map((b) => b.id);
 
       // Check badge schema version — silent catch-up on mismatch
-      const savedVersion = localStorage.getItem(SCHEMA_KEY);
+      const savedVersion = await scopedGet(SCHEMA_KEY);
       if (savedVersion !== String(BADGE_SCHEMA_VERSION)) {
-        // Schema changed (or first run): save current state silently,
-        // don't trigger any "newly earned" notifications
-        saveEarnedBadgeIds(currentIds);
-        localStorage.setItem(SCHEMA_KEY, String(BADGE_SCHEMA_VERSION));
+        await saveEarnedBadgeIds(currentIds);
+        await scopedSet(SCHEMA_KEY, String(BADGE_SCHEMA_VERSION));
         return;
       }
 
-      const prevIds = getEarnedBadgeIds();
+      const prevIds = await getEarnedBadgeIds();
       const newlyEarned = earned.filter((b) => !prevIds.includes(b.id));
-      saveEarnedBadgeIds(currentIds);
+      await saveEarnedBadgeIds(currentIds);
 
       // Emit one event per newly earned badge
       for (const badge of newlyEarned) {
@@ -79,15 +87,8 @@ export function useBadgeChecker() {
     check();
 
     // Re-check on a long cadence (web has no library event bus like mobile).
-    // 60s is more than enough: badges update when the user comes back to the
-    // tab (see visibilitychange below) so they never wait longer than a tick
-    // after adding a book. 10s was eating Supabase bandwidth needlessly
-    // (720 req/h/user in background).
+    // 60s + visibility-gated — see earlier pre-launch hardening commit.
     const interval = setInterval(check, 60000);
-
-    // Pause while the tab is hidden; refresh immediately when it becomes
-    // visible again. Covers the "user marked book read on mobile then came
-    // back to web" case.
     const onVisibility = () => {
       if (document.visibilityState === "visible") check();
     };
