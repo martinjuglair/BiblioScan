@@ -17,6 +17,7 @@ import { BadgeBanner } from "@interfaces/components/BadgeBanner";
 import { LevelUpBanner } from "@interfaces/components/LevelUpBanner";
 import { ResetPasswordModal } from "@interfaces/components/ResetPasswordModal";
 import { LegalPages } from "@interfaces/components/LegalPages";
+import { LandingPage } from "@interfaces/components/LandingPage";
 import { useBadgeChecker } from "@interfaces/hooks/useBadgeChecker";
 import { useLevelChecker } from "@interfaces/hooks/useLevelChecker";
 
@@ -62,6 +63,9 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   // Legal pages overlay — takes precedence over the rest of the UI.
   const [legalPage, setLegalPage] = useState<"privacy" | "terms" | null>(null);
+  // Landing page is the default entry point for unauthenticated users.
+  // They click "Se connecter" to open the LoginScreen.
+  const [showLoginScreen, setShowLoginScreen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem("shelfy-onboarding-v1");
   });
@@ -105,15 +109,24 @@ export default function App() {
     return <LegalPages page={legalPage} onBack={() => setLegalPage(null)} />;
   }
 
-  // Not authenticated
+  // Not authenticated: show landing page by default, login screen on demand
   if (!user) {
+    if (showLoginScreen) {
+      return (
+        <LoginScreen
+          onSignIn={signIn}
+          onSignUp={signUp}
+          onResetPassword={resetPassword}
+          onBack={() => setShowLoginScreen(false)}
+          loading={loading}
+          error={error}
+          onOpenLegal={setLegalPage}
+        />
+      );
+    }
     return (
-      <LoginScreen
-        onSignIn={signIn}
-        onSignUp={signUp}
-        onResetPassword={resetPassword}
-        loading={loading}
-        error={error}
+      <LandingPage
+        onLogin={() => setShowLoginScreen(true)}
         onOpenLegal={setLegalPage}
       />
     );

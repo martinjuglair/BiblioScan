@@ -9,11 +9,12 @@ interface LoginScreenProps {
   ) => Promise<{ ok: boolean; needsConfirmation?: boolean; error?: string }>;
   onResetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
   onOpenLegal: (page: "privacy" | "terms") => void;
+  onBack?: () => void;
   loading: boolean;
   error: string | null;
 }
 
-export function LoginScreen({ onSignIn, onSignUp, onResetPassword, onOpenLegal, loading, error }: LoginScreenProps) {
+export function LoginScreen({ onSignIn, onSignUp, onResetPassword, onOpenLegal, onBack, loading, error }: LoginScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -42,7 +43,21 @@ export function LoginScreen({ onSignIn, onSignUp, onResetPassword, onOpenLegal, 
   };
 
   return (
-    <div className="min-h-screen bg-surface-light flex flex-col items-center justify-center px-5 py-8">
+    <div className="min-h-screen bg-surface-light flex flex-col items-center justify-center px-5 py-8 relative">
+      {/* Back to landing (only if onBack is provided) */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 flex items-center gap-1.5 text-sm font-semibold text-text-tertiary hover:text-text-primary transition-colors"
+          type="button"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+          Accueil
+        </button>
+      )}
+
       {/* Logo / Title */}
       <div className="text-center mb-8">
         <img
