@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ComicBookCreateInput } from "@domain/entities/ComicBook";
 import { bookLookup, unifiedSearch } from "@infrastructure/container";
 import { UnifiedSearchResult } from "@infrastructure/services/UnifiedSearchService";
@@ -6,6 +6,8 @@ import { UnifiedSearchResult } from "@infrastructure/services/UnifiedSearchServi
 interface TitleSearchProps {
   onSelect: (data: ComicBookCreateInput) => void;
   onManualEntry: () => void;
+  /** Pre-fill the search input and trigger search immediately. */
+  initialQuery?: string;
 }
 
 function amazonCoverUrl(isbn: string): string | null {
@@ -25,20 +27,20 @@ function amazonCoverUrl(isbn: string): string | null {
   return null;
 }
 
-export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
-  const [query, setQuery] = useState("");
+export function TitleSearch({ onSelect, onManualEntry, initialQuery }: TitleSearchProps) {
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [results, setResults] = useState<UnifiedSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [selecting, setSelecting] = useState<number | null>(null);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  const runSearch = async (q: string) => {
+    if (!q.trim()) return;
     setLoading(true);
     setSearched(true);
     setResults([]);
 
-    const result = await unifiedSearch.search(query.trim(), (updated) => {
+    const result = await unifiedSearch.search(q.trim(), (updated) => {
       setResults([...updated]);
     });
 
@@ -47,6 +49,16 @@ export function TitleSearch({ onSelect, onManualEntry }: TitleSearchProps) {
     }
     setLoading(false);
   };
+
+  const handleSearch = () => runSearch(query);
+
+  // Auto-run the search once if a query was pre-supplied (e.g. from Discover).
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      runSearch(initialQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSelect = async (result: UnifiedSearchResult, index: number) => {
     const cleanIsbn = result.isbn?.replace(/[-\s]/g, "") ?? null;

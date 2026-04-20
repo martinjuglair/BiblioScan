@@ -15,6 +15,10 @@ interface ScannerProps {
   onUpdateFirstName: (name: string) => Promise<void>;
   /** When used as overlay from Library, start directly in a specific step */
   initialStep?: "scan" | "search" | "manual";
+  /** Pre-filled ISBN — triggers auto-lookup into "preview" without using the camera. */
+  initialIsbn?: string;
+  /** Pre-filled title search query. */
+  initialQuery?: string;
   /** Close callback for overlay mode */
   onClose?: () => void;
   /** Whether the scanner is embedded in an overlay (hides greeting/idle) */
@@ -31,8 +35,9 @@ type ScanState =
   | { step: "success"; title: string; coverUrl: string | null }
   | { step: "error"; message: string };
 
-export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep, onClose, embedded }: ScannerProps) {
+export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep, initialIsbn, initialQuery, onClose, embedded }: ScannerProps) {
   const getInitialState = (): ScanState => {
+    if (initialIsbn) return { step: "loading", isbn: initialIsbn };
     if (initialStep === "scan") return { step: "scanning" };
     if (initialStep === "search") return { step: "titleSearch" };
     if (initialStep === "manual") return { step: "manualEntry" };
@@ -68,11 +73,25 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep
     onDetected: handleDetected,
   });
 
-  // Auto-start camera when entering in scan mode
+  // Auto-start camera when entering in scan mode (not when we have an ISBN pre-filled)
   useEffect(() => {
-    if (initialStep === "scan") {
+    if (initialStep === "scan" && !initialIsbn) {
       start();
     }
+  }, []);
+
+  // Pre-filled ISBN (from Discover / a share link): skip camera, do lookup.
+  useEffect(() => {
+    if (!initialIsbn) return;
+    (async () => {
+      const result = await scanComicBook.lookup(initialIsbn);
+      if (result.ok) {
+        setState({ step: "preview", data: result.value });
+      } else {
+        setState({ step: "error", message: result.error });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleStartScan = () => {
@@ -363,6 +382,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep
           <TitleSearch
             onSelect={(data) => setState({ step: "preview", data })}
             onManualEntry={() => setState({ step: "manualEntry" })}
+            initialQuery={initialQuery}
           />
         </>
       )}

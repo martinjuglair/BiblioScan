@@ -59,6 +59,9 @@ export default function App() {
 
   const [tab, setTab] = useState<Tab>("library");
   const [addMode, setAddMode] = useState<"scan" | "search" | "manual" | null>(null);
+  // Optional hints carried with the add-book mode: a known ISBN jumps straight
+  // to the preview screen (no camera), a known title auto-runs the search.
+  const [addHints, setAddHints] = useState<{ isbn?: string; query?: string }>({});
   const [view, setView] = useState<View>({ screen: "main" });
   const [refreshKey, setRefreshKey] = useState(0);
   // Legal pages overlay — takes precedence over the rest of the UI.
@@ -154,7 +157,15 @@ export default function App() {
         </div>
       </div>
 
-      {tab === "discover" && <Discover onAddBook={(mode) => { setTab("library"); setAddMode(mode); }} />}
+      {tab === "discover" && (
+        <Discover
+          onAddBook={(mode, opts) => {
+            setTab("library");
+            setAddHints(opts ?? {});
+            setAddMode(mode);
+          }}
+        />
+      )}
 
       {tab === "library" && view.screen === "main" && (
         <>
@@ -176,11 +187,13 @@ export default function App() {
                 <div className="w-9" />
               </div>
               <Scanner
-                onBookAdded={() => { refresh(); setAddMode(null); }}
+                onBookAdded={() => { refresh(); setAddMode(null); setAddHints({}); }}
                 firstName={firstName}
                 onUpdateFirstName={updateFirstName}
                 initialStep={addMode}
-                onClose={() => setAddMode(null)}
+                initialIsbn={addHints.isbn}
+                initialQuery={addHints.query}
+                onClose={() => { setAddMode(null); setAddHints({}); }}
                 embedded
               />
             </div>
@@ -194,7 +207,7 @@ export default function App() {
           refreshKey={refreshKey}
           onSelectCategory={(categoryId) => setView({ screen: "category", categoryId })}
           onSelectBook={(isbn) => setView({ screen: "book", isbn, fromCategoryId: null })}
-          onAddBook={(mode) => setAddMode(mode)}
+          onAddBook={(mode) => { setAddHints({}); setAddMode(mode); }}
         />
       )}
 

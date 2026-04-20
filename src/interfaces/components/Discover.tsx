@@ -11,7 +11,12 @@ import { LoadingLogo } from "./LoadingLogo";
 import { toThumbnailUrl } from "@interfaces/utils/coverUrl";
 
 interface DiscoverProps {
-  onAddBook?: (mode: "scan" | "search" | "manual") => void;
+  /**
+   * Opens the add-book overlay. The optional second argument lets the caller
+   * pre-fill an ISBN (straight-to-preview, no camera) or a title query
+   * (auto-run search) — used when the user taps a book card on Discover.
+   */
+  onAddBook?: (mode: "scan" | "search" | "manual", opts?: { isbn?: string; query?: string }) => void;
 }
 
 // ── In-memory cache ──
@@ -64,8 +69,13 @@ export function Discover({ onAddBook }: DiscoverProps) {
     fetchAll(true);
   };
 
-  const handleBookPress = () => {
-    onAddBook?.("search");
+  const handleBookPress = (book: { isbn: string | null; title: string }) => {
+    if (book.isbn) {
+      // Straight to preview — no camera.
+      onAddBook?.("scan", { isbn: book.isbn });
+    } else {
+      onAddBook?.("search", { query: book.title });
+    }
   };
 
   // ── Loading state (branded) ──
@@ -112,7 +122,7 @@ export function Discover({ onAddBook }: DiscoverProps) {
                 volumeNumber={vol.volumeNumber}
                 isGap={vol.source === "gap"}
                 averageRating={vol.averageRating}
-                onPress={handleBookPress}
+                onPress={() => handleBookPress({ isbn: vol.isbn, title: vol.title })}
               />
             )),
           )}
@@ -133,7 +143,7 @@ export function Discover({ onAddBook }: DiscoverProps) {
                 title={book.title}
                 subtitle={book.authors.join(", ")}
                 averageRating={book.averageRating}
-                onPress={handleBookPress}
+                onPress={() => handleBookPress({ isbn: book.isbn, title: book.title })}
               />
             ))}
           </Row>
@@ -148,7 +158,7 @@ export function Discover({ onAddBook }: DiscoverProps) {
               title={book.title}
               subtitle={book.authors.join(", ")}
               averageRating={book.averageRating}
-              onPress={handleBookPress}
+              onPress={() => handleBookPress({ isbn: book.isbn, title: book.title })}
             />
           ))}
         </Row>
