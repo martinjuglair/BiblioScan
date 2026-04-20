@@ -719,31 +719,16 @@ function AnimatedHeadline({ lines }: { lines: string[][] }) {
       {lines.map((words, lineIdx) => (
         <span key={lineIdx} className="block">
           {lineIdx === 1 ? (
+            // Line 2 highlights the product: rendered as ONE static span
+            // with a solid brand-grape color. Nested ploom-word spans
+            // inside a bg-clip-text parent broke rendering (words stayed
+            // opacity:0), and a solid color guarantees readability on
+            // the pale peach hero background.
             <span
-              className="inline-block bg-clip-text text-transparent"
-              style={{
-                // Darker Solar Pop gradient — stays readable on the pale
-                // peach hero background. The original (FB6538 → FF3C7A →
-                // FFC83D) was too light and blended into the decorative
-                // blobs.
-                backgroundImage:
-                  "linear-gradient(135deg, #D14518 0%, #E0246A 50%, #C27A00 100%)",
-              }}
+              className="inline-block text-brand-grape"
+              style={{ animation: "ploom-word-rise 700ms 180ms cubic-bezier(.22,1,.36,1) backwards" }}
             >
-              {words.map((w, i) => {
-                const delay = wordIndex++ * 90;
-                return (
-                  <span key={`${lineIdx}-${i}`}>
-                    <span
-                      className="ploom-word"
-                      style={{ animationDelay: `${delay}ms` }}
-                    >
-                      {w}
-                    </span>
-                    {i < words.length - 1 && " "}
-                  </span>
-                );
-              })}
+              {words.join(" ")}
             </span>
           ) : (
             words.map((w, i) => {
