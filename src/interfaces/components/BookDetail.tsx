@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { ComicBook } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
 import { ReadingGroup } from "@domain/entities/ReadingGroup";
-import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, readingGroupRepository, googleBooksSearch } from "@infrastructure/container";
+import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, createCategory, readingGroupRepository, googleBooksSearch } from "@infrastructure/container";
 import { CoverLightbox } from "./CoverLightbox";
+import { CreateCategoryModal } from "./CreateCategoryModal";
 import { BottomSheet } from "./BottomSheet";
 import { BookDetailSkeleton } from "./Skeleton";
 import { SwipeToRead } from "./SwipeToRead";
@@ -39,6 +40,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   // Category state
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
 
   // Read state
@@ -740,17 +742,26 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           {/* Category selector */}
           <div>
             <p className="text-text-tertiary text-xs uppercase tracking-wide mb-1">Catégorie</p>
-            <select
-              value={categoryId ?? ""}
-              onChange={(e) => handleCategoryChange(e.target.value || null)}
-              disabled={savingCategory}
-              className="input-rect w-full"
-            >
-              <option value="">Non classé</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={categoryId ?? ""}
+                onChange={(e) => handleCategoryChange(e.target.value || null)}
+                disabled={savingCategory}
+                className="input-rect flex-1"
+              >
+                <option value="">Non classé</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowCreateCategory(true)}
+                className="px-3 py-2 rounded-card bg-brand-grape/10 text-brand-grape text-sm font-semibold active:scale-95 transition-transform whitespace-nowrap"
+              >
+                + Nouvelle
+              </button>
+            </div>
           </div>
 
           <button
@@ -1057,6 +1068,25 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           </button>
         </div>
       </BottomSheet>
+
+      {showCreateCategory && (
+        <CreateCategoryModal
+          onConfirm={async (name, emoji) => {
+            const result = await createCategory.execute(name, emoji);
+            if (result.ok) {
+              // Refresh the local category list then auto-select the new one.
+              const all = await categoryRepository.findAllByUser();
+              if (all.ok) setCategories(all.value);
+              setShowCreateCategory(false);
+              await handleCategoryChange(result.value.id);
+              toast(`Catégorie "${name}" créée`, "success");
+            } else {
+              toast(result.error, "error");
+            }
+          }}
+          onCancel={() => setShowCreateCategory(false)}
+        />
+      )}
     </div>
   );
 }
