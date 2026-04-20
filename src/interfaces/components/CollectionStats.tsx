@@ -8,9 +8,11 @@ interface CollectionStatsProps {
 
 export function CollectionStats({ books, categoryCount }: CollectionStatsProps) {
   const [expanded, setExpanded] = useState(false);
-  const stats = useMemo(() => computeStats(books, categoryCount), [books, categoryCount]);
+  // Wishlist books aren't counted in stats: they're "want to read", not owned/read.
+  const ownedBooks = useMemo(() => books.filter((b) => !b.wishlist), [books]);
+  const stats = useMemo(() => computeStats(ownedBooks, categoryCount), [ownedBooks, categoryCount]);
 
-  if (books.length === 0) return null;
+  if (ownedBooks.length === 0) return null;
 
   return (
     <div className="mb-4">

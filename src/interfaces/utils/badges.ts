@@ -13,88 +13,90 @@ export interface BadgeDef {
 
 const rated = (x: ComicBook) => typeof x.rating === "number" && x.rating > 0;
 const hasComment = (x: ComicBook) => typeof x.comment === "string" && x.comment.trim().length > 0;
+// Books actually in the library (wishlist items don't count toward collection/read badges).
+const owned = (x: ComicBook) => !x.wishlist;
 
 export const BADGES: BadgeDef[] = [
   // --- Collection ---
   {
     id: "first", name: "Premier pas", description: "Ajouter votre 1er livre", emoji: "📚",
-    check: (b) => b.length >= 1,
-    progress: (b) => ({ current: Math.min(b.length, 1), target: 1 }),
+    check: (b) => b.filter(owned).length >= 1,
+    progress: (b) => ({ current: Math.min(b.filter(owned).length, 1), target: 1 }),
   },
   {
     id: "ten", name: "Beau début", description: "10 livres dans la bibliothèque", emoji: "🌟",
-    check: (b) => b.length >= 10,
-    progress: (b) => ({ current: Math.min(b.length, 10), target: 10 }),
+    check: (b) => b.filter(owned).length >= 10,
+    progress: (b) => ({ current: Math.min(b.filter(owned).length, 10), target: 10 }),
   },
   {
     id: "fifty", name: "Collectionneur", description: "50 livres collectionnés", emoji: "🏆",
-    check: (b) => b.length >= 50,
-    progress: (b) => ({ current: Math.min(b.length, 50), target: 50 }),
+    check: (b) => b.filter(owned).length >= 50,
+    progress: (b) => ({ current: Math.min(b.filter(owned).length, 50), target: 50 }),
   },
   {
     id: "hundred", name: "Bibliothécaire", description: "100 livres dans la bibliothèque", emoji: "🏛️",
-    check: (b) => b.length >= 100,
-    progress: (b) => ({ current: Math.min(b.length, 100), target: 100 }),
+    check: (b) => b.filter(owned).length >= 100,
+    progress: (b) => ({ current: Math.min(b.filter(owned).length, 100), target: 100 }),
   },
 
   // --- Lecture ---
   {
     id: "reader5", name: "Lecteur assidu", description: "5 livres lus", emoji: "📖",
-    check: (b) => b.filter((x) => x.isRead).length >= 5,
-    progress: (b) => ({ current: Math.min(b.filter((x) => x.isRead).length, 5), target: 5 }),
+    check: (b) => b.filter((x) => x.isRead && owned(x)).length >= 5,
+    progress: (b) => ({ current: Math.min(b.filter((x) => x.isRead && owned(x)).length, 5), target: 5 }),
   },
   {
     id: "reader20", name: "Rat de bibliothèque", description: "20 livres lus", emoji: "🐀",
-    check: (b) => b.filter((x) => x.isRead).length >= 20,
-    progress: (b) => ({ current: Math.min(b.filter((x) => x.isRead).length, 20), target: 20 }),
+    check: (b) => b.filter((x) => x.isRead && owned(x)).length >= 20,
+    progress: (b) => ({ current: Math.min(b.filter((x) => x.isRead && owned(x)).length, 20), target: 20 }),
   },
   {
     id: "reader50", name: "Dévoreur", description: "50 livres lus", emoji: "🦈",
-    check: (b) => b.filter((x) => x.isRead).length >= 50,
-    progress: (b) => ({ current: Math.min(b.filter((x) => x.isRead).length, 50), target: 50 }),
+    check: (b) => b.filter((x) => x.isRead && owned(x)).length >= 50,
+    progress: (b) => ({ current: Math.min(b.filter((x) => x.isRead && owned(x)).length, 50), target: 50 }),
   },
 
   // --- Notes & critiques ---
   {
     id: "critic", name: "Critique littéraire", description: "Noter 10 livres", emoji: "⭐",
-    check: (b) => b.filter(rated).length >= 10,
-    progress: (b) => ({ current: Math.min(b.filter(rated).length, 10), target: 10 }),
+    check: (b) => b.filter((x) => rated(x) && owned(x)).length >= 10,
+    progress: (b) => ({ current: Math.min(b.filter((x) => rated(x) && owned(x)).length, 10), target: 10 }),
   },
   {
     id: "critic25", name: "Expert", description: "Noter 25 livres", emoji: "🎯",
-    check: (b) => b.filter(rated).length >= 25,
-    progress: (b) => ({ current: Math.min(b.filter(rated).length, 25), target: 25 }),
+    check: (b) => b.filter((x) => rated(x) && owned(x)).length >= 25,
+    progress: (b) => ({ current: Math.min(b.filter((x) => rated(x) && owned(x)).length, 25), target: 25 }),
   },
   {
     id: "top", name: "Coup de coeur", description: "Donner un 5/5", emoji: "❤️",
-    check: (b) => b.some((x) => typeof x.rating === "number" && x.rating === 5),
+    check: (b) => b.some((x) => owned(x) && x.rating === 5),
   },
 
   // --- Commentaires ---
   {
     id: "comment5", name: "Chroniqueur", description: "Écrire 5 commentaires", emoji: "✍️",
-    check: (b) => b.filter(hasComment).length >= 5,
-    progress: (b) => ({ current: Math.min(b.filter(hasComment).length, 5), target: 5 }),
+    check: (b) => b.filter((x) => hasComment(x) && owned(x)).length >= 5,
+    progress: (b) => ({ current: Math.min(b.filter((x) => hasComment(x) && owned(x)).length, 5), target: 5 }),
   },
   {
     id: "comment20", name: "Blogueur littéraire", description: "Écrire 20 commentaires", emoji: "📝",
-    check: (b) => b.filter(hasComment).length >= 20,
-    progress: (b) => ({ current: Math.min(b.filter(hasComment).length, 20), target: 20 }),
+    check: (b) => b.filter((x) => hasComment(x) && owned(x)).length >= 20,
+    progress: (b) => ({ current: Math.min(b.filter((x) => hasComment(x) && owned(x)).length, 20), target: 20 }),
   },
 
   // --- Diversité ---
   {
     id: "diverse", name: "Éclectique", description: "5 éditeurs différents", emoji: "🌍",
-    check: (b) => new Set(b.map((x) => x.publisher).filter(Boolean)).size >= 5,
-    progress: (b) => ({ current: Math.min(new Set(b.map((x) => x.publisher).filter(Boolean)).size, 5), target: 5 }),
+    check: (b) => new Set(b.filter(owned).map((x) => x.publisher).filter(Boolean)).size >= 5,
+    progress: (b) => ({ current: Math.min(new Set(b.filter(owned).map((x) => x.publisher).filter(Boolean)).size, 5), target: 5 }),
   },
   {
     id: "diverse10", name: "Globe-trotter", description: "10 éditeurs différents", emoji: "🗺️",
-    check: (b) => new Set(b.map((x) => x.publisher).filter(Boolean)).size >= 10,
-    progress: (b) => ({ current: Math.min(new Set(b.map((x) => x.publisher).filter(Boolean)).size, 10), target: 10 }),
+    check: (b) => new Set(b.filter(owned).map((x) => x.publisher).filter(Boolean)).size >= 10,
+    progress: (b) => ({ current: Math.min(new Set(b.filter(owned).map((x) => x.publisher).filter(Boolean)).size, 10), target: 10 }),
   },
 
-  // --- Wishlist ---
+  // --- Wishlist (intentionnellement compte les wishlist) ---
   {
     id: "wishlist5", name: "Liste de souhaits", description: "5 livres en wishlist", emoji: "🎁",
     check: (b) => b.filter((x) => x.wishlist).length >= 5,
@@ -123,11 +125,11 @@ export const BADGES: BadgeDef[] = [
     id: "speed", name: "Lecteur rapide", description: "Lire 3 livres en 7 jours", emoji: "⚡",
     check: (b) => {
       const week = Date.now() - 7 * 86400000;
-      return b.filter((x) => x.isRead && x.readAt && new Date(x.readAt).getTime() > week).length >= 3;
+      return b.filter((x) => owned(x) && x.isRead && x.readAt && new Date(x.readAt).getTime() > week).length >= 3;
     },
     progress: (b) => {
       const week = Date.now() - 7 * 86400000;
-      const count = b.filter((x) => x.isRead && x.readAt && new Date(x.readAt).getTime() > week).length;
+      const count = b.filter((x) => owned(x) && x.isRead && x.readAt && new Date(x.readAt).getTime() > week).length;
       return { current: Math.min(count, 3), target: 3 };
     },
   },

@@ -172,6 +172,22 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
     }
   };
 
+  // "Transférer vers ma bibliothèque" — clears the wishlist flag, turning a
+  // wishlist item into a regular owned book. More explicit than the heart toggle.
+  const handleTransferToLibrary = async () => {
+    hapticLight();
+    setIsWishlist(false);
+    const result = await updateBook.execute(isbn, { wishlist: false });
+    if (result.ok) {
+      setBook(result.value);
+      onUpdated();
+      toast("Ajouté à ta bibliothèque 📚", "success");
+    } else {
+      setIsWishlist(true);
+      toast("Impossible de transférer ce livre", "error");
+    }
+  };
+
   const handleSaveReview = async () => {
     if (!book) return;
     hapticLight();
@@ -648,10 +664,22 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           />
         </label>
 
-        {/* Swipe to mark as read */}
-        <div className="w-full mt-4">
-          <SwipeToRead isRead={isRead} onChange={handleToggleRead} />
-        </div>
+        {/* Transfer-to-library — only for wishlist items */}
+        {isWishlist && (
+          <button
+            onClick={handleTransferToLibrary}
+            className="w-full mt-4 px-4 py-3 rounded-card bg-brand-grape text-white font-semibold text-sm shadow-card active:scale-[0.98] active:opacity-90 transition-all"
+          >
+            📚  Transférer vers ma bibliothèque
+          </button>
+        )}
+
+        {/* Swipe to mark as read (hidden for wishlist items — they're not owned yet) */}
+        {!isWishlist && (
+          <div className="w-full mt-4">
+            <SwipeToRead isRead={isRead} onChange={handleToggleRead} />
+          </div>
+        )}
       </div>
 
       {/* Cover lightbox */}

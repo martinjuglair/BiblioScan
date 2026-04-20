@@ -92,22 +92,30 @@ export function Library({ refreshKey, onSelectBook, onAddBook }: LibraryProps) {
     return group ? group.books : [];
   }, [allBooks, data, selectedCategoryId]);
 
-  // Filter counts scoped to selected category
+  // Filter counts scoped to selected category.
+  // "Tous / À lire / Lus" = books actually in the library (wishlist excluded).
+  // "♡ Souhaits" = wishlist only.
   const filterCounts = useMemo(() => {
-    const total = categoryBooks.length;
-    const read = categoryBooks.filter((b) => b.isRead).length;
+    const owned = categoryBooks.filter((b) => !b.wishlist);
+    const total = owned.length;
+    const read = owned.filter((b) => b.isRead).length;
     const unread = total - read;
     const wishlist = categoryBooks.filter((b) => b.wishlist).length;
     return { total, read, unread, wishlist };
   }, [categoryBooks]);
 
-  // Display books: category filter → read filter → sort
+  // Display books: category filter → read filter → sort.
+  // Wishlist items only show up under the "wishlist" filter.
   const displayBooks = useMemo(() => {
     let books = [...categoryBooks];
 
-    if (readFilter === "read") books = books.filter((b) => b.isRead);
-    else if (readFilter === "unread") books = books.filter((b) => !b.isRead);
-    else if (readFilter === "wishlist") books = books.filter((b) => b.wishlist);
+    if (readFilter === "wishlist") {
+      books = books.filter((b) => b.wishlist);
+    } else {
+      books = books.filter((b) => !b.wishlist);
+      if (readFilter === "read") books = books.filter((b) => b.isRead);
+      else if (readFilter === "unread") books = books.filter((b) => !b.isRead);
+    }
 
     if (sort === "az") {
       books.sort((a, b) => a.title.localeCompare(b.title, "fr"));
