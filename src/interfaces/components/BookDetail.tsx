@@ -567,7 +567,13 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
       `Pas encore Ploom ? Télécharge l'app pour découvrir l'univers des lecteurs.`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: book.title, text });
+        // Passing `url` (cover) enables rich previews in share targets that
+        // support it (iOS Messages, most chat apps); falls back to plain text.
+        await navigator.share({
+          title: book.title,
+          text,
+          url: book.coverUrl ?? undefined,
+        });
       } catch {
         /* cancelled */
       }
