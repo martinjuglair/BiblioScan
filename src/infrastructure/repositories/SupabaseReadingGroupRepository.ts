@@ -275,15 +275,18 @@ export class SupabaseReadingGroupRepository {
 
       if (error) return Result.fail(error.message);
 
-      if (review && review.rating > 0) {
+      // Rating OR comment is enough — both are optional so users can recommend
+      // a book with just a few words, without needing to rate it first.
+      const hasReviewPayload = review && (review.rating > 0 || (review.comment && review.comment.trim().length > 0));
+      if (hasReviewPayload) {
         await supabase.from("group_reviews").upsert(
           {
             group_id: groupId,
             isbn,
             user_id: user.id,
             user_name: user.firstName,
-            rating: review.rating,
-            comment: review.comment,
+            rating: review!.rating,
+            comment: review!.comment,
           },
           { onConflict: "group_id,isbn,user_id" },
         );
@@ -294,6 +297,8 @@ export class SupabaseReadingGroupRepository {
       if (review && review.rating > 0) {
         const stars = "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
         parts.push(review.comment && review.comment.trim() ? `${stars} — ${review.comment.trim()}` : stars);
+      } else if (review && review.comment && review.comment.trim()) {
+        parts.push(`💬 ${review.comment.trim()}`);
       }
       const combinedMessage = parts.length > 0 ? parts.join("\n") : null;
 

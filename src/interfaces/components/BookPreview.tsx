@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { ComicBookCreateInput } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
-import { categoryRepository, createCategory } from "@infrastructure/container";
+import { ReadingGroup } from "@domain/entities/ReadingGroup";
+import { categoryRepository, createCategory, readingGroupRepository } from "@infrastructure/container";
 import { useToast } from "./Toast";
 
 interface BookPreviewProps {
@@ -52,16 +53,50 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (opts: { wishlist?: boolean } = {}) => {
     const retailAmount = parseFloat(retailPriceInput);
-
     onConfirm({
       ...data,
       retailPrice: !isNaN(retailAmount) && retailAmount > 0
         ? { amount: retailAmount, currency: "EUR" }
         : data.retailPrice,
-      categoryId,
+      categoryId: opts.wishlist ? null : categoryId,
+      wishlist: opts.wishlist ?? false,
     });
+  };
+
+  // ── Share-to-group (book stays out of user's library) ──
+  const [showShareGroupSheet, setShowShareGroupSheet] = useState(false);
+  const [groupsForShare, setGroupsForShare] = useState<ReadingGroup[]>([]);
+  const [shareMsg, setShareMsg] = useState("");
+  const [sharing, setSharing] = useState(false);
+
+  const openShareToGroup = async () => {
+    const result = await readingGroupRepository.findMyGroups();
+    if (result.ok) setGroupsForShare(result.value);
+    setShowShareGroupSheet(true);
+  };
+
+  const shareToGroup = async (groupId: string) => {
+    setSharing(true);
+    try {
+      await readingGroupRepository.shareBook(
+        groupId,
+        data.isbn,
+        data.title,
+        data.coverUrl ?? null,
+        null,
+        shareMsg.trim() || null,
+        null, // No rating — sharing without having read
+      );
+      setShowShareGroupSheet(false);
+      setShareMsg("");
+      toast(`${data.title} partagé dans le groupe`, "success");
+    } catch {
+      toast("Impossible de partager ce livre", "error");
+    } finally {
+      setSharing(false);
+    }
   };
 
   return (
@@ -149,7 +184,7 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
       </div>
 
       <button
-        onClick={handleConfirm}
+        onClick={() => handleConfirm()}
         className="mt-4 w-full flex items-center justify-center gap-2.5 rounded-2xl py-4 bg-brand-grape text-white font-bold text-[17px] tracking-[0.2px] active:scale-[0.98] transition-transform"
         style={{ boxShadow: "0 8px 28px rgba(251,101,56,0.35)" }}
       >
@@ -157,31 +192,16 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
         Ajouter à ma bibliothèque
       </button>
       <button
-        onClick={async () => {
-          const authors = data.authors.join(", ") || "Auteur inconnu";
-          const deepLink = data.isbn && !data.isbn.startsWith("NOISBN")
-            ? `${window.location.origin}/?add=${encodeURIComponent(data.isbn)}`
-            : null;
-          const message =
-            `📚 ${data.title}\n${authors}\n\n` +
-            (deepLink
-              ? `Je te le recommande sur Ploom :\n${deepLink}\n\n`
-              : `Je te le recommande — à ajouter dans Ploom.\n\n`) +
-            `Pas encore Ploom ? Télécharge l'app pour découvrir l'univers des lecteurs.`;
-          try {
-            if (navigator.share) {
-              await navigator.share({ title: data.title, text: message });
-            } else {
-              await navigator.clipboard.writeText(message);
-              toast("Copié dans le presse-papier", "success");
-            }
-          } catch {
-            // User dismissed — no-op.
-          }
-        }}
+        onClick={() => handleConfirm({ wishlist: true })}
+        className="mt-2 w-full flex items-center justify-center gap-2 rounded-2xl py-3 bg-status-error/10 border border-status-error/30 text-status-error font-semibold text-sm active:scale-[0.98] transition-transform"
+      >
+        ♡  Ajouter à mes souhaits
+      </button>
+      <button
+        onClick={openShareToGroup}
         className="mt-2 w-full flex items-center justify-center gap-2 rounded-2xl py-3 bg-white border border-border text-text-secondary font-semibold text-sm active:scale-[0.98] transition-transform"
       >
-        📤  Partager sans ajouter
+        👥  Partager dans un groupe
       </button>
       <button
         onClick={onCancel}
@@ -189,6 +209,64 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
       >
         Annuler
       </button>
+
+      {/* Share-to-group bottom sheet */}
+      {showShareGroupSheet && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40">
+          <div className="bg-white rounded-t-2xl w-full max-w-lg p-4 pb-safe animate-[slideUp_0.25s_ease-out]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-bold text-text-primary">Partager dans un groupe</h3>
+              <button
+                onClick={() => { setShowShareGroupSheet(false); setShareMsg(""); }}
+                className="p-1 text-text-muted"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-xs text-text-tertiary mb-3 leading-snug">
+              Le livre sera posté dans le groupe. Il ne sera pas ajouté à ta bibliothèque.
+            </p>
+            <textarea
+              value={shareMsg}
+              onChange={(e) => setShareMsg(e.target.value)}
+              placeholder="Pourquoi tu le recommandes ? (optionnel)"
+              className="input-rect w-full mb-3 resize-none"
+              rows={2}
+              maxLength={200}
+            />
+            {groupsForShare.length === 0 ? (
+              <p className="text-center text-sm text-text-tertiary py-6">
+                Tu n'es dans aucun groupe pour l'instant.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
+                  Choisis un groupe :
+                </p>
+                {groupsForShare.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => shareToGroup(g.id)}
+                    disabled={sharing}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-surface-subtle active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    <span className="text-xl">{g.emoji || "📚"}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-text-primary">{g.name}</p>
+                      {g.description && (
+                        <p className="text-xs text-text-tertiary truncate">{g.description}</p>
+                      )}
+                    </div>
+                    <span className="text-brand-grape">›</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Category picker overlay */}
       {showCategoryPicker && (

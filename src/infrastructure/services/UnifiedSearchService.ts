@@ -42,13 +42,13 @@ function normalize(s: string): string {
     .trim();
 }
 
-function titleSimilarity(query: string, title: string): number {
+function textSimilarity(query: string, text: string): number {
   const q = normalize(query);
-  const t = normalize(title);
+  const t = normalize(text);
+  if (!t) return 0;
   if (t === q) return 100;
   if (t.includes(q) || q.includes(t)) return 80;
 
-  // Word overlap score
   const qWords = new Set(q.split(" ").filter((w) => w.length > 1));
   const tWords = new Set(t.split(" ").filter((w) => w.length > 1));
   if (qWords.size === 0) return 0;
@@ -56,7 +56,6 @@ function titleSimilarity(query: string, title: string): number {
   for (const w of qWords) {
     if (tWords.has(w)) matches++;
     else {
-      // Partial match (prefix)
       for (const tw of tWords) {
         if (tw.startsWith(w) || w.startsWith(tw)) { matches += 0.5; break; }
       }
@@ -65,15 +64,24 @@ function titleSimilarity(query: string, title: string): number {
   return Math.round((matches / qWords.size) * 70);
 }
 
+function authorsSimilarity(query: string, authors: string[]): number {
+  if (authors.length === 0) return 0;
+  return textSimilarity(query, authors.join(" "));
+}
+
 function computeScore(query: string, result: UnifiedSearchResult): number {
-  let score = titleSimilarity(query, result.title);
-  // Bonus for having a cover
+  // Take the best of { title, authors, publisher }. A search for "blake et
+  // mortimer" surfaces volumes via title; "peter heller" via authors; "éclore"
+  // via title alone. Using max() instead of sum() means a perfect author match
+  // still ranks high even when the title doesn't match at all.
+  const titleScore = textSimilarity(query, result.title);
+  const authorScore = authorsSimilarity(query, result.authors);
+  const publisherScore = textSimilarity(query, result.publisher) * 0.6;
+  let score = Math.max(titleScore, authorScore * 0.92, publisherScore);
+
   if (result.coverUrl) score += 10;
-  // Bonus for having an ISBN (more trustworthy)
   if (result.isbn) score += 5;
-  // Bonus for having price
   if (result.price) score += 3;
-  // Bonus for having authors
   if (result.authors.length > 0) score += 2;
   return score;
 }

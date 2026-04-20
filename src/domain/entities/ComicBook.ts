@@ -33,6 +33,9 @@ export interface ComicBookCreateInput {
   categoryId?: string | null;
   /** Short synopsis from the book provider. Not persisted, displayed on-the-fly. */
   description?: string;
+  /** When true, the book is added straight to the wishlist drawer instead of
+   * the main library. Defaults to false. */
+  wishlist?: boolean;
 }
 
 export class ComicBook {
@@ -119,7 +122,7 @@ export class ComicBook {
         comment: null,
         categoryId: input.categoryId ?? null,
         tags: [],
-        wishlist: false,
+        wishlist: input.wishlist ?? false,
         isRead: false,
         readAt: null,
         addedAt: new Date(),
