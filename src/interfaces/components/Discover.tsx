@@ -8,6 +8,7 @@ import type { SeriesRecommendation } from "@domain/entities/SeriesRecommendation
 import type { AuthorRecommendation, AuthorSuggestedBook } from "@domain/entities/AuthorRecommendation";
 import { LazyImage } from "./LazyImage";
 import { LoadingLogo } from "./LoadingLogo";
+import { toThumbnailUrl } from "@interfaces/utils/coverUrl";
 
 interface DiscoverProps {
   onAddBook?: (mode: "scan" | "search" | "manual") => void;
@@ -202,7 +203,7 @@ function BookCard({
         <div className="w-[100px] aspect-[0.65] rounded-lg overflow-hidden bg-surface-subtle">
           {coverUrl ? (
             <LazyImage
-              src={coverUrl}
+              src={toThumbnailUrl(coverUrl)!}
               alt={title}
               className="w-full h-full object-cover group-active:scale-105 transition-transform"
             />

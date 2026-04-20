@@ -9,6 +9,7 @@ import { LibrarySkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
 import { hapticLight } from "@interfaces/utils/haptics";
 import { matchesQuery } from "@interfaces/utils/fuzzySearch";
+import { toThumbnailUrl } from "@interfaces/utils/coverUrl";
 import { ShareCollection } from "./ShareCollection";
 import { LazyImage } from "./LazyImage";
 import { ReadBadge } from "./ReadBadge";
@@ -381,7 +382,7 @@ export function Library({ refreshKey, onSelectBook, onAddBook }: LibraryProps) {
                   <div className="relative">
                     {book.coverUrl ? (
                       <LazyImage
-                        src={book.coverUrl}
+                        src={toThumbnailUrl(book.coverUrl)!}
                         alt={book.title}
                         className="w-full aspect-[2/3] rounded-lg shadow-card"
                       />
