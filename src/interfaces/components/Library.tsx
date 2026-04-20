@@ -151,7 +151,7 @@ export function Library({ refreshKey, onSelectBook, onAddBook }: LibraryProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Ma Collection</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text-primary">Ma Bibliothèque</h1>
           {allBooks.length > 0 && (
             <AnimatedCounter count={allBooks.length} label={allBooks.length > 1 ? "livres" : "livre"} />
           )}

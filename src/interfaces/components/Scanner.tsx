@@ -217,7 +217,7 @@ export function Scanner({ onBookAdded, firstName, onUpdateFirstName, initialStep
               {firstName ? `${getGreeting()}, ${firstName}` : "Ajouter un livre"}
             </h1>
             <p className="text-text-tertiary text-sm mt-1">
-              {firstName ? "Prêt à agrandir votre collection ?" : "Scannez ou recherchez pour commencer"}
+              {firstName ? "Prêt à agrandir ta bibliothèque ?" : "Scannez ou recherchez pour commencer"}
             </p>
           </div>
 

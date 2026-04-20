@@ -125,7 +125,7 @@ export function ScanSuccess({ title, coverUrl, onDone }: ScanSuccessProps) {
           className="text-white/60 text-sm mt-1"
           style={{ animation: "scan-fade-in 0.4s ease-out 0.6s both" }}
         >
-          Ajouté à votre collection
+          Ajouté à ta bibliothèque
         </p>
       </div>
     </>

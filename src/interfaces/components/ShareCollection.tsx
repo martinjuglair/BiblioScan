@@ -21,7 +21,7 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
 
   const generateText = () => {
     const lines: string[] = [
-      `Ma collection Ploom`,
+      `Ma bibliothèque Ploom`,
       `${books.length} livres \u00b7 ${categoryCount} cat\u00e9gories`,
       totalValue > 0 ? `Valeur : ${formatEur(totalValue)}` : "",
       avgRating > 0 ? `Note moyenne : ${avgRating.toFixed(1)}/5` : "",
@@ -60,7 +60,7 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Ma collection Ploom",
+          title: "Ma bibliothèque Ploom",
           text,
         });
       } catch {
@@ -97,7 +97,7 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
   return (
     <div className="flex flex-col gap-3 pb-4">
       <p className="text-sm text-text-tertiary text-center mb-1">
-        {books.length} livres dans votre collection
+        {books.length} livres dans ta bibliothèque
       </p>
 
       {/* Export PDF */}
@@ -135,7 +135,7 @@ export function ShareCollection({ books, categoryCount, onClose }: ShareCollecti
         </div>
         <div className="text-left">
           <h3 className="font-semibold text-text-primary text-sm">
-            {copied ? "Copi\u00e9 !" : "Partager ma collection"}
+            {copied ? "Copi\u00e9 !" : "Partager ma bibliothèque"}
           </h3>
           <p className="text-xs text-text-tertiary">Liste texte de tous vos livres</p>
         </div>
@@ -219,7 +219,7 @@ async function generatePDF(
   doc.text("Ploom", pageW / 2, 28, { align: "center" });
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
-  doc.text("Ma Collection", pageW / 2, 40, { align: "center" });
+  doc.text("Ma Bibliothèque", pageW / 2, 40, { align: "center" });
 
   // Stats boxes
   let y = 75;

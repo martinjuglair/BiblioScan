@@ -160,7 +160,7 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
     setAddingToLibrary(false);
     if (result.ok) {
       hapticMedium();
-      toast(`"${book.title}" ajouté à votre collection`, "success");
+      toast(`"${book.title}" ajouté à ta bibliothèque`, "success");
     } else {
       toast(result.error, "error");
     }
@@ -515,7 +515,7 @@ export function GroupDetail({ groupId, onBack }: GroupDetailProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               )}
-              Ajouter à ma collection
+              Ajouter à ma bibliothèque
             </button>
           )}
 

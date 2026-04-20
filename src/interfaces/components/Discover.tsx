@@ -240,7 +240,7 @@ function EmptyState() {
         Pas encore de recommandations
       </h3>
       <p className="text-sm text-text-tertiary leading-relaxed">
-        Ajoutez des livres à votre collection et marquez-les comme lus pour
+        Ajoute des livres à ta bibliothèque et marque-les comme lus pour
         recevoir des suggestions personnalisées.
       </p>
     </div>

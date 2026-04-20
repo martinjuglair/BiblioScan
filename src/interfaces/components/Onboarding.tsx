@@ -23,7 +23,7 @@ const STEPS = [
   {
     type: "tab" as const,
     tab: "library",
-    title: "Collection",
+    title: "Bibliothèque",
     description: "Ajoutez vos livres par scan, recherche ou saisie manuelle, et organisez-les par catégories.",
   },
   {
@@ -36,13 +36,13 @@ const STEPS = [
     type: "tab" as const,
     tab: "groups",
     title: "Social",
-    description: "Retrouvez vos amis, rejoignez des groupes de lecture et partagez vos collections.",
+    description: "Retrouvez vos amis, rejoignez des groupes de lecture et partagez vos bibliothèques.",
   },
   {
     type: "tab" as const,
     tab: "stats",
     title: "Statistiques",
-    description: "Suivez votre progression de lecture et découvrez des stats sur votre collection.",
+    description: "Suivez votre progression de lecture et découvrez des stats sur votre bibliothèque.",
   },
   {
     type: "tab" as const,

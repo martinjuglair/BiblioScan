@@ -22,7 +22,7 @@ export const BADGES: BadgeDef[] = [
     progress: (b) => ({ current: Math.min(b.length, 1), target: 1 }),
   },
   {
-    id: "ten", name: "Beau début", description: "10 livres dans la collection", emoji: "🌟",
+    id: "ten", name: "Beau début", description: "10 livres dans la bibliothèque", emoji: "🌟",
     check: (b) => b.length >= 10,
     progress: (b) => ({ current: Math.min(b.length, 10), target: 10 }),
   },
@@ -32,7 +32,7 @@ export const BADGES: BadgeDef[] = [
     progress: (b) => ({ current: Math.min(b.length, 50), target: 50 }),
   },
   {
-    id: "hundred", name: "Bibliothécaire", description: "100 livres dans la collection", emoji: "🏛️",
+    id: "hundred", name: "Bibliothécaire", description: "100 livres dans la bibliothèque", emoji: "🏛️",
     check: (b) => b.length >= 100,
     progress: (b) => ({ current: Math.min(b.length, 100), target: 100 }),
   },

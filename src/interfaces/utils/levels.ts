@@ -56,7 +56,7 @@ export const LEVELS: LevelDef[] = [
     emoji: "🛡️",
     color: "#A78BFA",
     colorDeep: "#7C3AED",
-    subtitle: "Ta collection commence à vraiment peser.",
+    subtitle: "Ta bibliothèque commence à vraiment peser.",
   },
   {
     rank: 5,

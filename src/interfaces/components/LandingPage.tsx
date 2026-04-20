@@ -498,7 +498,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
         }
         description="Ploom regarde ce que tu as lu, adoré, noté — et te propose de nouvelles pépites. Par auteur, par genre, par ambiance. Zéro sponso, zéro ranking payé. Juste des livres qui devraient te parler."
         bullets={[
-          "Recos basées sur ta collection",
+          "Recos basées sur ta bibliothèque",
           "Par auteur favori, par thème",
           "Pas de sponsoring, pas de biais",
           "Ajout en 1 tap à ta wishlist",
@@ -567,7 +567,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               value={null}
               overrideDisplay="∞"
               label="Livres"
-              hint="Ta collection illimitée."
+              hint="Ta bibliothèque illimitée."
               delay={240}
             />
           </div>
@@ -1038,7 +1038,7 @@ function TabBar({ active }: { active: 0 | 1 | 2 | 3 | 4 }) {
       ),
     },
     {
-      label: "Collection",
+      label: "Bibliothèque",
       icon: (
         <svg
           viewBox="0 0 24 24"
@@ -1158,7 +1158,7 @@ function CollectionScreen({
       />
       <div className="flex-1 overflow-hidden px-3.5 pb-[66px]">
         <h3 className="text-[22px] font-extrabold text-text-primary tracking-tight mt-2.5 mb-2">
-          Ma Collection
+          Ma Bibliothèque
         </h3>
 
         {/* Stat bar */}
@@ -1357,7 +1357,7 @@ function StatsScreen() {
                 Gardien des récits
               </div>
               <div className="text-[9px] opacity-80 mt-0.5">
-                Ta collection commence à peser.
+                Ta bibliothèque commence à peser.
               </div>
             </div>
           </div>

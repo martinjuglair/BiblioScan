@@ -154,7 +154,7 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
         style={{ boxShadow: "0 8px 28px rgba(251,101,56,0.35)" }}
       >
         <span className="text-2xl leading-none font-bold">+</span>
-        Ajouter à ma collection
+        Ajouter à ma bibliothèque
       </button>
       <button
         onClick={onCancel}

@@ -564,7 +564,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
   };
 
   const handleDelete = async () => {
-    if (!confirm("Supprimer ce livre de votre collection ?")) return;
+    if (!confirm("Supprimer ce livre de ta bibliothèque ?")) return;
     hapticError();
     const result = await deleteBook.execute(isbn);
     if (result.ok) onDeleted();
