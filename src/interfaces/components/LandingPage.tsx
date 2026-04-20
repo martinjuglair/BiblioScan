@@ -282,6 +282,14 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Hidden access to the web version: ?login=1 in the URL auto-opens the
+  // login screen. Not linked anywhere in the UI — intentionally reserved
+  // for the dev while the app isn't ready for public testing.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("login") === "1") onLogin();
+  }, [onLogin]);
+
   return (
     <div className="min-h-screen bg-surface-light landing-root">
       {/* Global styles scoped to the landing page */}
@@ -358,19 +366,16 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
             </span>
           </a>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <a
               href="#features"
-              className="hidden sm:inline-block text-sm font-semibold text-text-secondary hover:text-text-primary transition"
+              className="hidden md:inline-block text-sm font-semibold text-text-secondary hover:text-text-primary transition mr-2"
             >
               Fonctionnalités
             </a>
-            <button
-              onClick={onLogin}
-              className="bg-brand-grape hover:bg-brand-grape/90 text-white font-bold text-sm px-5 py-2.5 rounded-pill shadow-card transition-all duration-200 active:scale-95"
-            >
-              Se connecter
-            </button>
+            {/* Teased download buttons — app not yet published */}
+            <NavStoreBadge type="apple" />
+            <NavStoreBadge type="google" />
           </div>
         </div>
       </nav>
@@ -378,13 +383,13 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
       {/* ─── HERO ─── */}
       <section
         id="hero"
-        className="relative pt-16 pb-16 md:pb-24 px-5 overflow-hidden"
+        className="relative pt-20 pb-16 md:pt-24 md:pb-24 px-5 overflow-hidden"
       >
         {/* Decorative blobs — positioned so they don't push layout */}
-        <div className="absolute top-16 -left-20 w-80 h-80 rounded-full bg-brand-grape/15 blur-[80px] pointer-events-none" />
+        <div className="absolute top-0 -left-20 w-80 h-80 rounded-full bg-brand-grape/15 blur-[80px] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-brand-sun/20 blur-[100px] pointer-events-none" />
 
-        <div className="max-w-6xl mx-auto pt-6 md:pt-12 grid md:grid-cols-2 gap-12 md:gap-16 items-center relative">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-16 items-start md:items-center relative">
           {/* Left: text */}
           <div className="text-center md:text-left order-2 md:order-1">
             <div className="inline-flex items-center gap-2 bg-brand-grape/10 text-brand-grape text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-pill mb-6">
@@ -404,41 +409,16 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               avec les bons outils pour lire plus et mieux.
             </p>
 
-            {/* CTAs — primary (teased download) + secondary (web) */}
+            {/* Store badges — both teased until the apps are published. Login
+                button intentionally removed so visitors focus on the mobile
+                download path. */}
             <div className="flex flex-col sm:flex-row items-center md:items-start md:justify-start justify-center gap-3">
-              <button
-                type="button"
-                className="group relative w-full sm:w-auto bg-text-primary text-white font-bold text-base px-7 py-4 rounded-pill shadow-hero transition-all duration-200 active:scale-95 cursor-default overflow-hidden"
-                disabled
-                aria-label="Télécharger — bientôt disponible"
-              >
-                <span className="flex items-center justify-center gap-3">
-                  <span className="flex -space-x-1">
-                    <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5">
-                      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                    </svg>
-                  </span>
-                  <span className="flex flex-col items-start leading-none">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-sun">
-                      Bientôt disponible
-                    </span>
-                    <span className="text-[15px] font-extrabold mt-0.5">
-                      Télécharger l'app
-                    </span>
-                  </span>
-                </span>
-              </button>
-
-              <button
-                onClick={onLogin}
-                className="w-full sm:w-auto bg-white text-text-primary border-2 border-border-strong hover:border-brand-grape hover:text-brand-grape font-bold text-base px-7 py-[14px] rounded-pill transition-all duration-200 active:scale-95"
-              >
-                Essayer sur le web →
-              </button>
+              <HeroStoreBadge type="apple" />
+              <HeroStoreBadge type="google" />
             </div>
 
             <p className="mt-4 text-xs text-text-tertiary">
-              Dispo dès maintenant sur ton navigateur · Version iOS & Android en préparation
+              🚀 Bientôt disponible sur l'App Store et Google Play
             </p>
           </div>
 
@@ -624,21 +604,12 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
             <StoreBadge type="google" />
           </div>
 
-          <p className="text-sm font-semibold opacity-90 mb-6">
+          <p className="text-sm font-semibold opacity-90">
             Bientôt sur l'App Store et Google Play.
           </p>
-
-          <div className="inline-flex flex-col items-center gap-2">
-            <button
-              onClick={onLogin}
-              className="bg-white text-brand-grape font-extrabold text-base px-8 py-4 rounded-pill shadow-hero transition-all duration-200 active:scale-95 hover:scale-105"
-            >
-              Déjà dispo : essayer sur le web →
-            </button>
-            <p className="text-xs font-semibold opacity-80">
-              Sans engagement · Sans pub · Pour toujours
-            </p>
-          </div>
+          <p className="text-xs font-semibold opacity-80 mt-2">
+            Sans engagement · Sans pub · Pour toujours
+          </p>
         </Reveal>
       </section>
 
@@ -751,8 +722,12 @@ function AnimatedHeadline({ lines }: { lines: string[][] }) {
             <span
               className="inline-block bg-clip-text text-transparent"
               style={{
+                // Darker Solar Pop gradient — stays readable on the pale
+                // peach hero background. The original (FB6538 → FF3C7A →
+                // FFC83D) was too light and blended into the decorative
+                // blobs.
                 backgroundImage:
-                  "linear-gradient(135deg, #FB6538 0%, #FF3C7A 50%, #FFC83D 100%)",
+                  "linear-gradient(135deg, #D14518 0%, #E0246A 50%, #C27A00 100%)",
               }}
             >
               {words.map((w, i) => {
@@ -829,10 +804,11 @@ function HeroMockup() {
           </PhoneMockup>
         </div>
 
-        {/* Floating level badge — anchored slightly outside the phone but
-            inside the column wrapper so it never escapes the grid. */}
+        {/* Floating level badge — hovers ABOVE the phone's top-right corner
+            with clear vertical gap so it doesn't overlap the phone shell.
+            Only shown on md+ screens because it would crowd mobile. */}
         <div
-          className="absolute -top-3 right-0 translate-x-3 md:translate-x-5 bg-white rounded-2xl shadow-float px-4 py-3 flex items-center gap-3 z-20"
+          className="hidden md:flex absolute -top-10 right-2 bg-white rounded-2xl shadow-float px-4 py-3 items-center gap-3 z-20"
           style={{ animation: "ploom-bounce 2.5s ease-in-out infinite" }}
         >
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-grape to-brand-sun flex items-center justify-center">
@@ -1792,6 +1768,71 @@ function SocialScreen() {
 /* ═══════════════════════════════════════════════════════════════════════
    Sub-components (Store badge, Stat card)
    ═══════════════════════════════════════════════════════════════════════ */
+
+/** Compact store badge used inside the sticky nav. Just the logo +
+ *  tiny "Bientôt" label so it doesn't crowd the right side on mobile. */
+function NavStoreBadge({ type }: { type: "apple" | "google" }) {
+  return (
+    <button
+      className="group flex items-center gap-1.5 bg-text-primary text-white rounded-pill pl-2.5 pr-3 py-1.5 shadow-card cursor-default relative"
+      disabled
+      aria-label={`${type === "apple" ? "App Store" : "Google Play"} — bientôt disponible`}
+    >
+      <div className="w-4 h-4 flex items-center justify-center">
+        {type === "apple" ? (
+          <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" className="w-full h-full">
+            <path fill="#00C4FF" d="M3.6 1.6c-.2.2-.3.5-.3.9v19c0 .4.1.7.3.9l11-11-11-9.8z" />
+            <path fill="#FFCC00" d="M18.5 10.2L14.6 8l-3.3 3 3.3 3 3.9-2.2c1.2-.7 1.2-2 0-2.6z" />
+            <path fill="#00E676" d="M3.6 1.6l11 9.8 3-2.7L5.2 1c-.7-.2-1.3-.1-1.6.6z" />
+            <path fill="#FF3B4E" d="M14.6 11.4l-11 11c.3.7.9.8 1.6.6l12.4-7.1-3-4.5z" />
+          </svg>
+        )}
+      </div>
+      <span className="text-[11px] font-bold leading-none hidden sm:inline">
+        {type === "apple" ? "App Store" : "Play Store"}
+      </span>
+    </button>
+  );
+}
+
+/** Bigger store badge used as the primary CTA in the hero. Same black
+ *  pill pattern as the footer one but a touch larger. */
+function HeroStoreBadge({ type }: { type: "apple" | "google" }) {
+  return (
+    <button
+      className="flex items-center gap-3 bg-text-primary text-white rounded-pill pl-5 pr-6 py-3.5 shadow-hero cursor-default relative w-full sm:w-auto justify-center sm:justify-start"
+      disabled
+      aria-label={`${type === "apple" ? "App Store" : "Google Play"} — bientôt disponible`}
+    >
+      <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+        {type === "apple" ? (
+          <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" className="w-full h-full">
+            <path fill="#00C4FF" d="M3.6 1.6c-.2.2-.3.5-.3.9v19c0 .4.1.7.3.9l11-11-11-9.8z" />
+            <path fill="#FFCC00" d="M18.5 10.2L14.6 8l-3.3 3 3.3 3 3.9-2.2c1.2-.7 1.2-2 0-2.6z" />
+            <path fill="#00E676" d="M3.6 1.6l11 9.8 3-2.7L5.2 1c-.7-.2-1.3-.1-1.6.6z" />
+            <path fill="#FF3B4E" d="M14.6 11.4l-11 11c.3.7.9.8 1.6.6l12.4-7.1-3-4.5z" />
+          </svg>
+        )}
+      </div>
+      <div className="text-left leading-none">
+        <p className="text-[10px] font-semibold text-brand-sun uppercase tracking-wider">
+          Bientôt disponible
+        </p>
+        <p className="text-[16px] font-extrabold mt-1">
+          {type === "apple" ? "App Store" : "Google Play"}
+        </p>
+      </div>
+    </button>
+  );
+}
 
 function StoreBadge({ type }: { type: "apple" | "google" }) {
   return (

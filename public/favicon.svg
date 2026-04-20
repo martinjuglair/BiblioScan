@@ -1,11 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#FB923C"/>
-      <stop offset="50%" stop-color="#EA580C"/>
-      <stop offset="100%" stop-color="#FCD34D"/>
+      <stop offset="0%" stop-color="#FB6538"/>
+      <stop offset="50%" stop-color="#FF8B5F"/>
+      <stop offset="100%" stop-color="#FFC83D"/>
     </linearGradient>
   </defs>
   <rect width="100" height="100" rx="22" fill="url(#g)"/>
-  <text x="50" y="70" font-size="55" font-weight="800" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system,Inter,sans-serif">S</text>
+  <!-- Stack of books icon, white -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 28 L24 78 C24 82 27 85 31 85 L69 85 C73 85 76 82 76 78 L76 28"/>
+    <path d="M24 28 C24 22 28 18 34 18 L66 18 C72 18 76 22 76 28"/>
+    <line x1="24" y1="42" x2="76" y2="42"/>
+    <line x1="24" y1="62" x2="76" y2="62"/>
+  </g>
 </svg>
