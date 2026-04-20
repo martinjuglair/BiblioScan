@@ -8,6 +8,7 @@ import { BottomSheet } from "./BottomSheet";
 import { LibrarySkeleton } from "./Skeleton";
 import { useToast } from "./Toast";
 import { hapticLight } from "@interfaces/utils/haptics";
+import { matchesQuery } from "@interfaces/utils/fuzzySearch";
 import { ShareCollection } from "./ShareCollection";
 import { LazyImage } from "./LazyImage";
 import { ReadBadge } from "./ReadBadge";
@@ -132,16 +133,11 @@ export function Library({ refreshKey, onSelectBook, onAddBook }: LibraryProps) {
     return books;
   }, [categoryBooks, readFilter, sort]);
 
-  // Global search
+  // Global search — accent/case-insensitive, multi-token AND
   const globalSearchResults = useMemo(() => {
     if (!globalQuery.trim() || !data) return [];
-    const q = globalQuery.toLowerCase();
-    return allBooks.filter(
-      (b) =>
-        b.title.toLowerCase().includes(q) ||
-        b.authors.some((a) => a.toLowerCase().includes(q)) ||
-        b.publisher.toLowerCase().includes(q) ||
-        b.isbn.includes(q),
+    return allBooks.filter((b) =>
+      matchesQuery(globalQuery, [b.title, ...b.authors, b.publisher, b.isbn]),
     );
   }, [globalQuery, allBooks, data]);
 
