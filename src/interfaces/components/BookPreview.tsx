@@ -157,6 +157,33 @@ export function BookPreview({ data, onConfirm, onCancel }: BookPreviewProps) {
         Ajouter à ma bibliothèque
       </button>
       <button
+        onClick={async () => {
+          const authors = data.authors.join(", ") || "Auteur inconnu";
+          const deepLink = data.isbn && !data.isbn.startsWith("NOISBN")
+            ? `${window.location.origin}/?add=${encodeURIComponent(data.isbn)}`
+            : null;
+          const message =
+            `📚 ${data.title}\n${authors}\n\n` +
+            (deepLink
+              ? `Je te le recommande sur Ploom :\n${deepLink}\n\n`
+              : `Je te le recommande — à ajouter dans Ploom.\n\n`) +
+            `Pas encore Ploom ? Télécharge l'app pour découvrir l'univers des lecteurs.`;
+          try {
+            if (navigator.share) {
+              await navigator.share({ title: data.title, text: message });
+            } else {
+              await navigator.clipboard.writeText(message);
+              toast("Copié dans le presse-papier", "success");
+            }
+          } catch {
+            // User dismissed — no-op.
+          }
+        }}
+        className="mt-2 w-full flex items-center justify-center gap-2 rounded-2xl py-3 bg-white border border-border text-text-secondary font-semibold text-sm active:scale-[0.98] transition-transform"
+      >
+        📤  Partager sans ajouter
+      </button>
+      <button
         onClick={onCancel}
         className="mt-2 w-full text-center py-3 text-sm font-semibold text-text-tertiary active:text-text-secondary transition-colors"
       >
