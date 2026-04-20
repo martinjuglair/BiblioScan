@@ -383,13 +383,13 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
       {/* ─── HERO ─── */}
       <section
         id="hero"
-        className="relative pt-20 pb-16 md:pt-24 md:pb-24 px-5 overflow-hidden"
+        className="relative pt-24 pb-16 md:pt-28 md:pb-20 px-5 overflow-hidden"
       >
         {/* Decorative blobs — positioned so they don't push layout */}
         <div className="absolute top-0 -left-20 w-80 h-80 rounded-full bg-brand-grape/15 blur-[80px] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-brand-sun/20 blur-[100px] pointer-events-none" />
 
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-16 items-start md:items-center relative">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 md:gap-16 items-start relative">
           {/* Left: text */}
           <div className="text-center md:text-left order-2 md:order-1">
             <div className="inline-flex items-center gap-2 bg-brand-grape/10 text-brand-grape text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-pill mb-6">
@@ -804,25 +804,10 @@ function HeroMockup() {
           </PhoneMockup>
         </div>
 
-        {/* Floating level badge — hovers ABOVE the phone's top-right corner
-            with clear vertical gap so it doesn't overlap the phone shell.
-            Only shown on md+ screens because it would crowd mobile. */}
-        <div
-          className="hidden md:flex absolute -top-10 right-2 bg-white rounded-2xl shadow-float px-4 py-3 items-center gap-3 z-20"
-          style={{ animation: "ploom-bounce 2.5s ease-in-out infinite" }}
-        >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-grape to-brand-sun flex items-center justify-center">
-            <span className="text-lg">🛡️</span>
-          </div>
-          <div>
-            <p className="text-[9px] font-bold text-brand-grape uppercase tracking-wider leading-none">
-              Niveau 4
-            </p>
-            <p className="text-xs font-extrabold text-text-primary mt-0.5">
-              Gardien des récits
-            </p>
-          </div>
-        </div>
+        {/* Removed the floating "Niveau 4" badge — it kept overlapping the
+            phone shell at various viewport sizes and was fighting the
+            layout. The level gamification is already showcased later in
+            the Stats mockup section. */}
       </div>
     </div>
   );
