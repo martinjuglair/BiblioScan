@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "REPLACE_WITH_TEAM_ID.com.ploom.app",
+        "paths": [
+          "/auth/*",
+          "/invite/*",
+          "/b/*",
+          "/group/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["REPLACE_WITH_TEAM_ID.com.ploom.app"]
+  }
+}
