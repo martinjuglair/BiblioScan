@@ -3,6 +3,7 @@ import { ComicBook } from "@domain/entities/ComicBook";
 import { Category } from "@domain/entities/Category";
 import { ReadingGroup } from "@domain/entities/ReadingGroup";
 import { getCategorizedLibrary, updateBook, deleteBook, categoryRepository, createCategory, readingGroupRepository, googleBooksSearch } from "@infrastructure/container";
+import { fnacAffiliateUrl, amazonAffiliateUrl } from "@interfaces/utils/affiliate";
 import { CoverLightbox } from "./CoverLightbox";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 import { BottomSheet } from "./BottomSheet";
@@ -890,7 +891,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
           {showBuyPicker && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-float border border-border overflow-hidden z-10 animate-fadeIn">
               <a
-                href={`https://www.amazon.fr/s?k=${encodeURIComponent(book.title)}&tag=shelfy-21`}
+                href={amazonAffiliateUrl({ isbn: book.isbn, title: book.title })}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowBuyPicker(false)}
@@ -900,7 +901,7 @@ export function BookDetail({ isbn, onBack, onDeleted, onUpdated }: BookDetailPro
                 <p className="font-semibold text-sm text-text-primary flex-1">Amazon</p>
               </a>
               <a
-                href={`https://www.fnac.com/SearchResult/ResultList.aspx?Search=${encodeURIComponent(book.title)}`}
+                href={fnacAffiliateUrl({ isbn: book.isbn, title: book.title })}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowBuyPicker(false)}
