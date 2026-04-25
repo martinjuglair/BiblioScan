@@ -22,9 +22,21 @@ export function ResetPasswordModal() {
       }
     });
 
-    // Also detect direct visits to /auth/reset-password (e.g. if Supabase
-    // has processed the fragment before this effect runs).
-    if (window.location.pathname.startsWith("/auth/reset-password")) {
+    // Belt-and-suspenders: the PASSWORD_RECOVERY event sometimes fires before
+    // this effect subscribes (Supabase processes the URL fragment in createClient
+    // synchronously). We additionally detect a recovery context by:
+    //   1. The pathname being /auth/reset-password (our intended landing route)
+    //   2. The URL fragment containing access_token + type=recovery (what Supabase
+    //      writes after consuming the email link, even if the host redirected
+    //      to / or another domain along the way)
+    //   3. The query string carrying ?type=recovery (PKCE flow variant)
+    const hash = window.location.hash;
+    const search = window.location.search;
+    const isRecoveryUrl =
+      window.location.pathname.startsWith("/auth/reset-password") ||
+      (hash.includes("type=recovery") && hash.includes("access_token=")) ||
+      search.includes("type=recovery");
+    if (isRecoveryUrl) {
       setVisible(true);
     }
 
