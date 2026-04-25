@@ -112,26 +112,32 @@ export default function App() {
     return <LegalPages page={legalPage} onBack={() => setLegalPage(null)} />;
   }
 
-  // Not authenticated: show landing page by default, login screen on demand
+  // Not authenticated: show landing page by default, login screen on demand.
+  // The ResetPasswordModal must be mounted ALSO in this branch — when a user
+  // clicks the "forgot password" email link they are necessarily logged out,
+  // so without this the modal would never appear and they'd land on the LP
+  // with no way to set a new password.
   if (!user) {
-    if (showLoginScreen) {
-      return (
-        <LoginScreen
-          onSignIn={signIn}
-          onSignUp={signUp}
-          onResetPassword={resetPassword}
-          onBack={() => setShowLoginScreen(false)}
-          loading={loading}
-          error={error}
-          onOpenLegal={setLegalPage}
-        />
-      );
-    }
     return (
-      <LandingPage
-        onLogin={() => setShowLoginScreen(true)}
-        onOpenLegal={setLegalPage}
-      />
+      <>
+        <ResetPasswordModal />
+        {showLoginScreen ? (
+          <LoginScreen
+            onSignIn={signIn}
+            onSignUp={signUp}
+            onResetPassword={resetPassword}
+            onBack={() => setShowLoginScreen(false)}
+            loading={loading}
+            error={error}
+            onOpenLegal={setLegalPage}
+          />
+        ) : (
+          <LandingPage
+            onLogin={() => setShowLoginScreen(true)}
+            onOpenLegal={setLegalPage}
+          />
+        )}
+      </>
     );
   }
 
