@@ -16,6 +16,7 @@ import { Onboarding } from "@interfaces/components/Onboarding";
 import { BadgeBanner } from "@interfaces/components/BadgeBanner";
 import { LevelUpBanner } from "@interfaces/components/LevelUpBanner";
 import { ResetPasswordModal } from "@interfaces/components/ResetPasswordModal";
+import { EmailConfirmedScreen } from "@interfaces/components/EmailConfirmedScreen";
 import { LegalPages } from "@interfaces/components/LegalPages";
 import { LandingPage } from "@interfaces/components/LandingPage";
 import { useBadgeChecker } from "@interfaces/hooks/useBadgeChecker";
@@ -73,6 +74,30 @@ export default function App() {
     return !localStorage.getItem("shelfy-onboarding-v1");
   });
 
+  // Detect email-confirmation landings. Supabase appends `type=signup` (or
+  // `type=email_change`) either as a fragment param (implicit flow) or as a
+  // query param (PKCE flow). On those landings we want to show a clear
+  // success screen instead of dropping the user straight into the LP.
+  const [showEmailConfirmed, setShowEmailConfirmed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const search = window.location.search;
+    const hash = window.location.hash;
+    const path = window.location.pathname;
+    const isConfirmFlow =
+      search.includes("type=signup") ||
+      search.includes("type=email_change") ||
+      hash.includes("type=signup") ||
+      hash.includes("type=email_change") ||
+      path.startsWith("/auth/confirm");
+    // Don't trigger if we're actually on a password recovery URL — that one
+    // has its own modal and shouldn't be hijacked.
+    const isRecovery =
+      hash.includes("type=recovery") ||
+      search.includes("type=recovery") ||
+      path.startsWith("/auth/reset-password");
+    return isConfirmFlow && !isRecovery;
+  });
+
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   const handleOnboardingComplete = useCallback(() => {
@@ -110,6 +135,23 @@ export default function App() {
   // screen + Profile link when authenticated).
   if (legalPage) {
     return <LegalPages page={legalPage} onBack={() => setLegalPage(null)} />;
+  }
+
+  // Email confirmation landing — branded success screen with a clear next
+  // step ("ouvre l'app sur ton tel" on mobile, "entre dans Ploom" on desktop).
+  if (showEmailConfirmed) {
+    return (
+      <EmailConfirmedScreen
+        onContinue={() => {
+          setShowEmailConfirmed(false);
+          // Strip the auth fragment / query so a refresh doesn't re-trigger
+          // the confirmed screen.
+          if (typeof window !== "undefined") {
+            window.history.replaceState({}, document.title, "/");
+          }
+        }}
+      />
+    );
   }
 
   // Not authenticated: show landing page by default, login screen on demand.
