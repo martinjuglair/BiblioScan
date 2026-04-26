@@ -39,6 +39,26 @@
       content="Scanne, note et partage tous tes livres. 100% gratuit, zéro pub."
     />
     <meta name="twitter:image" content="https://ploom-app.com/og-image.png" />
+
+    <!-- Structured data — helps Google understand we're a mobile app -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "MobileApplication",
+        "name": "Ploom",
+        "operatingSystem": "iOS, Android",
+        "applicationCategory": "LifestyleApplication",
+        "description": "Scanne, note et partage tous tes livres. Ploom suit ta progression de lecture, te suggère ta prochaine pépite et t'aide à garder ta bibliothèque organisée.",
+        "url": "https://ploom-app.com/",
+        "image": "https://ploom-app.com/og-image.png",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        },
+        "inLanguage": "fr"
+      }
+    </script>
     <style>
       /* Inline splash screen — shows while JS bundle loads */
       #splash {

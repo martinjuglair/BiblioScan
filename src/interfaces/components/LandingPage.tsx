@@ -593,12 +593,18 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
             alt="Ploom"
             className="w-20 h-20 rounded-2xl mx-auto mb-6 shadow-hero"
           />
-          <h2 className="text-[32px] sm:text-4xl md:text-6xl font-extrabold tracking-tighter leading-[1.05] mb-5">
+          <h2
+            className="text-[32px] sm:text-4xl md:text-6xl font-extrabold tracking-tighter leading-[1.05] mb-5"
+            style={{ textShadow: "0 1px 2px rgba(0,0,0,0.18)" }}
+          >
             Transforme
             <br />
             ta façon de lire.
           </h2>
-          <p className="text-base sm:text-lg md:text-xl opacity-95 mb-8 max-w-xl mx-auto">
+          <p
+            className="text-base sm:text-lg md:text-xl opacity-95 mb-8 max-w-xl mx-auto"
+            style={{ textShadow: "0 1px 1px rgba(0,0,0,0.15)" }}
+          >
             Plus jamais le même livre racheté deux fois. Plus jamais l'oubli
             d'une pépite. Plus jamais lire seul·e.
           </p>
@@ -714,6 +720,24 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
           </div>
         </div>
       </footer>
+
+      {/* Sticky mobile-only "join waitlist" bar — anchors users to the
+          waitlist no matter where they are on the page. Only shows after
+          scrolling past the hero (where the form is already visible) and
+          hides itself once the user has actually scrolled to the bottom
+          (final CTA section has its own form). */}
+      {scrolled && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-border shadow-hero px-4 py-3">
+          <a
+            href="#hero"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-pill bg-brand-grape text-white font-bold text-sm"
+            aria-label="Rejoindre la liste d'attente"
+          >
+            <span>🔔</span>
+            <span>Rejoindre la liste d'attente</span>
+          </a>
+        </div>
+      )}
     </div>
   );
 }
