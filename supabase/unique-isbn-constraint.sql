@@ -1,39 +1,46 @@
 -- =====================================================================
--- Add UNIQUE constraint on comic_books (user_id, isbn)
+-- Ensure comic_books has a UNIQUE constraint on (user_id, isbn)
 -- =====================================================================
 --
--- Why: the app does scanComicBook.confirm → findByISBN → save (upsert).
--- The upsert uses onConflict: "user_id,isbn", which Supabase / Postgres
--- only honours when a UNIQUE constraint or UNIQUE INDEX exists on those
--- columns. The existing idx_comic_books_user_isbn was non-unique → in
--- the rare race where the user double-tapped "Ajouter" before the first
--- save returned, two concurrent inserts could each pass the duplicate
--- check and both succeed, creating two rows with the same ISBN.
+-- Why: the app's add-book flow uses upsert with onConflict: "user_id,isbn".
+-- Postgres / Supabase only honours that ON CONFLICT target when it
+-- matches a unique constraint or unique index — otherwise a fast
+-- double-tap on "Ajouter" could (in theory) create two rows.
 --
--- This migration:
---   1. Deduplicates existing rows (keeps the oldest by created_at) so the
---      unique constraint can be added without rejecting prod data.
---   2. Replaces the non-unique index with a UNIQUE INDEX (Postgres treats
---      a UNIQUE INDEX as a constraint for purposes of ON CONFLICT).
+-- This table doesn't have a separate `id` column; the natural composite
+-- key is (user_id, isbn). Most likely the PRIMARY KEY is already on those
+-- two columns, in which case Postgres already enforces uniqueness and
+-- this migration is a no-op. If it isn't, this script promotes the
+-- existing non-unique idx_comic_books_user_isbn to a UNIQUE INDEX so
+-- the upsert behaves correctly.
 --
 -- Idempotent: safe to re-run.
 -- =====================================================================
 
--- ── 1. Dedupe existing rows (keep the oldest per (user_id, isbn)) ──
-WITH duplicates AS (
-  SELECT
-    id,
-    ROW_NUMBER() OVER (
-      PARTITION BY user_id, isbn
-      ORDER BY added_at ASC, id ASC
-    ) AS rn
-  FROM public.comic_books
-)
-DELETE FROM public.comic_books
-WHERE id IN (SELECT id FROM duplicates WHERE rn > 1);
+-- Inspect — what kind of constraint do we already have on (user_id, isbn)?
+DO $$
+DECLARE
+  has_unique boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND tablename = 'comic_books'
+      AND indexdef ILIKE '%UNIQUE%'
+      AND indexdef ILIKE '%(user_id, isbn)%'
+  ) INTO has_unique;
 
--- ── 2. Drop the old non-unique index, add a UNIQUE one ──
-DROP INDEX IF EXISTS public.idx_comic_books_user_isbn;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_comic_books_user_isbn
-  ON public.comic_books (user_id, isbn);
+  IF has_unique THEN
+    RAISE NOTICE 'comic_books already has a UNIQUE index on (user_id, isbn) — nothing to do.';
+  ELSE
+    -- Drop the non-unique idx if present so the new unique one can take its
+    -- place under the same name.
+    DROP INDEX IF EXISTS public.idx_comic_books_user_isbn;
+    -- This will fail loudly if duplicates somehow exist — the error message
+    -- tells you which (user_id, isbn) pair is duplicated so you can clean
+    -- it up by hand from the Table Editor.
+    EXECUTE 'CREATE UNIQUE INDEX idx_comic_books_user_isbn ON public.comic_books (user_id, isbn)';
+    RAISE NOTICE 'Created UNIQUE INDEX on comic_books (user_id, isbn).';
+  END IF;
+END $$;
