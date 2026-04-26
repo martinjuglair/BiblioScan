@@ -32,3 +32,19 @@ CREATE POLICY "anon_can_insert_waitlist"
 -- Owner reads the list from the Supabase dashboard / psql.
 DROP POLICY IF EXISTS "no_select_for_clients" ON public.waitlist;
 -- Intentionally omitted: no SELECT policy means only service_role can read.
+
+-- Public-facing count function — exposes ONLY the row count, never the emails.
+-- Used by the LP "X personnes attendent l'app" social proof.
+CREATE OR REPLACE FUNCTION public.count_waitlist()
+RETURNS bigint
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT count(*) FROM public.waitlist;
+$$;
+
+-- Allow anon + authenticated to call the function (without giving them
+-- read access to the table itself).
+GRANT EXECUTE ON FUNCTION public.count_waitlist() TO anon, authenticated;

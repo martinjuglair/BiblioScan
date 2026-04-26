@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "og:gen": "node scripts/generate-og-image.mjs"
+    "og:gen": "node scripts/generate-og-image.mjs",
+    "cache:seed": "node scripts/seed-google-cache.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.49.0",

@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { WaitlistForm } from "./WaitlistForm";
+import { WaitlistCount } from "./WaitlistCount";
 
 /**
  * Marketing landing page shown at `/` to unauthenticated visitors.
@@ -422,6 +423,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
                 the store badges above are visually CTAs but functionally
                 inert. */}
             <WaitlistForm source="lp_hero" />
+            <WaitlistCount />
           </div>
 
           {/* Right: hero phone mockup showing Collection */}
