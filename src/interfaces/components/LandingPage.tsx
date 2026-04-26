@@ -5,6 +5,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { WaitlistForm } from "./WaitlistForm";
 
 /**
  * Marketing landing page shown at `/` to unauthenticated visitors.
@@ -405,8 +406,8 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               />
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-text-secondary max-w-lg mx-auto md:mx-0 mb-8 leading-relaxed">
-              Scanne, note, partage. Toute ta bibliothèque dans ta poche —
-              avec les bons outils pour lire plus et mieux.
+              Scanne tes livres, note tes coups de cœur, partage avec tes proches.
+              Et ne perds plus jamais le fil de tes lectures.
             </p>
 
             {/* Store badges — both teased until the apps are published. Login
@@ -416,8 +417,11 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               <HeroStoreBadge type="apple" />
               <HeroStoreBadge type="google" />
             </div>
-            {/* Removed the redundant "🚀 Bientôt disponible…" line — already
-                spelled out inside each HeroStoreBadge label. */}
+
+            {/* Pre-launch waitlist — without it the LP is a dead-end since
+                the store badges above are visually CTAs but functionally
+                inert. */}
+            <WaitlistForm source="lp_hero" />
           </div>
 
           {/* Right: hero phone mockup showing Collection */}
@@ -608,9 +612,15 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
           <p className="text-sm font-semibold opacity-90">
             Bientôt sur l'App Store et Google Play.
           </p>
-          <p className="text-xs font-semibold opacity-80 mt-2">
+          <p className="text-xs font-semibold opacity-80 mt-2 mb-6">
             Sans engagement · Sans pub · Pour toujours
           </p>
+
+          {/* Second waitlist capture — visitors who scrolled all the way down
+              are warm leads. Same form, dark variant for the gradient bg. */}
+          <div className="max-w-sm mx-auto">
+            <WaitlistForm source="lp_final" variant="dark" />
+          </div>
         </Reveal>
       </section>
 
