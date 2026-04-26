@@ -396,7 +396,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               <span>✨</span>
               <span>100% Gratuit · Zéro pub</span>
             </div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-text-primary tracking-tighter leading-[1.02] mb-5">
+            <h1 className="text-[40px] sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-text-primary tracking-tighter leading-[1.02] mb-5">
               <AnimatedHeadline
                 lines={[
                   ["Ton", "compagnon"],
@@ -404,7 +404,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
                 ]}
               />
             </h1>
-            <p className="text-lg md:text-xl text-text-secondary max-w-lg mx-auto md:mx-0 mb-8 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-text-secondary max-w-lg mx-auto md:mx-0 mb-8 leading-relaxed">
               Scanne, note, partage. Toute ta bibliothèque dans ta poche —
               avec les bons outils pour lire plus et mieux.
             </p>
@@ -416,10 +416,8 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               <HeroStoreBadge type="apple" />
               <HeroStoreBadge type="google" />
             </div>
-
-            <p className="mt-4 text-xs text-text-tertiary">
-              🚀 Bientôt disponible sur l'App Store et Google Play
-            </p>
+            {/* Removed the redundant "🚀 Bientôt disponible…" line — already
+                spelled out inside each HeroStoreBadge label. */}
           </div>
 
           {/* Right: hero phone mockup showing Collection */}
@@ -458,6 +456,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
 
       {/* ─── SECTION 2: Stats & progression ─── */}
       <FeatureSection
+        id="progression"
         bg="surface"
         reversed
         eyebrow="Progression"
@@ -486,6 +485,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
 
       {/* ─── SECTION 3: Discover ─── */}
       <FeatureSection
+        id="decouverte"
         bg="white"
         reversed={false}
         eyebrow="Découverte"
@@ -514,6 +514,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
 
       {/* ─── SECTION 4: Social / groups ─── */}
       <FeatureSection
+        id="clubs"
         bg="surface"
         reversed
         eyebrow="Entre amis"
@@ -549,7 +550,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
         }}
       >
         <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-3 gap-6 md:gap-12 text-center">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 md:gap-12 text-center">
             <AnimatedStatCard
               value={100}
               suffix="%"
@@ -588,12 +589,12 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
             alt="Ploom"
             className="w-20 h-20 rounded-2xl mx-auto mb-6 shadow-hero"
           />
-          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tighter leading-[1.05] mb-5">
+          <h2 className="text-[32px] sm:text-4xl md:text-6xl font-extrabold tracking-tighter leading-[1.05] mb-5">
             Transforme
             <br />
             ta façon de lire.
           </h2>
-          <p className="text-lg md:text-xl opacity-95 mb-8 max-w-xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl opacity-95 mb-8 max-w-xl mx-auto">
             Plus jamais le même livre racheté deux fois. Plus jamais l'oubli
             d'une pépite. Plus jamais lire seul·e.
           </p>
@@ -643,17 +644,17 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
                   </a>
                 </li>
                 <li>
-                  <a href="#features" className="hover:text-white">
+                  <a href="#progression" className="hover:text-white">
                     Stats & progression
                   </a>
                 </li>
                 <li>
-                  <a href="#features" className="hover:text-white">
+                  <a href="#decouverte" className="hover:text-white">
                     Découverte
                   </a>
                 </li>
                 <li>
-                  <a href="#features" className="hover:text-white">
+                  <a href="#clubs" className="hover:text-white">
                     Clubs de lecture
                   </a>
                 </li>
@@ -684,7 +685,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
                 <li>
                   <a
                     href="mailto:ploomlivre@gmail.com"
-                    className="hover:text-white"
+                    className="text-white underline hover:no-underline decoration-white/40 hover:decoration-white"
                   >
                     ploomlivre@gmail.com
                   </a>
@@ -859,10 +860,10 @@ function FeatureSection({
             <p className="text-xs font-bold text-brand-grape uppercase tracking-widest mb-4">
               {eyebrow}
             </p>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-text-primary tracking-tight leading-[1.05] mb-5">
+            <h2 className="text-[32px] sm:text-4xl md:text-5xl font-extrabold text-text-primary tracking-tight leading-[1.05] mb-5">
               {title}
             </h2>
-            <p className="text-lg text-text-secondary leading-relaxed mb-6">
+            <p className="text-base sm:text-lg text-text-secondary leading-relaxed mb-6">
               {description}
             </p>
             <ul className="space-y-3">
@@ -1744,7 +1745,7 @@ function SocialScreen() {
 function NavStoreBadge({ type }: { type: "apple" | "google" }) {
   return (
     <button
-      className="group flex items-center gap-1.5 bg-text-primary text-white rounded-pill pl-2.5 pr-3 py-1.5 shadow-card cursor-default relative"
+      className="group flex items-center gap-1.5 bg-text-primary text-white rounded-pill pl-2.5 pr-3 py-1.5 shadow-card cursor-default relative pointer-events-none"
       disabled
       aria-label={`${type === "apple" ? "App Store" : "Google Play"} — bientôt disponible`}
     >
@@ -1774,7 +1775,7 @@ function NavStoreBadge({ type }: { type: "apple" | "google" }) {
 function HeroStoreBadge({ type }: { type: "apple" | "google" }) {
   return (
     <button
-      className="flex items-center gap-3 bg-text-primary text-white rounded-pill pl-5 pr-6 py-3.5 shadow-hero cursor-default relative w-full sm:w-auto justify-center sm:justify-start"
+      className="flex items-center gap-3 bg-text-primary text-white rounded-pill pl-5 pr-6 py-3.5 shadow-hero cursor-default relative w-full sm:w-auto justify-center sm:justify-start pointer-events-none"
       disabled
       aria-label={`${type === "apple" ? "App Store" : "Google Play"} — bientôt disponible`}
     >
@@ -1807,7 +1808,7 @@ function HeroStoreBadge({ type }: { type: "apple" | "google" }) {
 function StoreBadge({ type }: { type: "apple" | "google" }) {
   return (
     <button
-      className="flex items-center gap-2 bg-black text-white rounded-xl px-4 py-3 shadow-card cursor-default relative overflow-hidden"
+      className="flex items-center gap-2 bg-black text-white rounded-xl px-4 py-3 shadow-card cursor-default relative overflow-hidden pointer-events-none"
       disabled
       aria-label={`${type === "apple" ? "App Store" : "Google Play"} — bientôt disponible`}
     >
