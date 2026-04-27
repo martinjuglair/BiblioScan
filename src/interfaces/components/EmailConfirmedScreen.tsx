@@ -1,25 +1,17 @@
-import { useEffect, useState } from "react";
-
 /**
  * Shown when the user lands on the site via the Supabase email-confirmation
- * link (`?type=signup` / `#type=signup`). Without this screen they used to
- * bounce straight into the LandingPage and wonder if confirmation actually
- * worked.
+ * link (`type=signup` in the URL). Without this screen they used to bounce
+ * straight into the LandingPage and wonder if confirmation worked.
  *
- * We detect the confirmation context by:
- *   - URL fragment containing `type=signup` (Supabase implicit flow), or
- *   - URL pathname starting with `/auth/confirm` (Supabase PKCE flow), or
- *   - The Supabase JS client emitting the SIGNED_IN event for the very
- *     first time on this device (handled by the parent App via prop).
+ * The web version has been deprecated in favour of native — so this screen
+ * just confirms success and points the user back to the mobile app. No
+ * "Continuer ici (Web)" CTA: visitors who land here from an email click on
+ * desktop can still close the tab; the message is the goal.
+ *
+ * `onContinue` is kept as a prop so App.tsx can dismiss the screen if the
+ * user really wants to inspect the web (we no longer expose the button).
  */
-export function EmailConfirmedScreen({ onContinue }: { onContinue: () => void }) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-    setIsMobile(/iPhone|iPad|iPod|Android/i.test(ua));
-  }, []);
-
+export function EmailConfirmedScreen({ onContinue: _onContinue }: { onContinue: () => void }) {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-6"
@@ -39,36 +31,19 @@ export function EmailConfirmedScreen({ onContinue }: { onContinue: () => void })
           Bienvenue sur Ploom. Ton compte est prêt.
         </p>
 
-        {isMobile ? (
-          <>
-            <p className="text-sm text-text-tertiary mb-4 leading-relaxed">
-              Si l'app Ploom est installée sur ton téléphone, tu peux y
-              retourner pour te connecter.
-            </p>
-            <button
-              onClick={onContinue}
-              className="w-full py-3 rounded-pill bg-brand-grape text-white font-bold text-sm active:scale-95 transition-transform mb-2"
-            >
-              Continuer ici (Web)
-            </button>
-            <p className="text-xs text-text-muted">
-              Pas encore l'app ? Bientôt sur l'App Store et Google Play.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-text-tertiary mb-4 leading-relaxed">
-              Tu peux maintenant te connecter à Ploom depuis ton téléphone
-              ou continuer ici dans le navigateur.
-            </p>
-            <button
-              onClick={onContinue}
-              className="w-full py-3 rounded-pill bg-brand-grape text-white font-bold text-sm active:scale-95 transition-transform"
-            >
-              Entrer dans Ploom
-            </button>
-          </>
-        )}
+        <div className="rounded-2xl bg-brand-grape/10 px-4 py-4 mb-4">
+          <p className="text-sm font-semibold text-text-primary mb-1">
+            📱 Retourne sur l'app Ploom
+          </p>
+          <p className="text-xs text-text-secondary leading-relaxed">
+            Ouvre l'application sur ton téléphone et tape « J'ai confirmé,
+            me connecter » pour finaliser ta connexion.
+          </p>
+        </div>
+
+        <p className="text-xs text-text-muted">
+          Pas encore l'app ? Bientôt sur l'App Store et Google Play.
+        </p>
       </div>
     </div>
   );
