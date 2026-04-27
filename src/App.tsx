@@ -74,27 +74,30 @@ export default function App() {
     return !localStorage.getItem("shelfy-onboarding-v1");
   });
 
-  // Detect email-confirmation landings. Supabase appends `type=signup` (or
-  // `type=email_change`) either as a fragment param (implicit flow) or as a
-  // query param (PKCE flow). On those landings we want to show a clear
-  // success screen instead of dropping the user straight into the LP.
+  // Detect email-confirmation landings. We read the URL captured by an
+  // inline script in index.html BEFORE Supabase had a chance to wipe the
+  // fragment via detectSessionInUrl. Without that capture the hash
+  // (#access_token=…&type=signup) was already gone by the time React
+  // mounted, so the screen never fired.
   const [showEmailConfirmed, setShowEmailConfirmed] = useState(() => {
     if (typeof window === "undefined") return false;
-    const search = window.location.search;
-    const hash = window.location.hash;
-    const path = window.location.pathname;
+    const entry = (window as unknown as {
+      __PLOOM_ENTRY_URL__?: { pathname: string; search: string; hash: string };
+    }).__PLOOM_ENTRY_URL__ ?? {
+      pathname: window.location.pathname,
+      search: window.location.search,
+      hash: window.location.hash,
+    };
     const isConfirmFlow =
-      search.includes("type=signup") ||
-      search.includes("type=email_change") ||
-      hash.includes("type=signup") ||
-      hash.includes("type=email_change") ||
-      path.startsWith("/auth/confirm");
-    // Don't trigger if we're actually on a password recovery URL — that one
-    // has its own modal and shouldn't be hijacked.
+      entry.search.includes("type=signup") ||
+      entry.search.includes("type=email_change") ||
+      entry.hash.includes("type=signup") ||
+      entry.hash.includes("type=email_change") ||
+      entry.pathname.startsWith("/auth/confirm");
     const isRecovery =
-      hash.includes("type=recovery") ||
-      search.includes("type=recovery") ||
-      path.startsWith("/auth/reset-password");
+      entry.hash.includes("type=recovery") ||
+      entry.search.includes("type=recovery") ||
+      entry.pathname.startsWith("/auth/reset-password");
     return isConfirmFlow && !isRecovery;
   });
 

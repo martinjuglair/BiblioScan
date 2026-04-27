@@ -104,6 +104,20 @@
     </style>
   </head>
   <body class="bg-surface-light text-text-primary min-h-screen">
+    <script>
+      // Capture the entry URL BEFORE the JS bundle (and therefore Supabase)
+      // gets a chance to clean the fragment. With detectSessionInUrl the
+      // Supabase client strips the #access_token=...&type=signup hash as
+      // soon as it boots, which used to make our EmailConfirmedScreen
+      // detection always miss. Stash the original parts on window for
+      // App.tsx to read at mount time.
+      window.__PLOOM_ENTRY_URL__ = {
+        pathname: window.location.pathname,
+        search: window.location.search,
+        hash: window.location.hash,
+      };
+    </script>
+
     <!-- Splash screen -->
     <div id="splash">
       <div id="splash-logo">
