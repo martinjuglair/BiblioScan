@@ -17,10 +17,17 @@ export class AuthService {
     password: string,
     firstName?: string,
   ): Promise<Result<{ user: User; needsConfirmation: boolean }>> {
+    // Explicit emailRedirectTo so we don't depend on the dashboard
+    // Site URL (which used to still point at the legacy BiblioScan
+    // deployment). On web we use window.location.origin to support
+    // Vercel preview deployments seamlessly.
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: firstName ? { data: { first_name: firstName } } : undefined,
+      options: {
+        ...(firstName ? { data: { first_name: firstName } } : {}),
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      },
     });
     if (error) return Result.fail(error.message);
     if (!data.user) return Result.fail("Erreur lors de la création du compte");
