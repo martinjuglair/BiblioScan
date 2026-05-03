@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "REPLACE_WITH_TEAM_ID.com.ploom.app",
+        "appID": "G7V4G865YV.com.ploom.app",
         "paths": [
           "/auth/*",
           "/invite/*",
@@ -14,6 +14,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["REPLACE_WITH_TEAM_ID.com.ploom.app"]
+    "apps": ["G7V4G865YV.com.ploom.app"]
   }
 }
