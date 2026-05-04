@@ -66,7 +66,26 @@ export default function App() {
   const [view, setView] = useState<View>({ screen: "main" });
   const [refreshKey, setRefreshKey] = useState(0);
   // Legal pages overlay — takes precedence over the rest of the UI.
-  const [legalPage, setLegalPage] = useState<"privacy" | "terms" | null>(null);
+  // Initialise from the URL so direct visits to /privacy, /terms, and
+  // /delete-account (the URLs we hand to Apple App Store / Google Play /
+  // Brevo email footers) render the legal content immediately. Without
+  // this, those URLs landed on a blank app shell because the state
+  // defaulted to `null`. /delete-account is required by both stores'
+  // Data Deletion policies — it must be reachable without an account.
+  const [legalPage, setLegalPage] = useState<"privacy" | "terms" | "delete-account" | null>(() => {
+    if (typeof window === "undefined") return null;
+    const entry = (window as unknown as {
+      __PLOOM_ENTRY_URL__?: { pathname: string; hash: string };
+    }).__PLOOM_ENTRY_URL__ ?? {
+      pathname: window.location.pathname,
+      hash: window.location.hash,
+    };
+    const path = entry.pathname + entry.hash;
+    if (/(^|#)\/privacy/.test(path)) return "privacy";
+    if (/(^|#)\/terms/.test(path)) return "terms";
+    if (/(^|#)\/delete-account/.test(path)) return "delete-account";
+    return null;
+  });
   // Landing page is the default entry point for unauthenticated users.
   // They click "Se connecter" to open the LoginScreen.
   const [showLoginScreen, setShowLoginScreen] = useState(false);
