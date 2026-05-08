@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@interfaces/hooks/useAuth";
 import { LoginScreen } from "@interfaces/components/LoginScreen";
 import { Scanner } from "@interfaces/components/Scanner";
@@ -72,7 +72,8 @@ export default function App() {
   // this, those URLs landed on a blank app shell because the state
   // defaulted to `null`. /delete-account is required by both stores'
   // Data Deletion policies — it must be reachable without an account.
-  const [legalPage, setLegalPage] = useState<"privacy" | "terms" | "delete-account" | null>(() => {
+  type LegalPage = "privacy" | "terms" | "delete-account" | "support";
+  const [legalPage, setLegalPageState] = useState<LegalPage | null>(() => {
     if (typeof window === "undefined") return null;
     const entry = (window as unknown as {
       __PLOOM_ENTRY_URL__?: { pathname: string; hash: string };
@@ -84,8 +85,42 @@ export default function App() {
     if (/(^|#)\/privacy/.test(path)) return "privacy";
     if (/(^|#)\/terms/.test(path)) return "terms";
     if (/(^|#)\/delete-account/.test(path)) return "delete-account";
+    if (/(^|#)\/support/.test(path)) return "support";
     return null;
   });
+
+  // Wrapped setter that ALSO pushes the URL into the browser history so
+  // /privacy, /terms, /delete-account and /support become first-class
+  // URLs (visible in the address bar, shareable, indexable). Without
+  // this the state changed but the URL stayed at "/", so Apple's
+  // reviewer typing /privacy directly hit the right page but a user
+  // clicking the footer link saw the right page WITH the wrong URL.
+  const setLegalPage = useCallback((page: LegalPage | null) => {
+    setLegalPageState(page);
+    if (typeof window === "undefined") return;
+    const targetPath = page ? `/${page}` : "/";
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ legal: page }, "", targetPath);
+    }
+  }, []);
+
+  // Honour the browser's back / forward buttons so navigating away from
+  // a legal page (or back to it) restores the right state. Without this
+  // the URL changed but the React state didn't, leaving a phantom legal
+  // page rendered at "/" or vice-versa.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => {
+      const path = window.location.pathname;
+      if (path.startsWith("/privacy")) setLegalPageState("privacy");
+      else if (path.startsWith("/terms")) setLegalPageState("terms");
+      else if (path.startsWith("/delete-account")) setLegalPageState("delete-account");
+      else if (path.startsWith("/support")) setLegalPageState("support");
+      else setLegalPageState(null);
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
   // Landing page is the default entry point for unauthenticated users.
   // They click "Se connecter" to open the LoginScreen.
   const [showLoginScreen, setShowLoginScreen] = useState(false);

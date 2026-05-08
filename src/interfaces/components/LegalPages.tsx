@@ -11,7 +11,7 @@
  */
 
 interface LegalPagesProps {
-  page: "privacy" | "terms" | "delete-account";
+  page: "privacy" | "terms" | "delete-account" | "support";
   onBack: () => void;
 }
 
@@ -32,8 +32,53 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
         {page === "privacy" && <PrivacyContent />}
         {page === "terms" && <TermsContent />}
         {page === "delete-account" && <DeleteAccountContent />}
+        {page === "support" && <SupportContent />}
       </div>
     </div>
+  );
+}
+
+/**
+ * Support page — required by App Store Connect (the URL is mandatory)
+ * and Google Play (recommended). Kept short and direct: an email to
+ * reach out + a couple of self-service pointers. No FAQ chatbot or
+ * forum here — for a 1.0 launch a single contact email is plenty.
+ */
+function SupportContent() {
+  return (
+    <article className="prose prose-sm max-w-none text-text-secondary">
+      <h1 className="text-2xl font-extrabold text-text-primary mb-2">Assistance</h1>
+      <p className="text-xs text-text-tertiary mb-6">On te répond sous 48h.</p>
+
+      <h2 className="text-lg font-bold text-text-primary mt-6 mb-2">Une question, un bug, une idée ?</h2>
+      <p>
+        Écris-nous à{" "}
+        <a href="mailto:hello@ploom-app.com" className="text-brand-grape underline">
+          hello@ploom-app.com
+        </a>
+        . On lit chaque message et on répond toujours.
+      </p>
+
+      <h2 className="text-lg font-bold text-text-primary mt-6 mb-2">Avant d'écrire</h2>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Tu veux supprimer ton compte ? <a href="/delete-account" className="text-brand-grape underline">Suis cette procédure</a>.</li>
+        <li>Tu cherches notre politique de confidentialité ? <a href="/privacy" className="text-brand-grape underline">Voir ici</a>.</li>
+        <li>Conditions d'utilisation : <a href="/terms" className="text-brand-grape underline">disponibles ici</a>.</li>
+      </ul>
+
+      <h2 className="text-lg font-bold text-text-primary mt-6 mb-2">Bug urgent ?</h2>
+      <p>
+        Si quelque chose t'empêche d'utiliser l'app (impossible de te connecter,
+        crash au lancement, etc.), précise-le dans l'objet du mail et on te
+        priorise.
+      </p>
+
+      <h2 className="text-lg font-bold text-text-primary mt-6 mb-2">Suggestions</h2>
+      <p>
+        Ploom évolue avec ses utilisateurs. Une fonctionnalité te manque, un
+        détail t'agace ? Dis-le nous, on regarde.
+      </p>
+    </article>
   );
 }
 
