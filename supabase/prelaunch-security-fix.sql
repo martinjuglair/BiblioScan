@@ -115,13 +115,61 @@ REVOKE ALL ON FUNCTION promote_to_admin(UUID, UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION promote_to_admin(UUID, UUID) TO authenticated;
 
 -- ============================================================
--- 4. Sanity check — re-run after applying to verify.
+-- 4. admin_remove_member — kick a member out of a group as admin.
+--    The default RLS policy on group_members allows users to delete
+--    only their OWN row. Without this RPC, the "Retirer" button in
+--    the admin's UI silently failed (DELETE returned 0 rows). The
+--    SECURITY DEFINER bypass + caller-is-admin check is the safe
+--    way to grant cross-row delete to admins.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION admin_remove_member(p_group_id UUID, p_user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  -- Caller must be admin of this group.
+  IF NOT EXISTS (
+    SELECT 1 FROM group_members
+    WHERE group_id = p_group_id
+      AND user_id = auth.uid()
+      AND role = 'admin'
+  ) THEN
+    RAISE EXCEPTION 'Only group admins can remove members';
+  END IF;
+
+  -- Refuse self-targeting via this RPC. Self-leave goes through the
+  -- normal DELETE path (allowed by the existing user-self policy).
+  IF p_user_id = auth.uid() THEN
+    RAISE EXCEPTION 'Use leaveGroup to leave a group';
+  END IF;
+
+  DELETE FROM group_members
+  WHERE group_id = p_group_id AND user_id = p_user_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Target user is not a member of this group';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION admin_remove_member(UUID, UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION admin_remove_member(UUID, UUID) TO authenticated;
+
+-- ============================================================
+-- 5. Sanity check — re-run after applying to verify.
 -- ============================================================
 
 -- Should return ONE row per function:
 SELECT proname, prosecdef AS security_definer
 FROM pg_proc
-WHERE proname IN ('find_group_by_invite_code', 'promote_to_admin', 'get_my_group_ids')
+WHERE proname IN ('find_group_by_invite_code', 'promote_to_admin', 'admin_remove_member', 'get_my_group_ids')
 ORDER BY proname;
 
 -- Should NOT include "Anyone can find by invite code":
