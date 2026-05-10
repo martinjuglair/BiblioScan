@@ -53,8 +53,8 @@ function SupportContent() {
       <h2 className="text-lg font-bold text-text-primary mt-6 mb-2">Une question, un bug, une idée ?</h2>
       <p>
         Écris-nous à{" "}
-        <a href="mailto:hello@ploom-app.com" className="text-brand-grape underline">
-          hello@ploom-app.com
+        <a href="mailto:ploomlivre@gmail.com" className="text-brand-grape underline">
+          ploomlivre@gmail.com
         </a>
         . On lit chaque message et on répond toujours.
       </p>
