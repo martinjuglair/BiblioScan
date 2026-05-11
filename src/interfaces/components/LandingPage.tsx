@@ -5,21 +5,38 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { WaitlistForm } from "./WaitlistForm";
-import { WaitlistCount } from "./WaitlistCount";
 
 /**
  * Marketing landing page shown at `/` to unauthenticated visitors.
  *
- * Narrative is "download-first": the native app is the destination, but
- * the web version is always one click away via "Essayer sur le web". The
- * app is not yet published on the stores so the primary CTA is softly
- * teased as "Bientôt disponible".
+ * Narrative is "download-first": the native app is the destination, with
+ * primary CTAs pointing to the App Store and Google Play. The web
+ * version is always one click away via "Essayer sur le web".
  *
  * Visual strategy: multiple phone mockups reproducing the real app
  * screens (Collection, Book detail, Stats, Discover, Social) with
  * faithful typography, spacing, SVG tab bar and real OpenLibrary covers.
  */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Store links — used by all 3 store badge variants below
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const APP_STORE_URL = "https://apps.apple.com/app/id6766039341";
+const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.ploom.app";
+
+const storeUrl = (type: "apple" | "google") =>
+  type === "apple" ? APP_STORE_URL : PLAY_STORE_URL;
+const storeName = (type: "apple" | "google") =>
+  type === "apple" ? "App Store" : "Google Play";
+
+// Flip this to true once Google Play review completes and the app is
+// live. Until then the Play Store link returns 404 so we render the
+// Google badge as a disabled "Bientôt" tease.
+const GOOGLE_PLAY_LIVE = false;
+const isStoreLive = (type: "apple" | "google") =>
+  type === "apple" || GOOGLE_PLAY_LIVE;
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -375,7 +392,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
             >
               Fonctionnalités
             </a>
-            {/* Teased download buttons — app not yet published */}
+            {/* Download buttons — primary nav CTA */}
             <NavStoreBadge type="apple" />
             <NavStoreBadge type="google" />
           </div>
@@ -411,19 +428,17 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
               Et ne perds plus jamais le fil de tes lectures.
             </p>
 
-            {/* Store badges — both teased until the apps are published. Login
-                button intentionally removed so visitors focus on the mobile
+            {/* Store badges — primary download CTAs. Login button
+                intentionally removed so visitors focus on the mobile
                 download path. */}
             <div className="flex flex-col sm:flex-row items-center md:items-start md:justify-start justify-center gap-3">
               <HeroStoreBadge type="apple" />
               <HeroStoreBadge type="google" />
             </div>
 
-            {/* Pre-launch waitlist — without it the LP is a dead-end since
-                the store badges above are visually CTAs but functionally
-                inert. */}
-            <WaitlistForm source="lp_hero" />
-            <WaitlistCount />
+            <p className="mt-5 text-sm text-text-secondary font-medium">
+              Gratuit · Sans pub · Sans engagement
+            </p>
           </div>
 
           {/* Right: hero phone mockup showing Collection */}
@@ -611,24 +626,18 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
             d'une pépite. Plus jamais lire seul·e.
           </p>
 
-          {/* Store badges — primary CTA, presented as "coming soon" */}
+          {/* Store badges — primary download CTAs. */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-5">
             <StoreBadge type="apple" />
             <StoreBadge type="google" />
           </div>
 
           <p className="text-sm font-semibold opacity-90">
-            Bientôt sur l'App Store et Google Play.
+            Disponible dès maintenant sur l'App Store. Bientôt sur Google Play.
           </p>
-          <p className="text-xs font-semibold opacity-80 mt-2 mb-6">
+          <p className="text-xs font-semibold opacity-80 mt-2">
             Sans engagement · Sans pub · Pour toujours
           </p>
-
-          {/* Second waitlist capture — visitors who scrolled all the way down
-              are warm leads. Same form, dark variant for the gradient bg. */}
-          <div className="max-w-sm mx-auto">
-            <WaitlistForm source="lp_final" variant="dark" />
-          </div>
         </Reveal>
       </section>
 
@@ -723,20 +732,22 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
         </div>
       </footer>
 
-      {/* Sticky mobile-only "join waitlist" bar — anchors users to the
-          waitlist no matter where they are on the page. Only shows after
-          scrolling past the hero (where the form is already visible) and
-          hides itself once the user has actually scrolled to the bottom
-          (final CTA section has its own form). */}
+      {/* Sticky mobile-only download bar — anchors visitors to the
+          download CTAs no matter where they are on the page. Defaults
+          to iOS since most French mobile traffic is iOS-heavy; users on
+          Android can scroll back up to the hero or final CTA where both
+          badges are side by side. */}
       {scrolled && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-border shadow-hero px-4 py-3">
           <a
-            href="#hero"
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 w-full py-3 rounded-pill bg-brand-grape text-white font-bold text-sm"
-            aria-label="Rejoindre la liste d'attente"
+            aria-label="Télécharger Ploom"
           >
-            <span>🔔</span>
-            <span>Rejoindre la liste d'attente</span>
+            <span>📲</span>
+            <span>Télécharger Ploom</span>
           </a>
         </div>
       )}
@@ -1777,13 +1788,48 @@ function SocialScreen() {
    ═══════════════════════════════════════════════════════════════════════ */
 
 /** Compact store badge used inside the sticky nav. Just the logo +
- *  tiny "Bientôt" label so it doesn't crowd the right side on mobile. */
+ *  store name so it doesn't crowd the right side on mobile. Falls back
+ *  to a disabled "Bientôt" pill when the store isn't live yet. */
 function NavStoreBadge({ type }: { type: "apple" | "google" }) {
+  const live = isStoreLive(type);
+  const commonClass =
+    "group flex items-center gap-1.5 bg-text-primary text-white rounded-pill pl-2.5 pr-3 py-1.5 shadow-card relative";
+
+  if (!live) {
+    return (
+      <button
+        disabled
+        className={`${commonClass} opacity-60 cursor-default pointer-events-none`}
+        aria-label={`${storeName(type)} — bientôt disponible`}
+      >
+        <div className="w-4 h-4 flex items-center justify-center">
+          {type === "apple" ? (
+            <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
+              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="w-full h-full">
+              <path fill="#00C4FF" d="M3.6 1.6c-.2.2-.3.5-.3.9v19c0 .4.1.7.3.9l11-11-11-9.8z" />
+              <path fill="#FFCC00" d="M18.5 10.2L14.6 8l-3.3 3 3.3 3 3.9-2.2c1.2-.7 1.2-2 0-2.6z" />
+              <path fill="#00E676" d="M3.6 1.6l11 9.8 3-2.7L5.2 1c-.7-.2-1.3-.1-1.6.6z" />
+              <path fill="#FF3B4E" d="M14.6 11.4l-11 11c.3.7.9.8 1.6.6l12.4-7.1-3-4.5z" />
+            </svg>
+          )}
+        </div>
+        <span className="text-[11px] font-bold leading-none hidden sm:inline">
+          Bientôt
+        </span>
+      </button>
+    );
+  }
+
   return (
-    <button
-      className="group flex items-center gap-1.5 bg-text-primary text-white rounded-pill pl-2.5 pr-3 py-1.5 shadow-card cursor-default relative pointer-events-none"
-      disabled
-      aria-label={`${type === "apple" ? "App Store" : "Google Play"} — bientôt disponible`}
+    <a
+      href={storeUrl(type)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${commonClass} hover:opacity-90 transition-opacity`}
+      aria-label={`Télécharger Ploom sur ${storeName(type)}`}
     >
       <div className="w-4 h-4 flex items-center justify-center">
         {type === "apple" ? (
@@ -1802,18 +1848,56 @@ function NavStoreBadge({ type }: { type: "apple" | "google" }) {
       <span className="text-[11px] font-bold leading-none hidden sm:inline">
         {type === "apple" ? "App Store" : "Play Store"}
       </span>
-    </button>
+    </a>
   );
 }
 
 /** Bigger store badge used as the primary CTA in the hero. Same black
- *  pill pattern as the footer one but a touch larger. */
+ *  pill pattern as the footer one but a touch larger. Falls back to a
+ *  disabled "Bientôt disponible" variant when the store isn't live. */
 function HeroStoreBadge({ type }: { type: "apple" | "google" }) {
+  const live = isStoreLive(type);
+  const commonClass =
+    "flex items-center gap-3 bg-text-primary text-white rounded-pill pl-5 pr-6 py-3.5 shadow-hero relative w-full sm:w-auto justify-center sm:justify-start";
+
+  if (!live) {
+    return (
+      <button
+        disabled
+        className={`${commonClass} opacity-70 cursor-default pointer-events-none`}
+        aria-label={`${storeName(type)} — bientôt disponible`}
+      >
+        <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+          {type === "apple" ? (
+            <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
+              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="w-full h-full">
+              <path fill="#00C4FF" d="M3.6 1.6c-.2.2-.3.5-.3.9v19c0 .4.1.7.3.9l11-11-11-9.8z" />
+              <path fill="#FFCC00" d="M18.5 10.2L14.6 8l-3.3 3 3.3 3 3.9-2.2c1.2-.7 1.2-2 0-2.6z" />
+              <path fill="#00E676" d="M3.6 1.6l11 9.8 3-2.7L5.2 1c-.7-.2-1.3-.1-1.6.6z" />
+              <path fill="#FF3B4E" d="M14.6 11.4l-11 11c.3.7.9.8 1.6.6l12.4-7.1-3-4.5z" />
+            </svg>
+          )}
+        </div>
+        <div className="text-left leading-none">
+          <p className="text-[10px] font-semibold text-brand-sun uppercase tracking-wider">
+            Bientôt disponible
+          </p>
+          <p className="text-[16px] font-extrabold mt-1">{storeName(type)}</p>
+        </div>
+      </button>
+    );
+  }
+
   return (
-    <button
-      className="flex items-center gap-3 bg-text-primary text-white rounded-pill pl-5 pr-6 py-3.5 shadow-hero cursor-default relative w-full sm:w-auto justify-center sm:justify-start pointer-events-none"
-      disabled
-      aria-label={`${type === "apple" ? "App Store" : "Google Play"} — bientôt disponible`}
+    <a
+      href={storeUrl(type)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${commonClass} hover:opacity-90 transition-opacity`}
+      aria-label={`Télécharger Ploom sur ${storeName(type)}`}
     >
       <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
         {type === "apple" ? (
@@ -1831,22 +1915,61 @@ function HeroStoreBadge({ type }: { type: "apple" | "google" }) {
       </div>
       <div className="text-left leading-none">
         <p className="text-[10px] font-semibold text-brand-sun uppercase tracking-wider">
-          Bientôt disponible
+          {type === "apple" ? "Télécharger sur l'" : "Disponible sur"}
         </p>
         <p className="text-[16px] font-extrabold mt-1">
           {type === "apple" ? "App Store" : "Google Play"}
         </p>
       </div>
-    </button>
+    </a>
   );
 }
 
 function StoreBadge({ type }: { type: "apple" | "google" }) {
+  const live = isStoreLive(type);
+  const commonClass =
+    "flex items-center gap-2 bg-black text-white rounded-xl px-4 py-3 shadow-card relative overflow-hidden";
+
+  if (!live) {
+    return (
+      <button
+        disabled
+        className={`${commonClass} opacity-70 cursor-default pointer-events-none`}
+        aria-label={`${storeName(type)} — bientôt disponible`}
+      >
+        <div className="w-6 h-6 flex items-center justify-center">
+          {type === "apple" ? (
+            <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
+              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="w-full h-full">
+              <path fill="#00C4FF" d="M3.6 1.6c-.2.2-.3.5-.3.9v19c0 .4.1.7.3.9l11-11-11-9.8z" />
+              <path fill="#FFCC00" d="M18.5 10.2L14.6 8l-3.3 3 3.3 3 3.9-2.2c1.2-.7 1.2-2 0-2.6z" />
+              <path fill="#00E676" d="M3.6 1.6l11 9.8 3-2.7L5.2 1c-.7-.2-1.3-.1-1.6.6z" />
+              <path fill="#FF3B4E" d="M14.6 11.4l-11 11c.3.7.9.8 1.6.6l12.4-7.1-3-4.5z" />
+            </svg>
+          )}
+        </div>
+        <div className="text-left">
+          <p className="text-[9px] leading-none opacity-70 uppercase">
+            Bientôt sur
+          </p>
+          <p className="text-sm font-bold leading-none mt-0.5">
+            {storeName(type)}
+          </p>
+        </div>
+      </button>
+    );
+  }
+
   return (
-    <button
-      className="flex items-center gap-2 bg-black text-white rounded-xl px-4 py-3 shadow-card cursor-default relative overflow-hidden pointer-events-none"
-      disabled
-      aria-label={`${type === "apple" ? "App Store" : "Google Play"} — bientôt disponible`}
+    <a
+      href={storeUrl(type)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${commonClass} hover:opacity-90 transition-opacity`}
+      aria-label={`Télécharger Ploom sur ${storeName(type)}`}
     >
       <div className="w-6 h-6 flex items-center justify-center">
         {type === "apple" ? (
@@ -1882,7 +2005,7 @@ function StoreBadge({ type }: { type: "apple" | "google" }) {
           {type === "apple" ? "App Store" : "Google Play"}
         </p>
       </div>
-    </button>
+    </a>
   );
 }
 
