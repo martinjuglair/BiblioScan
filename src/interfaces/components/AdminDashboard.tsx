@@ -157,11 +157,26 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
           "admin_dashboard_metrics",
           { p_password: pwd, period_days: days }
         );
-        if (rpcError) throw rpcError;
+        if (rpcError) {
+          // Supabase PostgrestError → extract its real fields (otherwise
+          // String(rpcError) → "[object Object]").
+          const parts = [
+            rpcError.message,
+            rpcError.details,
+            rpcError.hint,
+            rpcError.code ? `(code ${rpcError.code})` : null,
+          ].filter(Boolean);
+          throw new Error(parts.join(" · ") || "Erreur RPC inconnue");
+        }
         setMetrics(data as Metrics);
         setLastRefreshedAt(new Date());
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg =
+          e instanceof Error
+            ? e.message
+            : typeof e === "object" && e !== null
+              ? JSON.stringify(e)
+              : String(e);
         // Wrong password → clear cache so we re-prompt
         if (msg.toLowerCase().includes("invalid password")) {
           window.sessionStorage.removeItem(SESSION_KEY);
@@ -186,17 +201,11 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     setPassword(pwd);
   }, []);
 
-  // Not authenticated yet → show password prompt
-  if (!password) {
-    return (
-      <AdminLogin
-        onSubmit={handlePasswordSubmit}
-        onExit={onExit}
-        error={error}
-      />
-    );
-  }
-
+  // IMPORTANT: every hook in this component must run on every render.
+  // `exportCSV` was previously declared *after* the `if (!password)`
+  // early return — that swapped the hook count on the first unlock
+  // ("Rendered more hooks than during the previous render"). Keep all
+  // hooks above the conditional.
   const exportCSV = useCallback(() => {
     if (!metrics) return;
     const lines: string[] = [];
@@ -217,6 +226,17 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, [metrics, period]);
+
+  // Not authenticated yet → show password prompt
+  if (!password) {
+    return (
+      <AdminLogin
+        onSubmit={handlePasswordSubmit}
+        onExit={onExit}
+        error={error}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
