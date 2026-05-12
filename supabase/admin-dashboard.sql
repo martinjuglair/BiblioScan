@@ -1,46 +1,75 @@
 -- ============================================================
--- Admin dashboard RPCs
+-- Admin dashboard RPCs — password-gated
 -- ------------------------------------------------------------
--- One single RPC `admin_dashboard_metrics(period_days int)` that
--- returns everything the dashboard needs as one JSON blob:
---   - totals (lifetime counts)
---   - period stats (last N days)
---   - daily series for the period (one row per day, no gaps)
---   - top users, top groups, top books
---   - engagement % (users with ≥1 book, ≥1 group, ≥1 read book)
---   - waitlist conversion
+-- Public access to the LP makes Supabase-auth-based gating
+-- impractical (there's no login UI on the web), so the
+-- dashboard auths against a single bcrypt-hashed password
+-- stored in `public.admin_credentials`. The hash is read only
+-- by the security-definer function — RLS blocks any direct
+-- SELECT from clients, even with the service-role key revoked.
 --
--- Locked down with `security definer` + an admin-email guard so
--- only the configured admin can call it. Anyone else gets a
--- raised exception (no data leak).
+-- To install / rotate the password:
+--   1. Run this whole file once (it creates tables + functions
+--      but does NOT set a password)
+--   2. Run the snippet at the bottom (commented out) with your
+--      chosen password substituted in
 --
--- To allow another admin in the future, just add their email to
--- the `is_dashboard_admin()` helper below.
+-- The dashboard RPC `admin_dashboard_metrics(p, days)` takes
+-- the password as its first argument and raises an exception
+-- if it doesn't match. The client stores the password in
+-- sessionStorage so the user types it once per session.
 -- ============================================================
 
--- ---------- 1. Admin guard helper ----------
-CREATE OR REPLACE FUNCTION public.is_dashboard_admin()
+-- ---------- 0. Required extensions ----------
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+
+-- ---------- 1. Credentials table (single-row by design) ----------
+CREATE TABLE IF NOT EXISTS public.admin_credentials (
+  id            integer     PRIMARY KEY DEFAULT 1,
+  password_hash text        NOT NULL,
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT admin_credentials_single_row CHECK (id = 1)
+);
+
+ALTER TABLE public.admin_credentials ENABLE ROW LEVEL SECURITY;
+-- Intentionally NO policies: clients can never SELECT/INSERT/UPDATE
+-- directly. Only security-definer functions reach the data.
+
+
+-- ---------- 2. Password verification helper ----------
+CREATE OR REPLACE FUNCTION public.verify_admin_password(p_password text)
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM auth.users
-    WHERE id = auth.uid()
-      AND lower(email) IN (
-        'martinjuglair@gmail.com'
-      )
-  );
+DECLARE
+  stored_hash text;
+BEGIN
+  IF p_password IS NULL OR length(p_password) = 0 THEN
+    RETURN false;
+  END IF;
+  SELECT password_hash INTO stored_hash
+  FROM public.admin_credentials
+  WHERE id = 1;
+  IF stored_hash IS NULL THEN
+    RETURN false;
+  END IF;
+  RETURN stored_hash = crypt(p_password, stored_hash);
+END;
 $$;
 
-REVOKE ALL ON FUNCTION public.is_dashboard_admin() FROM public;
-GRANT EXECUTE ON FUNCTION public.is_dashboard_admin() TO authenticated;
+REVOKE ALL ON FUNCTION public.verify_admin_password(text) FROM public;
+GRANT EXECUTE ON FUNCTION public.verify_admin_password(text) TO anon, authenticated;
 
 
--- ---------- 2. Main metrics RPC ----------
-CREATE OR REPLACE FUNCTION public.admin_dashboard_metrics(period_days int DEFAULT 30)
+-- ---------- 3. Main metrics RPC (password-gated) ----------
+CREATE OR REPLACE FUNCTION public.admin_dashboard_metrics(
+  p_password   text,
+  period_days  int DEFAULT 30
+)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -51,9 +80,9 @@ DECLARE
   start_ts timestamptz;
   total_users int;
 BEGIN
-  -- Admin guard
-  IF NOT public.is_dashboard_admin() THEN
-    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
+  -- Password guard
+  IF NOT public.verify_admin_password(p_password) THEN
+    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
   END IF;
 
   -- Clamp the period to something sensible
@@ -214,5 +243,25 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_dashboard_metrics(int) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_dashboard_metrics(int) TO authenticated;
+REVOKE ALL ON FUNCTION public.admin_dashboard_metrics(text, int) FROM public;
+GRANT EXECUTE ON FUNCTION public.admin_dashboard_metrics(text, int) TO anon, authenticated;
+
+
+-- ============================================================
+-- ONE-TIME PASSWORD SETUP
+-- ------------------------------------------------------------
+-- Run the snippet below ONCE in the SQL Editor with your chosen
+-- password substituted for 'CHANGE_ME'. Use a strong one — this
+-- is the only thing standing between the public internet and
+-- your user data.
+--
+-- To rotate the password later, run the same snippet again with
+-- the new password.
+-- ============================================================
+/*
+INSERT INTO public.admin_credentials (id, password_hash)
+VALUES (1, crypt('CHANGE_ME', gen_salt('bf', 10)))
+ON CONFLICT (id) DO UPDATE
+  SET password_hash = excluded.password_hash,
+      updated_at    = now();
+*/

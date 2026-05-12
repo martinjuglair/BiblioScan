@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   Area,
   AreaChart,
@@ -101,16 +107,12 @@ interface Metrics {
 }
 
 interface AdminDashboardProps {
-  userEmail: string;
-  onSignOut: () => void;
   onExit: () => void;
 }
 
-// Same admin list as the SQL helper. Client-side gate is for UX only —
-// the RPC enforces the real check server-side. Keep this lowercase.
-const ADMIN_EMAILS = new Set(["martinjuglair@gmail.com"]);
-export const isAdmin = (email: string | null | undefined) =>
-  !!email && ADMIN_EMAILS.has(email.toLowerCase());
+// Where we cache the password for the session. Cleared on browser
+// tab close, on logout, and on Invalid-password errors.
+const SESSION_KEY = "ploom-admin-password";
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: 7, label: "7 jours" },
@@ -128,39 +130,72 @@ const COLORS = {
   muted: "#94A3B8",
 };
 
-export function AdminDashboard({
-  userEmail,
-  onSignOut,
-  onExit,
-}: AdminDashboardProps) {
+export function AdminDashboard({ onExit }: AdminDashboardProps) {
+  const [password, setPassword] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.sessionStorage.getItem(SESSION_KEY);
+  });
   const [period, setPeriod] = useState<Period>(30);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
 
-  const loadMetrics = useCallback(async (days: Period) => {
-    setLoading(true);
+  const signOut = useCallback(() => {
+    window.sessionStorage.removeItem(SESSION_KEY);
+    setPassword(null);
+    setMetrics(null);
     setError(null);
-    try {
-      const { data, error: rpcError } = await supabase.rpc(
-        "admin_dashboard_metrics",
-        { period_days: days }
-      );
-      if (rpcError) throw rpcError;
-      setMetrics(data as Metrics);
-      setLastRefreshedAt(new Date());
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
   }, []);
 
+  const loadMetrics = useCallback(
+    async (days: Period, pwd: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error: rpcError } = await supabase.rpc(
+          "admin_dashboard_metrics",
+          { p_password: pwd, period_days: days }
+        );
+        if (rpcError) throw rpcError;
+        setMetrics(data as Metrics);
+        setLastRefreshedAt(new Date());
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // Wrong password → clear cache so we re-prompt
+        if (msg.toLowerCase().includes("invalid password")) {
+          window.sessionStorage.removeItem(SESSION_KEY);
+          setPassword(null);
+          setError("Mot de passe incorrect.");
+        } else {
+          setError(msg);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
-    loadMetrics(period);
-  }, [period, loadMetrics]);
+    if (password) loadMetrics(period, password);
+  }, [period, password, loadMetrics]);
+
+  const handlePasswordSubmit = useCallback((pwd: string) => {
+    window.sessionStorage.setItem(SESSION_KEY, pwd);
+    setPassword(pwd);
+  }, []);
+
+  // Not authenticated yet → show password prompt
+  if (!password) {
+    return (
+      <AdminLogin
+        onSubmit={handlePasswordSubmit}
+        onExit={onExit}
+        error={error}
+      />
+    );
+  }
 
   const exportCSV = useCallback(() => {
     if (!metrics) return;
@@ -201,14 +236,16 @@ export function AdminDashboard({
               <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
                 Ploom · Admin
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">{userEmail}</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Session privée
+              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <PeriodSelector value={period} onChange={setPeriod} />
             <button
-              onClick={() => loadMetrics(period)}
-              disabled={loading}
+              onClick={() => password && loadMetrics(period, password)}
+              disabled={loading || !password}
               className="px-3 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition"
             >
               {loading ? "..." : "↻ Rafraîchir"}
@@ -221,10 +258,10 @@ export function AdminDashboard({
               ⬇ CSV
             </button>
             <button
-              onClick={onSignOut}
+              onClick={signOut}
               className="px-3 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700 transition"
             >
-              Déconnexion
+              Verrouiller
             </button>
           </div>
         </div>
@@ -234,11 +271,11 @@ export function AdminDashboard({
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-900 rounded-lg p-4 text-sm">
             <strong className="font-semibold">Erreur :</strong> {error}
-            {error.includes("Not authorized") && (
+            {error.toLowerCase().includes("function") && (
               <p className="mt-2 text-rose-700">
-                Vérifie que tu es connecté avec un email admin et que la
-                fonction SQL <code>admin_dashboard_metrics</code> est bien
-                installée sur Supabase.
+                Vérifie que la fonction SQL{" "}
+                <code>admin_dashboard_metrics</code> est bien installée sur
+                Supabase (script <code>supabase/admin-dashboard.sql</code>).
               </p>
             )}
           </div>
@@ -821,6 +858,97 @@ function ChartTooltip({
           </span>
         </p>
       ))}
+    </div>
+  );
+}
+
+/* ════════════════════ Login screen ════════════════════ */
+
+function AdminLogin({
+  onSubmit,
+  onExit,
+  error,
+}: {
+  onSubmit: (pwd: string) => void;
+  onExit: () => void;
+  error: string | null;
+}) {
+  const [value, setValue] = useState("");
+  const [show, setShow] = useState(false);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (value.length === 0) return;
+    onSubmit(value);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-5">
+      <button
+        onClick={onExit}
+        className="absolute top-5 left-5 text-slate-400 hover:text-slate-700 transition text-sm"
+      >
+        ← Retour à l'app
+      </button>
+
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FB6538] via-[#FF3C7A] to-[#FFC83D] shadow-lg mb-4">
+            <span className="text-2xl">🔒</span>
+          </div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            Ploom · Admin
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Accès restreint
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3"
+        >
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">
+              Mot de passe
+            </span>
+            <div className="mt-1 relative">
+              <input
+                type={show ? "text" : "password"}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                autoFocus
+                autoComplete="current-password"
+                className="w-full px-3 py-2.5 pr-12 text-base border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] focus:border-transparent"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShow((s) => !s)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500 hover:text-slate-700 px-2 py-1"
+              >
+                {show ? "Cacher" : "Voir"}
+              </button>
+            </div>
+          </label>
+
+          {error && (
+            <p className="text-sm text-rose-600 font-medium">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={value.length === 0}
+            className="w-full py-2.5 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 disabled:opacity-40 transition"
+          >
+            Entrer
+          </button>
+        </form>
+
+        <p className="text-xs text-slate-400 text-center mt-4">
+          Le mot de passe est vérifié côté serveur (bcrypt).
+        </p>
+      </div>
     </div>
   );
 }
