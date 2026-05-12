@@ -55,13 +55,24 @@ interface TopUser {
   read_count: number;
 }
 
+interface GroupMember {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: "admin" | "member";
+  joined_at: string;
+}
+
 interface TopGroup {
   id: string;
   name: string;
   emoji: string;
   created_at: string;
+  created_by_name: string;
+  created_by_email: string;
   member_count: number;
   book_count: number;
+  members: GroupMember[] | null;
 }
 
 interface TopBook {
@@ -72,6 +83,15 @@ interface TopBook {
   read_count: number;
 }
 
+interface RecentFeedback {
+  id: string;
+  rating: number;
+  message: string;
+  created_at: string;
+  user_name: string;
+  user_email: string | null;
+}
+
 interface Metrics {
   totals: {
     users: number;
@@ -79,15 +99,14 @@ interface Metrics {
     groups: number;
     reads: number;
     group_members: number;
-    waitlist: number;
   };
   period: {
     days: number;
+    start: string;
     new_users: number;
     new_books: number;
     new_groups: number;
     new_reads: number;
-    new_waitlist: number;
   };
   daily: DailyPoint[];
   top_users: TopUser[] | null;
@@ -99,10 +118,7 @@ interface Metrics {
     with_group: number;
     with_read_book: number;
   };
-  waitlist: {
-    total: number;
-    converted: number;
-  };
+  recent_feedback: RecentFeedback[] | null;
   generated_at: string;
 }
 
@@ -113,6 +129,12 @@ interface AdminDashboardProps {
 // Where we cache the password for the session. Cleared on browser
 // tab close, on logout, and on Invalid-password errors.
 const SESSION_KEY = "ploom-admin-password";
+
+// App Store launch date. The "Depuis le lancement" toggle (default on)
+// passes this as `since_date` to the RPC so pre-launch test traffic
+// stops polluting the numbers.
+const LAUNCH_DATE_ISO = "2026-05-11T00:00:00Z";
+const LAUNCH_DATE_LABEL = "11 mai";
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: 7, label: "7 jours" },
@@ -136,6 +158,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     return window.sessionStorage.getItem(SESSION_KEY);
   });
   const [period, setPeriod] = useState<Period>(30);
+  const [sinceLaunch, setSinceLaunch] = useState<boolean>(true);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,13 +172,17 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   }, []);
 
   const loadMetrics = useCallback(
-    async (days: Period, pwd: string) => {
+    async (days: Period, pwd: string, since: boolean) => {
       setLoading(true);
       setError(null);
       try {
         const { data, error: rpcError } = await supabase.rpc(
           "admin_dashboard_metrics",
-          { p_password: pwd, period_days: days }
+          {
+            p_password: pwd,
+            period_days: days,
+            since_date: since ? LAUNCH_DATE_ISO : null,
+          }
         );
         if (rpcError) {
           // Supabase PostgrestError → extract its real fields (otherwise
@@ -193,8 +220,8 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   );
 
   useEffect(() => {
-    if (password) loadMetrics(period, password);
-  }, [period, password, loadMetrics]);
+    if (password) loadMetrics(period, password, sinceLaunch);
+  }, [period, password, sinceLaunch, loadMetrics]);
 
   const handlePasswordSubmit = useCallback((pwd: string) => {
     window.sessionStorage.setItem(SESSION_KEY, pwd);
@@ -262,9 +289,20 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition select-none">
+              <input
+                type="checkbox"
+                checked={sinceLaunch}
+                onChange={(e) => setSinceLaunch(e.target.checked)}
+                className="w-4 h-4 accent-[#FB6538] cursor-pointer"
+              />
+              <span>Depuis le {LAUNCH_DATE_LABEL}</span>
+            </label>
             <PeriodSelector value={period} onChange={setPeriod} />
             <button
-              onClick={() => password && loadMetrics(period, password)}
+              onClick={() =>
+                password && loadMetrics(period, password, sinceLaunch)
+              }
               disabled={loading || !password}
               className="px-3 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition"
             >
@@ -525,17 +563,8 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             color={COLORS.users}
             loading={loading}
           />
-          <TopList
-            title="Top groupes"
-            subtitle="Par # membres"
-            rows={(metrics?.top_groups ?? []).map((g) => ({
-              key: g.id,
-              primary: `${g.emoji} ${g.name}`,
-              secondary: new Date(g.created_at).toLocaleDateString("fr-FR"),
-              value: g.member_count,
-              tag: `${g.book_count} livres`,
-            }))}
-            color={COLORS.groups}
+          <TopGroupsCard
+            groups={metrics?.top_groups ?? []}
             loading={loading}
           />
           <TopList
@@ -554,17 +583,11 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
           />
         </section>
 
-        {/* Waitlist conversion */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-          <h2 className="text-lg font-extrabold text-slate-900 mb-3">
-            Conversion waitlist
-          </h2>
-          <WaitlistConversion
-            total={metrics?.waitlist.total ?? 0}
-            converted={metrics?.waitlist.converted ?? 0}
-            loading={loading}
-          />
-        </section>
+        {/* Recent feedback — what users posted in Profile > "Votre avis compte" */}
+        <RecentFeedbackCard
+          feedback={metrics?.recent_feedback ?? []}
+          loading={loading}
+        />
 
         <p className="text-xs text-slate-400 text-center pt-4 pb-8">
           Données générées
@@ -786,44 +809,195 @@ function TopList({
   );
 }
 
-function WaitlistConversion({
-  total,
-  converted,
+/* ════════════════════ Top Groups (expandable members) ════════════════════ */
+
+function TopGroupsCard({
+  groups,
   loading,
 }: {
-  total: number;
-  converted: number;
+  groups: TopGroup[];
   loading: boolean;
 }) {
-  const pct = total > 0 ? Math.round((converted / total) * 100) : 0;
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
-    <div className="grid grid-cols-3 gap-4">
-      <div>
-        <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">
-          Inscrits waitlist
-        </p>
-        <p className="text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
-          {loading ? "—" : total.toLocaleString("fr-FR")}
-        </p>
-      </div>
-      <div>
-        <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">
-          Convertis
-        </p>
-        <p className="text-3xl font-extrabold text-emerald-600 mt-1 tabular-nums">
-          {loading ? "—" : converted.toLocaleString("fr-FR")}
-        </p>
-      </div>
-      <div>
-        <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">
-          Taux
-        </p>
-        <p className="text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
-          {loading ? "—" : `${pct}%`}
-        </p>
-      </div>
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <h3 className="text-base font-extrabold text-slate-900">Top groupes</h3>
+      <p className="text-xs text-slate-500 mb-3">
+        Par # membres · clique pour voir les membres
+      </p>
+      {loading && groups.length === 0 ? (
+        <p className="text-sm text-slate-400">Chargement…</p>
+      ) : groups.length === 0 ? (
+        <p className="text-sm text-slate-400">Aucun groupe.</p>
+      ) : (
+        <ul className="space-y-2">
+          {groups.map((g, i) => {
+            const isOpen = expanded === g.id;
+            return (
+              <li
+                key={g.id}
+                className="border-b border-slate-100 last:border-0"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isOpen ? null : g.id)}
+                  className="w-full flex items-center gap-3 py-2 text-left hover:bg-slate-50 rounded transition px-1 -mx-1"
+                >
+                  <span
+                    className="w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center text-white flex-shrink-0"
+                    style={{ backgroundColor: COLORS.groups }}
+                  >
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {g.emoji} {g.name}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate">
+                      Créé par {g.created_by_name || g.created_by_email} ·{" "}
+                      {new Date(g.created_at).toLocaleDateString("fr-FR")}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-extrabold text-slate-900 tabular-nums">
+                      {g.member_count}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {g.book_count} livres
+                    </p>
+                  </div>
+                  <span
+                    className={`text-slate-400 text-sm flex-shrink-0 transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div className="pb-3 pl-8 pr-1">
+                    {!g.members || g.members.length === 0 ? (
+                      <p className="text-xs text-slate-400">Aucun membre.</p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {g.members.map((m) => (
+                          <li
+                            key={m.id}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                m.role === "admin"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {m.role === "admin" ? "Admin" : "Membre"}
+                            </span>
+                            <span className="font-semibold text-slate-900 truncate">
+                              {m.name || "—"}
+                            </span>
+                            <span className="text-slate-500 truncate flex-1">
+                              {m.email || ""}
+                            </span>
+                            <span className="text-slate-400 flex-shrink-0">
+                              {new Date(m.joined_at).toLocaleDateString(
+                                "fr-FR",
+                                { day: "numeric", month: "short" }
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
+  );
+}
+
+/* ════════════════════ Recent feedback (Profile > "Votre avis") ════════════════════ */
+
+function RecentFeedbackCard({
+  feedback,
+  loading,
+}: {
+  feedback: RecentFeedback[];
+  loading: boolean;
+}) {
+  return (
+    <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <h2 className="text-lg font-extrabold text-slate-900">
+        Avis utilisateurs
+      </h2>
+      <p className="text-xs text-slate-500 mb-4">
+        Ce que tes users ont écrit dans Profil → « Votre avis compte »
+      </p>
+      {loading && feedback.length === 0 ? (
+        <p className="text-sm text-slate-400">Chargement…</p>
+      ) : feedback.length === 0 ? (
+        <p className="text-sm text-slate-400">Aucun avis pour le moment.</p>
+      ) : (
+        <ul className="space-y-3">
+          {feedback.map((fb) => (
+            <li
+              key={fb.id}
+              className="border border-slate-100 rounded-xl p-3 hover:bg-slate-50 transition"
+            >
+              <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-slate-900 truncate">
+                    {fb.user_name || "—"}
+                  </p>
+                  {fb.user_email && (
+                    <p className="text-xs text-slate-500 truncate">
+                      {fb.user_email}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <StarRating value={fb.rating} />
+                  <span className="text-xs text-slate-400">
+                    {new Date(fb.created_at).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              </div>
+              {fb.message && fb.message.trim().length > 0 ? (
+                <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                  {fb.message}
+                </p>
+              ) : (
+                <p className="text-xs italic text-slate-400">
+                  Pas de message — note seule.
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function StarRating({ value }: { value: number }) {
+  const clamped = Math.max(0, Math.min(5, Math.round(value)));
+  return (
+    <span aria-label={`${clamped} sur 5`} className="text-sm tracking-tight">
+      {"★".repeat(clamped)}
+      <span className="text-slate-300">{"★".repeat(5 - clamped)}</span>
+    </span>
   );
 }
 
