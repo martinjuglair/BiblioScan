@@ -19,6 +19,7 @@ import { ResetPasswordModal } from "@interfaces/components/ResetPasswordModal";
 import { EmailConfirmedScreen } from "@interfaces/components/EmailConfirmedScreen";
 import { LegalPages } from "@interfaces/components/LegalPages";
 import { LandingPage } from "@interfaces/components/LandingPage";
+import { AdminDashboard, isAdmin } from "@interfaces/components/AdminDashboard";
 import { useBadgeChecker } from "@interfaces/hooks/useBadgeChecker";
 import { useLevelChecker } from "@interfaces/hooks/useLevelChecker";
 
@@ -117,9 +118,29 @@ export default function App() {
       else if (path.startsWith("/delete-account")) setLegalPageState("delete-account");
       else if (path.startsWith("/support")) setLegalPageState("support");
       else setLegalPageState(null);
+      setShowAdmin(path.startsWith("/admin"));
     };
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
+  }, []);
+
+  // Admin dashboard route. Boots from /admin in the URL, kept in sync
+  // with browser back/forward via the popstate handler above. The
+  // server-side RPC enforces the real admin guard — this state is just
+  // UX so non-admins don't see the dashboard chrome flash.
+  const [showAdmin, setShowAdmin] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const entry = (window as unknown as {
+      __PLOOM_ENTRY_URL__?: { pathname: string };
+    }).__PLOOM_ENTRY_URL__ ?? { pathname: window.location.pathname };
+    return entry.pathname.startsWith("/admin");
+  });
+
+  const exitAdmin = useCallback(() => {
+    setShowAdmin(false);
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.history.pushState({}, "", "/");
+    }
   }, []);
   // Landing page is the default entry point for unauthenticated users.
   // They click "Se connecter" to open the LoginScreen.
@@ -186,6 +207,26 @@ export default function App() {
         <div className="mt-8 w-6 h-6 border-[2.5px] border-white/25 border-t-white/80 rounded-full animate-spin" />
       </div>
     );
+  }
+
+  // Admin dashboard — only for authenticated admin emails. Hits the
+  // server-guarded RPC, so even if a non-admin forces showAdmin=true
+  // client-side they get an error message instead of data.
+  if (showAdmin && user && isAdmin(user.email)) {
+    return (
+      <AdminDashboard
+        userEmail={user.email ?? ""}
+        onSignOut={signOut}
+        onExit={exitAdmin}
+      />
+    );
+  }
+  // /admin URL with a non-admin (or no) user → silently strip the
+  // path so the rest of the app renders as if they were at "/".
+  if (showAdmin && (!user || !isAdmin(user.email))) {
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.history.replaceState({}, "", "/");
+    }
   }
 
   // Legal pages — reachable whether logged in or not (footer link on login
