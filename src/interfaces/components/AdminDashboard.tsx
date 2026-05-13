@@ -20,6 +20,7 @@ import {
   YAxis,
 } from "recharts";
 import { supabase } from "@infrastructure/supabase/client";
+import { EngagementView } from "./EngagementView";
 
 /**
  * Admin dashboard at `/admin`. Calls a single Supabase RPC
@@ -163,6 +164,9 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
+  // Top-level tab — splits the dashboard between metrics analytics
+  // (default) and the engagement / push-notif tool.
+  const [view, setView] = useState<"metrics" | "engagement">("metrics");
 
   const signOut = useCallback(() => {
     window.sessionStorage.removeItem(SESSION_KEY);
@@ -326,6 +330,29 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       </header>
 
       <main className="max-w-7xl mx-auto px-5 py-6 space-y-6">
+        {/* Tab nav — splits the dashboard into Métriques (analytics)
+            and Engagement (push notifs + in-app messages). Kept as a
+            local view-toggle rather than nested routes to avoid
+            touching the route logic in App.tsx. */}
+        <nav className="flex gap-1 border-b border-slate-200 -mb-2">
+          <TabButton
+            label="Métriques"
+            active={view === "metrics"}
+            onClick={() => setView("metrics")}
+          />
+          <TabButton
+            label="Engagement"
+            active={view === "engagement"}
+            onClick={() => setView("engagement")}
+          />
+        </nav>
+
+        {view === "engagement" && password && (
+          <EngagementView password={password} />
+        )}
+
+        {view === "metrics" && (
+        <>
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-900 rounded-lg p-4 text-sm">
             <strong className="font-semibold">Erreur :</strong> {error}
@@ -594,6 +621,8 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
           {metrics?.generated_at &&
             ` le ${new Date(metrics.generated_at).toLocaleString("fr-FR")}`}
         </p>
+        </>
+        )}
       </main>
     </div>
   );
@@ -1057,6 +1086,31 @@ function ChartTooltip({
 }
 
 /* ════════════════════ Login screen ════════════════════ */
+
+/** Top-level tab button for switching between Metrics and
+ *  Engagement views inside the dashboard. */
+function TabButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 text-sm font-semibold transition border-b-2 ${
+        active
+          ? "border-[#FB6538] text-slate-900"
+          : "border-transparent text-slate-500 hover:text-slate-700"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
 function AdminLogin({
   onSubmit,
