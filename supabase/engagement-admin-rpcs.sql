@@ -324,7 +324,89 @@ REVOKE ALL ON FUNCTION public.admin_get_push_tokens_for_email(text, text) FROM p
 GRANT EXECUTE ON FUNCTION public.admin_get_push_tokens_for_email(text, text) TO anon, authenticated;
 
 
--- ---------- 7. admin_mark_campaign_sent — final state transition ----------
+-- ---------- 7. admin_create_test_inapp — one-shot in-app to one user ----------
+-- Used by the dashboard's "Tester sur un email" button when the
+-- campaign type is "in-app" (or "both" — the in-app side of "both").
+-- Creates a real campaign in status='sent' with a [TEST] name prefix
+-- + ONE recipient row pointing at the target user. The mobile
+-- EngagementBanner will pick it up at the next foreground transition.
+--
+-- Why a real campaign (not ephemeral): the engagement_recipients
+-- table has a NOT NULL foreign key to engagement_campaigns. We need
+-- the row to make the banner show up. Test campaigns are visible in
+-- the campaign list with their [TEST] prefix so the admin can
+-- recognise + delete them later.
+
+CREATE OR REPLACE FUNCTION public.admin_create_test_inapp(
+  p_password         text,
+  p_email            text,
+  p_inapp_title      text,
+  p_inapp_body       text,
+  p_inapp_cta_label  text,
+  p_inapp_cta_link   text,
+  p_inapp_image_url  text
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  target_user_id uuid;
+  new_id         uuid;
+BEGIN
+  IF NOT public.verify_admin_password(p_password) THEN
+    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_inapp_title IS NULL OR p_inapp_title = '' THEN
+    RAISE EXCEPTION 'In-app title required';
+  END IF;
+
+  SELECT id INTO target_user_id
+  FROM auth.users
+  WHERE lower(email) = lower(trim(p_email))
+    AND deleted_at IS NULL
+  LIMIT 1;
+
+  IF target_user_id IS NULL THEN
+    RAISE EXCEPTION 'No user found with email %', p_email;
+  END IF;
+
+  INSERT INTO public.engagement_campaigns (
+    name,
+    inapp_title, inapp_body, inapp_cta_label, inapp_cta_link, inapp_image_url,
+    segment, status, sent_at, recipient_count, delivered_count
+  ) VALUES (
+    '[TEST in-app] ' || to_char(now(), 'DD/MM HH24:MI') || ' → ' || p_email,
+    nullif(p_inapp_title, ''),
+    nullif(p_inapp_body, ''),
+    nullif(p_inapp_cta_label, ''),
+    nullif(p_inapp_cta_link, ''),
+    nullif(p_inapp_image_url, ''),
+    'all',           -- irrelevant for tests, but column is NOT NULL
+    'sent',
+    now(),
+    1,
+    0
+  )
+  RETURNING id INTO new_id;
+
+  INSERT INTO public.engagement_recipients (campaign_id, user_id)
+  VALUES (new_id, target_user_id);
+
+  RETURN json_build_object(
+    'campaign_id', new_id,
+    'user_id', target_user_id
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_create_test_inapp(text, text, text, text, text, text, text) FROM public;
+GRANT EXECUTE ON FUNCTION public.admin_create_test_inapp(text, text, text, text, text, text, text) TO anon, authenticated;
+
+
+-- ---------- 8. admin_mark_campaign_sent — final state transition ----------
 -- Called by the Edge Function once it has finished pushing to Expo.
 
 CREATE OR REPLACE FUNCTION public.admin_mark_campaign_sent(

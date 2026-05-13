@@ -359,47 +359,79 @@ function Composer({
       alert("Renseigne un email avant de tester.");
       return;
     }
-    if (!showPush) {
-      alert("Le test envoie un push. Choisis 'Notification push' ou 'Les deux' comme type de campagne.");
+    if (showPush && !pushTitle.trim() && !pushBody.trim()) {
+      alert("Un titre push ou un corps est requis.");
       return;
     }
-    if (!pushTitle.trim() && !pushBody.trim()) {
-      alert("Au moins un titre push ou un corps de message est requis.");
+    if (showInapp && !inappTitle.trim()) {
+      alert("Un titre in-app est requis.");
       return;
     }
     setTesting(true);
+
+    // The test branches on campaign type:
+    //   - Push: ephemeral call to Expo Push API via send_test_push
+    //           Edge Function. No DB rows created.
+    //   - In-app: real campaign row + ONE recipient inserted via the
+    //             admin_create_test_inapp RPC. The mobile
+    //             EngagementBanner picks it up next foreground.
+    //   - Both: do both in parallel.
+    const pushResultMsg: string[] = [];
+    const inappResultMsg: string[] = [];
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send_test_push`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          admin_password: password,
-          email: testEmail.trim(),
-          push_title: pushTitle.trim() || undefined,
-          push_body: pushBody.trim() || undefined,
-          push_deep_link: pushDeepLink.trim() || undefined,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error ?? `HTTP ${res.status}`);
+      const tasks: Promise<void>[] = [];
+
+      if (showPush) {
+        tasks.push((async () => {
+          const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send_test_push`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              admin_password: password,
+              email: testEmail.trim(),
+              push_title: pushTitle.trim() || undefined,
+              push_body: pushBody.trim() || undefined,
+              push_deep_link: pushDeepLink.trim() || undefined,
+            }),
+          });
+          const json = await res.json();
+          if (!res.ok || !json.ok) {
+            throw new Error(`Push: ${json.error ?? `HTTP ${res.status}`}`);
+          }
+          if (json.warning) pushResultMsg.push(`⚠️ Push: ${json.warning}`);
+          else if (json.sent === 0)
+            pushResultMsg.push("⚠️ Push: aucun token enregistré pour cet utilisateur.");
+          else pushResultMsg.push(`✅ Push envoyé sur ${json.sent} appareil(s).`);
+        })());
       }
-      if (json.warning) {
-        alert(`⚠️ ${json.warning}`);
-      } else if (json.sent === 0) {
-        alert(
-          "Aucun envoi. L'utilisateur existe mais n'a pas de token push enregistré.",
-        );
-      } else {
-        alert(`✅ Push envoyé à ${json.sent} appareil(s) de ${testEmail}.`);
+
+      if (showInapp) {
+        tasks.push((async () => {
+          const { error } = await supabase.rpc("admin_create_test_inapp", {
+            p_password: password,
+            p_email: testEmail.trim(),
+            p_inapp_title: inappTitle.trim(),
+            p_inapp_body: inappBody.trim(),
+            p_inapp_cta_label: inappCtaLabel.trim(),
+            p_inapp_cta_link: inappCtaLink.trim(),
+            p_inapp_image_url: inappImageUrl.trim(),
+          });
+          if (error) throw new Error(`In-app: ${error.message}`);
+          inappResultMsg.push(
+            "✅ Bannière in-app prête. Elle apparaîtra au prochain lancement de l'app pour cet utilisateur.",
+          );
+        })());
       }
+
+      await Promise.all(tasks);
+      alert([...pushResultMsg, ...inappResultMsg].join("\n\n"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      alert(`❌ Échec : ${msg}`);
+      alert(`❌ Échec :\n${msg}`);
     } finally {
       setTesting(false);
     }
@@ -601,44 +633,49 @@ function Composer({
           </div>
         </Section>
 
-        {/* Test push — only meaningful when push is part of the
-            campaign type. For in-app-only campaigns there's no live
-            test (the banner shows next time the user opens the app,
-            which you can verify by sending to your own account
-            below). */}
-        {showPush && (
-          <div className="border-t border-slate-100 pt-4">
-            <h4 className="text-sm font-bold text-slate-900 mb-1">
-              🧪 Tester sur un email
-            </h4>
-            <p className="text-xs text-slate-500 mb-2">
-              Envoie le push à un utilisateur précis, sans enregistrer
-              de campagne. Pour vérifier le rendu avant l'envoi en
-              masse.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="email"
-                value={testEmail}
-                onChange={(e) => setTestEmail(e.target.value)}
-                placeholder="ton.email@gmail.com"
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
-              />
-              <button
-                onClick={handleTest}
-                disabled={testing}
-                className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
-              >
-                {testing ? "Envoi…" : "Tester"}
-              </button>
-            </div>
-            <p className="text-xs text-slate-400 mt-2">
-              L'email doit être celui d'un compte Ploom existant, ayant
-              ouvert l'app sur un device physique avec les notifs
-              accordées.
-            </p>
+        {/* Test on an email — adapts to the campaign type:
+            • Push only: ephemeral send via send_test_push Edge
+              Function (no DB rows created)
+            • In-app only: creates a real [TEST] campaign with ONE
+              recipient via admin_create_test_inapp — the banner
+              appears at the user's next app foreground
+            • Both: runs both paths in parallel */}
+        <div className="border-t border-slate-100 pt-4">
+          <h4 className="text-sm font-bold text-slate-900 mb-1">
+            🧪 Tester sur un email
+          </h4>
+          <p className="text-xs text-slate-500 mb-2">
+            {campaignType === "push" &&
+              "Envoie le push à un utilisateur précis. Aucune campagne enregistrée."}
+            {campaignType === "inapp" &&
+              "Affiche la bannière in-app à un utilisateur précis au prochain lancement de l'app. Une campagne [TEST] sera créée dans l'historique."}
+            {campaignType === "both" &&
+              "Envoie le push immédiat + prépare la bannière in-app à un utilisateur précis."}
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="ton.email@gmail.com"
+              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+            />
+            <button
+              onClick={handleTest}
+              disabled={testing}
+              className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+            >
+              {testing ? "Envoi…" : "Tester"}
+            </button>
           </div>
-        )}
+          <p className="text-xs text-slate-400 mt-2">
+            L'email doit être celui d'un compte Ploom existant
+            {showPush
+              ? ", ayant ouvert l'app sur un device physique avec les notifs accordées"
+              : ""}
+            .
+          </p>
+        </div>
 
         <div className="pt-2 flex justify-end gap-2">
           <button
