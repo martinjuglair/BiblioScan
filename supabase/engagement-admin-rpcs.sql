@@ -117,7 +117,12 @@ REVOKE ALL ON FUNCTION public.admin_create_campaign(text, text, text, text, text
 GRANT EXECUTE ON FUNCTION public.admin_create_campaign(text, text, text, text, text, text, text, text, text, text, text) TO anon, authenticated;
 
 
--- ---------- 3. admin_delete_campaign — only drafts ----------
+-- ---------- 3. admin_delete_campaign — drafts + tests ----------
+-- Real "sent" campaigns are immutable (audit trail). Drafts can be
+-- deleted freely. Test campaigns (name starts with "[TEST") are
+-- considered ephemeral debug data and can be deleted whatever their
+-- status — they accumulate in the list and the admin wants to clean
+-- them up periodically.
 
 CREATE OR REPLACE FUNCTION public.admin_delete_campaign(
   p_password    text,
@@ -130,20 +135,24 @@ SET search_path = public
 AS $$
 DECLARE
   current_status text;
+  current_name   text;
 BEGIN
   IF NOT public.verify_admin_password(p_password) THEN
     RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
   END IF;
 
-  SELECT status INTO current_status
+  SELECT status, name INTO current_status, current_name
   FROM public.engagement_campaigns
   WHERE id = p_campaign_id;
 
   IF current_status IS NULL THEN
     RAISE EXCEPTION 'Campaign not found';
   END IF;
-  IF current_status != 'draft' THEN
-    RAISE EXCEPTION 'Only draft campaigns can be deleted (this one is %)', current_status;
+
+  -- Allowed if it's a draft OR a test campaign (regardless of status)
+  IF current_status != 'draft'
+     AND (current_name IS NULL OR current_name NOT LIKE '[TEST%') THEN
+    RAISE EXCEPTION 'Only draft or test campaigns can be deleted (this one is % "%")', current_status, current_name;
   END IF;
 
   DELETE FROM public.engagement_campaigns WHERE id = p_campaign_id;

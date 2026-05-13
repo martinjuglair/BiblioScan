@@ -149,6 +149,10 @@ export function EngagementView({ password }: Props) {
 
 /* ════════════════════════ Campaign List ════════════════════════ */
 
+function isTestCampaign(c: Campaign): boolean {
+  return c.name.startsWith("[TEST");
+}
+
 function CampaignList({
   campaigns,
   loading,
@@ -160,6 +164,28 @@ function CampaignList({
   password: string;
   onChange: () => void;
 }) {
+  // Tests are ephemeral debug data — admin can hide them to focus
+  // on real campaigns. Toggle persisted to localStorage so the
+  // preference sticks across reloads.
+  const [hideTests, setHideTests] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("engagement-hide-tests") === "1";
+  });
+  const toggleHideTests = (next: boolean) => {
+    setHideTests(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "engagement-hide-tests",
+        next ? "1" : "0",
+      );
+    }
+  };
+
+  const testCount = campaigns.filter(isTestCampaign).length;
+  const visibleCampaigns = hideTests
+    ? campaigns.filter((c) => !isTestCampaign(c))
+    : campaigns;
+
   if (loading && campaigns.length === 0) {
     return <p className="text-slate-500">Chargement…</p>;
   }
@@ -174,30 +200,43 @@ function CampaignList({
     );
   }
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-            <th className="text-left px-4 py-3 font-semibold">Campagne</th>
-            <th className="text-left px-4 py-3 font-semibold">Segment</th>
-            <th className="text-left px-4 py-3 font-semibold">Statut</th>
-            <th className="text-right px-4 py-3 font-semibold">Envoyés</th>
-            <th className="text-right px-4 py-3 font-semibold">Cliqués</th>
-            <th className="text-left px-4 py-3 font-semibold">Date</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {campaigns.map((c) => (
-            <CampaignRow
-              key={c.id}
-              campaign={c}
-              password={password}
-              onChange={onChange}
-            />
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-2">
+      {testCount > 0 && (
+        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            checked={hideTests}
+            onChange={(e) => toggleHideTests(e.target.checked)}
+            className="w-4 h-4 accent-[#FB6538] cursor-pointer"
+          />
+          Cacher les campagnes de test ({testCount})
+        </label>
+      )}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+              <th className="text-left px-4 py-3 font-semibold">Campagne</th>
+              <th className="text-left px-4 py-3 font-semibold">Segment</th>
+              <th className="text-left px-4 py-3 font-semibold">Statut</th>
+              <th className="text-right px-4 py-3 font-semibold">Envoyés</th>
+              <th className="text-right px-4 py-3 font-semibold">Cliqués</th>
+              <th className="text-left px-4 py-3 font-semibold">Date</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {visibleCampaigns.map((c) => (
+              <CampaignRow
+                key={c.id}
+                campaign={c}
+                password={password}
+                onChange={onChange}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -212,9 +251,31 @@ function CampaignRow({
   onChange: () => void;
 }) {
   const [sending, setSending] = useState(false);
-  const badge = STATUS_BADGE[campaign.status];
-  const segmentLabel = SEGMENTS.find((s) => s.slug === campaign.segment)?.label
-    ?? campaign.segment;
+
+  // Tests are special-cased throughout: their "segment" is actually
+  // a single email, their "delivered/clicked" stats are meaningless
+  // (always 0/1 or thereabouts), and their badge should clearly say
+  // "Test" instead of inheriting the standard sent/draft palette.
+  const isTest = isTestCampaign(campaign);
+
+  // Try to extract the test recipient email from the campaign name —
+  // we set it during admin_create_test_inapp / send_test_push as
+  // " → email@host.tld" at the end of the name string. Falling back
+  // to "Test" if the format ever changes.
+  const testRecipientEmail = isTest
+    ? campaign.name.match(/→\s*([^\s]+@[^\s]+)/)?.[1] ?? null
+    : null;
+
+  const badge: { label: string; color: string; bg: string } = isTest
+    ? { label: "🧪 Test", color: "#5C5963", bg: "#F1ECE6" }
+    : STATUS_BADGE[campaign.status];
+
+  const segmentLabel = isTest
+    ? testRecipientEmail
+      ? `→ ${testRecipientEmail}`
+      : "Test (1 destinataire)"
+    : (SEGMENTS.find((s) => s.slug === campaign.segment)?.label
+       ?? campaign.segment);
 
   const handleSend = async () => {
     const yes = confirm(
@@ -250,7 +311,11 @@ function CampaignRow({
   };
 
   const handleDelete = async () => {
-    const yes = confirm(`Supprimer le brouillon "${campaign.name}" ?`);
+    const yes = confirm(
+      isTest
+        ? `Supprimer cette campagne de test ?`
+        : `Supprimer le brouillon "${campaign.name}" ?`,
+    );
     if (!yes) return;
     try {
       const { error } = await supabase.rpc("admin_delete_campaign", {
@@ -285,16 +350,38 @@ function CampaignRow({
         </span>
       </td>
       <td className="px-4 py-3 text-right tabular-nums">
-        {campaign.delivered_count} / {campaign.recipient_count}
+        {isTest ? (
+          <span className="text-slate-400">—</span>
+        ) : (
+          `${campaign.delivered_count} / ${campaign.recipient_count}`
+        )}
       </td>
-      <td className="px-4 py-3 text-right tabular-nums">{campaign.clicked_count}</td>
+      <td className="px-4 py-3 text-right tabular-nums">
+        {isTest ? (
+          <span className="text-slate-400">—</span>
+        ) : (
+          campaign.clicked_count
+        )}
+      </td>
       <td className="px-4 py-3 text-slate-500 text-xs">
         {campaign.sent_at
           ? new Date(campaign.sent_at).toLocaleString("fr-FR")
           : new Date(campaign.created_at).toLocaleDateString("fr-FR")}
       </td>
       <td className="px-4 py-3 text-right">
-        {campaign.status === "draft" && (
+        {/* Tests get a delete button regardless of status — they're
+            ephemeral and should be easy to clean up. Drafts get
+            send + delete. Real sent campaigns are immutable. */}
+        {isTest && (
+          <button
+            onClick={handleDelete}
+            disabled={sending}
+            className="px-3 py-1 text-slate-500 text-xs font-semibold hover:text-rose-600"
+          >
+            Supprimer
+          </button>
+        )}
+        {!isTest && campaign.status === "draft" && (
           <div className="flex justify-end gap-2">
             <button
               onClick={handleSend}
