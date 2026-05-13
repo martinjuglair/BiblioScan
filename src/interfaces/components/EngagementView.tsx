@@ -558,12 +558,10 @@ function Composer({
               rows={2}
               className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
             />
-            <input
-              type="text"
+            <DeepLinkPicker
               value={pushDeepLink}
-              onChange={(e) => setPushDeepLink(e.target.value)}
-              placeholder="Deep link (ex: ploom://discover, ploom://b/9782… , ploom://group/abc) — optionnel"
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+              onChange={setPushDeepLink}
+              label="Au tap sur le push, ouvrir…"
             />
           </Section>
         )}
@@ -584,20 +582,18 @@ function Composer({
               rows={3}
               className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
             />
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                value={inappCtaLabel}
-                onChange={(e) => setInappCtaLabel(e.target.value)}
-                placeholder="Label du bouton (ex: Découvrir)"
-                className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
-              />
-              <input
-                type="text"
+            <input
+              type="text"
+              value={inappCtaLabel}
+              onChange={(e) => setInappCtaLabel(e.target.value)}
+              placeholder="Label du bouton (ex: Découvrir) — optionnel"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+            />
+            <div className="mt-2">
+              <DeepLinkPicker
                 value={inappCtaLink}
-                onChange={(e) => setInappCtaLink(e.target.value)}
-                placeholder="Lien (ex: ploom://discover) — optionnel"
-                className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+                onChange={setInappCtaLink}
+                label="Au tap sur le bouton, ouvrir…"
               />
             </div>
             <input
@@ -771,6 +767,134 @@ function Composer({
 /** Tile-style radio used for the "Type de campagne" selector. Lets
  *  the admin pick push-only / in-app-only / both with a single tap
  *  on the whole card (not just the radio dot). */
+/** Preset deep links available in Ploom. Update this list whenever
+ *  new routes are added to expo-router. Order = order shown in the
+ *  dropdown — keep "Aucun" first, "Personnalisé" last. */
+const DEEP_LINK_PRESETS: { value: string; label: string }[] = [
+  { value: "", label: "Aucun — juste ouvrir l'app" },
+  { value: "ploom://", label: "🏠 Bibliothèque (page d'accueil)" },
+  { value: "ploom://discover", label: "✨ Découvrir" },
+  { value: "ploom://groups", label: "👨‍👩‍👧 Groupes" },
+  { value: "ploom://stats", label: "📊 Stats" },
+  { value: "ploom://profile", label: "👤 Profil" },
+  { value: "ploom://add-book", label: "📚 Ajouter un livre (scan)" },
+  { value: "__book__", label: "📖 Un livre précis (ISBN à renseigner)" },
+  { value: "__group__", label: "🏘️ Un groupe précis (ID à renseigner)" },
+  { value: "__custom__", label: "🔧 URL personnalisée" },
+];
+
+/** Deep-link selector with smart sub-input for ISBN / group ID /
+ *  custom URL. The selector covers all routes registered via expo-
+ *  router; "Personnalisé" is the escape hatch for future routes. */
+function DeepLinkPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  // Internal mode derives from the current value. ISBN/group/custom
+  // get their own sub-input below the select.
+  let mode = "preset";
+  let extra = "";
+  if (value.startsWith("ploom://b/")) {
+    mode = "__book__";
+    extra = value.replace("ploom://b/", "");
+  } else if (value.startsWith("ploom://group/")) {
+    mode = "__group__";
+    extra = value.replace("ploom://group/", "");
+  } else if (
+    value &&
+    !DEEP_LINK_PRESETS.some((p) => p.value === value && !p.value.startsWith("__"))
+  ) {
+    mode = "__custom__";
+    extra = value;
+  }
+
+  const handleSelectChange = (newValue: string) => {
+    if (newValue === "__book__") {
+      // Wait for the user to type an ISBN.
+      onChange("ploom://b/");
+    } else if (newValue === "__group__") {
+      onChange("ploom://group/");
+    } else if (newValue === "__custom__") {
+      // Stays whatever was there if it was already custom, else
+      // clear so the user types from scratch.
+      if (
+        !value.startsWith("ploom://b/") &&
+        !value.startsWith("ploom://group/")
+      ) {
+        // keep current
+      } else {
+        onChange("");
+      }
+    } else {
+      // Preset: set the URL directly.
+      onChange(newValue);
+    }
+  };
+
+  const selectValue =
+    mode === "__book__"
+      ? "__book__"
+      : mode === "__group__"
+        ? "__group__"
+        : mode === "__custom__"
+          ? "__custom__"
+          : value;
+
+  return (
+    <div>
+      <label className="block text-xs text-slate-500 mb-1">{label}</label>
+      <select
+        value={selectValue}
+        onChange={(e) => handleSelectChange(e.target.value)}
+        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] bg-white"
+      >
+        {DEEP_LINK_PRESETS.map((p) => (
+          <option key={p.value || "_none"} value={p.value}>
+            {p.label}
+          </option>
+        ))}
+      </select>
+
+      {mode === "__book__" && (
+        <input
+          type="text"
+          value={extra}
+          onChange={(e) =>
+            onChange(`ploom://b/${e.target.value.replace(/[^0-9X]/g, "")}`)
+          }
+          placeholder="ISBN à 13 chiffres (ex: 9782070613082)"
+          className="w-full mt-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+        />
+      )}
+
+      {mode === "__group__" && (
+        <input
+          type="text"
+          value={extra}
+          onChange={(e) => onChange(`ploom://group/${e.target.value.trim()}`)}
+          placeholder="ID du groupe (UUID)"
+          className="w-full mt-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+        />
+      )}
+
+      {mode === "__custom__" && (
+        <input
+          type="text"
+          value={extra}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="ploom://… (URL complète)"
+          className="w-full mt-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+        />
+      )}
+    </div>
+  );
+}
+
 function TypeRadio({
   checked,
   onSelect,
