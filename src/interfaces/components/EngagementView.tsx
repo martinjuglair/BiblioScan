@@ -326,6 +326,15 @@ function Composer({
   password: string;
   onDone: () => void;
 }) {
+  // Campaign type — decides which fields are visible/required. Set
+  // at the top of the form so the user makes an explicit choice
+  // before composing. Keeping it as a state instead of a separate
+  // mode avoids re-mounting all the field state on switch.
+  type CampaignType = "push" | "inapp" | "both";
+  const [campaignType, setCampaignType] = useState<CampaignType>("push");
+  const showPush = campaignType === "push" || campaignType === "both";
+  const showInapp = campaignType === "inapp" || campaignType === "both";
+
   const [name, setName] = useState("");
   const [pushTitle, setPushTitle] = useState("");
   const [pushBody, setPushBody] = useState("");
@@ -348,6 +357,10 @@ function Composer({
   const handleTest = async () => {
     if (!testEmail.trim()) {
       alert("Renseigne un email avant de tester.");
+      return;
+    }
+    if (!showPush) {
+      alert("Le test envoie un push. Choisis 'Notification push' ou 'Les deux' comme type de campagne.");
       return;
     }
     if (!pushTitle.trim() && !pushBody.trim()) {
@@ -412,8 +425,12 @@ function Composer({
       alert("Donne un nom interne à la campagne.");
       return;
     }
-    if (!pushTitle.trim() && !inappTitle.trim()) {
-      alert("Au moins un titre push OU un titre in-app est requis.");
+    if (showPush && !pushTitle.trim()) {
+      alert("Un titre push est requis.");
+      return;
+    }
+    if (showInapp && !inappTitle.trim()) {
+      alert("Un titre in-app est requis.");
       return;
     }
     setSaving(true);
@@ -421,14 +438,18 @@ function Composer({
       const { error } = await supabase.rpc("admin_create_campaign", {
         p_password: password,
         p_name: name.trim(),
-        p_push_title: pushTitle.trim(),
-        p_push_body: pushBody.trim(),
-        p_push_deep_link: pushDeepLink.trim(),
-        p_inapp_title: inappTitle.trim(),
-        p_inapp_body: inappBody.trim(),
-        p_inapp_cta_label: inappCtaLabel.trim(),
-        p_inapp_cta_link: inappCtaLink.trim(),
-        p_inapp_image_url: inappImageUrl.trim(),
+        // Only persist fields for the active channel(s). Hidden fields
+        // are saved as empty strings → server-side nullif() turns them
+        // into NULL columns so the Edge Function knows to skip the
+        // corresponding channel.
+        p_push_title: showPush ? pushTitle.trim() : "",
+        p_push_body: showPush ? pushBody.trim() : "",
+        p_push_deep_link: showPush ? pushDeepLink.trim() : "",
+        p_inapp_title: showInapp ? inappTitle.trim() : "",
+        p_inapp_body: showInapp ? inappBody.trim() : "",
+        p_inapp_cta_label: showInapp ? inappCtaLabel.trim() : "",
+        p_inapp_cta_link: showInapp ? inappCtaLink.trim() : "",
+        p_inapp_image_url: showInapp ? inappImageUrl.trim() : "",
         p_segment: segment,
       });
       if (error) throw error;
@@ -455,69 +476,107 @@ function Composer({
           />
         </Section>
 
-        <Section title="Notification push" hint="Ce que l'utilisateur voit sur son écran de verrouillage.">
-          <input
-            type="text"
-            value={pushTitle}
-            onChange={(e) => setPushTitle(e.target.value)}
-            placeholder="Titre (court)"
-            className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
-          />
-          <textarea
-            value={pushBody}
-            onChange={(e) => setPushBody(e.target.value)}
-            placeholder="Corps du message"
-            rows={2}
-            className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
-          />
-          <input
-            type="text"
-            value={pushDeepLink}
-            onChange={(e) => setPushDeepLink(e.target.value)}
-            placeholder="Deep link (ex: ploom://discover) — optionnel"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
-          />
-        </Section>
-
-        <Section title="Bannière in-app" hint="Affichée au prochain lancement de l'app. Optionnel.">
-          <input
-            type="text"
-            value={inappTitle}
-            onChange={(e) => setInappTitle(e.target.value)}
-            placeholder="Titre"
-            className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
-          />
-          <textarea
-            value={inappBody}
-            onChange={(e) => setInappBody(e.target.value)}
-            placeholder="Corps du message"
-            rows={3}
-            className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="text"
-              value={inappCtaLabel}
-              onChange={(e) => setInappCtaLabel(e.target.value)}
-              placeholder="Label du bouton (ex: Découvrir)"
-              className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+        {/* Campaign type selector — drives which channels the user is
+            composing for. Push only / in-app only / both. Hidden
+            sections are skipped at save (empty strings → NULL in DB
+            via nullif()), which lets the Edge Function know to skip
+            the corresponding channel entirely. */}
+        <Section
+          title="Type de campagne"
+          hint="Choisis le canal avant de composer."
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <TypeRadio
+              checked={campaignType === "push"}
+              onSelect={() => setCampaignType("push")}
+              icon="🔔"
+              label="Push uniquement"
+              desc="Notification sur l'écran de verrouillage"
             />
-            <input
-              type="text"
-              value={inappCtaLink}
-              onChange={(e) => setInappCtaLink(e.target.value)}
-              placeholder="Lien (ex: ploom://discover)"
-              className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+            <TypeRadio
+              checked={campaignType === "inapp"}
+              onSelect={() => setCampaignType("inapp")}
+              icon="💬"
+              label="Bannière in-app"
+              desc="Visible au prochain lancement"
+            />
+            <TypeRadio
+              checked={campaignType === "both"}
+              onSelect={() => setCampaignType("both")}
+              icon="🔔💬"
+              label="Les deux"
+              desc="Push + bannière au prochain lancement"
             />
           </div>
-          <input
-            type="text"
-            value={inappImageUrl}
-            onChange={(e) => setInappImageUrl(e.target.value)}
-            placeholder="URL de l'image de bannière — optionnel"
-            className="w-full mt-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
-          />
         </Section>
+
+        {showPush && (
+          <Section title="Notification push" hint="Ce que l'utilisateur voit sur son écran de verrouillage.">
+            <input
+              type="text"
+              value={pushTitle}
+              onChange={(e) => setPushTitle(e.target.value)}
+              placeholder="Titre (court)"
+              className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+            />
+            <textarea
+              value={pushBody}
+              onChange={(e) => setPushBody(e.target.value)}
+              placeholder="Corps du message"
+              rows={2}
+              className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+            />
+            <input
+              type="text"
+              value={pushDeepLink}
+              onChange={(e) => setPushDeepLink(e.target.value)}
+              placeholder="Deep link (ex: ploom://discover, ploom://b/9782… , ploom://group/abc) — optionnel"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+            />
+          </Section>
+        )}
+
+        {showInapp && (
+          <Section title="Bannière in-app" hint="Affichée au prochain lancement de l'app.">
+            <input
+              type="text"
+              value={inappTitle}
+              onChange={(e) => setInappTitle(e.target.value)}
+              placeholder="Titre"
+              className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+            />
+            <textarea
+              value={inappBody}
+              onChange={(e) => setInappBody(e.target.value)}
+              placeholder="Corps du message"
+              rows={3}
+              className="w-full mb-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={inappCtaLabel}
+                onChange={(e) => setInappCtaLabel(e.target.value)}
+                placeholder="Label du bouton (ex: Découvrir)"
+                className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+              />
+              <input
+                type="text"
+                value={inappCtaLink}
+                onChange={(e) => setInappCtaLink(e.target.value)}
+                placeholder="Lien (ex: ploom://discover) — optionnel"
+                className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+              />
+            </div>
+            <input
+              type="text"
+              value={inappImageUrl}
+              onChange={(e) => setInappImageUrl(e.target.value)}
+              placeholder="URL de l'image de bannière — optionnel"
+              className="w-full mt-2 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] text-sm font-mono"
+            />
+          </Section>
+        )}
 
         <Section title="Ciblage" hint="Combien d'utilisateurs reçoivent cette campagne.">
           <div className="space-y-2">
@@ -542,42 +601,44 @@ function Composer({
           </div>
         </Section>
 
-        {/* Test push — envoyer le payload courant à UN email pour
-            valider l'apparence sur ton propre téléphone avant de
-            broadcaster. Ne crée AUCUNE campagne. L'utilisateur ciblé
-            doit avoir ouvert l'app au moins une fois sur un device
-            physique avec les notifs accordées. */}
-        <div className="border-t border-slate-100 pt-4">
-          <h4 className="text-sm font-bold text-slate-900 mb-1">
-            🧪 Tester sur un email
-          </h4>
-          <p className="text-xs text-slate-500 mb-2">
-            Envoie le contenu push ci-dessus à un utilisateur précis,
-            sans enregistrer de campagne. Pour vérifier le rendu avant
-            l'envoi en masse.
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              value={testEmail}
-              onChange={(e) => setTestEmail(e.target.value)}
-              placeholder="ton.email@gmail.com"
-              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
-            />
-            <button
-              onClick={handleTest}
-              disabled={testing}
-              className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
-            >
-              {testing ? "Envoi…" : "Tester"}
-            </button>
+        {/* Test push — only meaningful when push is part of the
+            campaign type. For in-app-only campaigns there's no live
+            test (the banner shows next time the user opens the app,
+            which you can verify by sending to your own account
+            below). */}
+        {showPush && (
+          <div className="border-t border-slate-100 pt-4">
+            <h4 className="text-sm font-bold text-slate-900 mb-1">
+              🧪 Tester sur un email
+            </h4>
+            <p className="text-xs text-slate-500 mb-2">
+              Envoie le push à un utilisateur précis, sans enregistrer
+              de campagne. Pour vérifier le rendu avant l'envoi en
+              masse.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="ton.email@gmail.com"
+                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+              />
+              <button
+                onClick={handleTest}
+                disabled={testing}
+                className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+              >
+                {testing ? "Envoi…" : "Tester"}
+              </button>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">
+              L'email doit être celui d'un compte Ploom existant, ayant
+              ouvert l'app sur un device physique avec les notifs
+              accordées.
+            </p>
           </div>
-          <p className="text-xs text-slate-400 mt-2">
-            L'email doit être celui d'un compte Ploom existant, ayant
-            ouvert l'app sur un device physique avec les notifs
-            accordées.
-          </p>
-        </div>
+        )}
 
         <div className="pt-2 flex justify-end gap-2">
           <button
@@ -605,33 +666,35 @@ function Composer({
           Aperçu
         </h3>
 
-        {/* iOS push preview */}
-        <div className="bg-white/80 backdrop-blur rounded-2xl p-3 shadow-sm border border-slate-200">
-          <div className="flex items-start gap-2.5">
-            <div
-              className="w-10 h-10 rounded-md flex-shrink-0"
-              style={{
-                background:
-                  "linear-gradient(135deg, #FB6538 0%, #FF8B5F 50%, #FFC83D 100%)",
-              }}
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-slate-600">PLOOM</p>
-                <p className="text-[10px] text-slate-400">maintenant</p>
+        {/* iOS push preview — only when push is part of the campaign */}
+        {showPush && (
+          <div className="bg-white/80 backdrop-blur rounded-2xl p-3 shadow-sm border border-slate-200">
+            <div className="flex items-start gap-2.5">
+              <div
+                className="w-10 h-10 rounded-md flex-shrink-0"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #FB6538 0%, #FF8B5F 50%, #FFC83D 100%)",
+                }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-600">PLOOM</p>
+                  <p className="text-[10px] text-slate-400">maintenant</p>
+                </div>
+                <p className="text-sm font-bold text-slate-900 mt-0.5 truncate">
+                  {pushTitle || "Titre du push"}
+                </p>
+                <p className="text-xs text-slate-600 line-clamp-2">
+                  {pushBody || "Corps du message…"}
+                </p>
               </div>
-              <p className="text-sm font-bold text-slate-900 mt-0.5 truncate">
-                {pushTitle || "Titre du push"}
-              </p>
-              <p className="text-xs text-slate-600 line-clamp-2">
-                {pushBody || "Corps du message…"}
-              </p>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* In-app banner preview (only if any in-app field is set) */}
-        {(inappTitle || inappBody) && (
+        {/* In-app banner preview — only when in-app is part of the campaign */}
+        {showInapp && (
           <div>
             <p className="text-xs font-semibold text-slate-500 mb-2">
               Bannière in-app
@@ -665,6 +728,45 @@ function Composer({
         )}
       </div>
     </div>
+  );
+}
+
+/** Tile-style radio used for the "Type de campagne" selector. Lets
+ *  the admin pick push-only / in-app-only / both with a single tap
+ *  on the whole card (not just the radio dot). */
+function TypeRadio({
+  checked,
+  onSelect,
+  icon,
+  label,
+  desc,
+}: {
+  checked: boolean;
+  onSelect: () => void;
+  icon: string;
+  label: string;
+  desc: string;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      type="button"
+      className={`text-left p-3 rounded-lg border-2 transition ${
+        checked
+          ? "border-[#FB6538] bg-[#FFF1EC]"
+          : "border-slate-200 bg-white hover:border-slate-300"
+      }`}
+    >
+      <div className="text-lg mb-1">{icon}</div>
+      <p
+        className={`text-sm font-bold ${
+          checked ? "text-[#FB6538]" : "text-slate-900"
+        }`}
+      >
+        {label}
+      </p>
+      <p className="text-xs text-slate-500 mt-0.5 leading-tight">{desc}</p>
+    </button>
   );
 }
 

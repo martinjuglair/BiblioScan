@@ -109,17 +109,34 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // No tokens to push to — still mark campaign as 'sent' (the in-app
-    // banner will still be picked up by users when they next open the
-    // app, since `engagement_recipients` rows exist).
-    if (recipients.length === 0) {
+    // Determine whether this campaign carries a push payload at all.
+    // In-app-only campaigns (no push_title and no push_body) skip the
+    // Expo Push API entirely — the recipient rows already exist (the
+    // RPC inserted them), so the in-app banner will appear next time
+    // each user opens the app. Saves wasted Expo calls + makes
+    // delivered_count semantically accurate.
+    const hasPushPayload = Boolean(
+      (campaign.push_title && campaign.push_title.length > 0) ||
+      (campaign.push_body && campaign.push_body.length > 0),
+    );
+
+    if (!hasPushPayload || recipients.length === 0) {
       await supabase.rpc("admin_mark_campaign_sent", {
         p_password: admin_password,
         p_campaign_id: campaign_id,
+        // No pushes attempted → delivered = 0, but the campaign is
+        // still "sent" because the in-app side is fully deployed by
+        // the inserted recipient rows.
         p_delivered: 0,
         p_failed: 0,
       });
-      return Response.json({ ok: true, sent: 0, failed: 0 });
+      return Response.json({
+        ok: true,
+        sent: 0,
+        failed: 0,
+        skippedPush: !hasPushPayload,
+        recipients: recipients.length,
+      });
     }
 
     // ── Step 2: batch push to Expo ──
