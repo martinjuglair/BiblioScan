@@ -266,7 +266,65 @@ REVOKE ALL ON FUNCTION public.admin_prepare_send_campaign(text, uuid) FROM publi
 GRANT EXECUTE ON FUNCTION public.admin_prepare_send_campaign(text, uuid) TO anon, authenticated;
 
 
--- ---------- 6. admin_mark_campaign_sent — final state transition ----------
+-- ---------- 6. admin_get_push_tokens_for_email — for test push ----------
+-- Used by the send_test_push Edge Function: looks up the target
+-- user's push tokens by email. Returns an empty array if the user
+-- doesn't exist or hasn't registered any device.
+--
+-- Why not let the function query auth.users directly? Because the
+-- Edge Function runs as service_role and could technically scan the
+-- whole auth.users table — wrapping it here adds a tiny audit
+-- surface and keeps the SECURITY DEFINER pattern consistent.
+
+CREATE OR REPLACE FUNCTION public.admin_get_push_tokens_for_email(
+  p_password text,
+  p_email    text
+)
+RETURNS json
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+  target_user_id uuid;
+  tokens json;
+BEGIN
+  IF NOT public.verify_admin_password(p_password) THEN
+    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT id INTO target_user_id
+  FROM auth.users
+  WHERE lower(email) = lower(trim(p_email))
+    AND deleted_at IS NULL
+  LIMIT 1;
+
+  IF target_user_id IS NULL THEN
+    RAISE EXCEPTION 'No user found with email %', p_email;
+  END IF;
+
+  SELECT json_agg(json_build_object(
+    'user_id', t.user_id,
+    'token', t.token,
+    'platform', t.platform
+  ))
+  INTO tokens
+  FROM public.push_tokens t
+  WHERE t.user_id = target_user_id;
+
+  RETURN json_build_object(
+    'user_id', target_user_id,
+    'tokens', coalesce(tokens, '[]'::json)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_get_push_tokens_for_email(text, text) FROM public;
+GRANT EXECUTE ON FUNCTION public.admin_get_push_tokens_for_email(text, text) TO anon, authenticated;
+
+
+-- ---------- 7. admin_mark_campaign_sent — final state transition ----------
 -- Called by the Edge Function once it has finished pushing to Expo.
 
 CREATE OR REPLACE FUNCTION public.admin_mark_campaign_sent(

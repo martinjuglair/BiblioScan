@@ -338,6 +338,59 @@ function Composer({
   const [segment, setSegment] = useState("all");
   const [segmentCount, setSegmentCount] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  // Test-push state: dedicated email field + busy/result feedback.
+  // Lets the admin verify the push payload on their own phone before
+  // broadcasting to a real segment. No campaign / recipient row is
+  // created — the test is ephemeral.
+  const [testEmail, setTestEmail] = useState("");
+  const [testing, setTesting] = useState(false);
+
+  const handleTest = async () => {
+    if (!testEmail.trim()) {
+      alert("Renseigne un email avant de tester.");
+      return;
+    }
+    if (!pushTitle.trim() && !pushBody.trim()) {
+      alert("Au moins un titre push ou un corps de message est requis.");
+      return;
+    }
+    setTesting(true);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send_test_push`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          admin_password: password,
+          email: testEmail.trim(),
+          push_title: pushTitle.trim() || undefined,
+          push_body: pushBody.trim() || undefined,
+          push_deep_link: pushDeepLink.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? `HTTP ${res.status}`);
+      }
+      if (json.warning) {
+        alert(`⚠️ ${json.warning}`);
+      } else if (json.sent === 0) {
+        alert(
+          "Aucun envoi. L'utilisateur existe mais n'a pas de token push enregistré.",
+        );
+      } else {
+        alert(`✅ Push envoyé à ${json.sent} appareil(s) de ${testEmail}.`);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert(`❌ Échec : ${msg}`);
+    } finally {
+      setTesting(false);
+    }
+  };
 
   // Live segment count
   useEffect(() => {
@@ -488,6 +541,43 @@ function Composer({
             ))}
           </div>
         </Section>
+
+        {/* Test push — envoyer le payload courant à UN email pour
+            valider l'apparence sur ton propre téléphone avant de
+            broadcaster. Ne crée AUCUNE campagne. L'utilisateur ciblé
+            doit avoir ouvert l'app au moins une fois sur un device
+            physique avec les notifs accordées. */}
+        <div className="border-t border-slate-100 pt-4">
+          <h4 className="text-sm font-bold text-slate-900 mb-1">
+            🧪 Tester sur un email
+          </h4>
+          <p className="text-xs text-slate-500 mb-2">
+            Envoie le contenu push ci-dessus à un utilisateur précis,
+            sans enregistrer de campagne. Pour vérifier le rendu avant
+            l'envoi en masse.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="ton.email@gmail.com"
+              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538]"
+            />
+            <button
+              onClick={handleTest}
+              disabled={testing}
+              className="px-4 py-2 bg-slate-900 text-white font-bold rounded-lg hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+            >
+              {testing ? "Envoi…" : "Tester"}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 mt-2">
+            L'email doit être celui d'un compte Ploom existant, ayant
+            ouvert l'app sur un device physique avec les notifs
+            accordées.
+          </p>
+        </div>
 
         <div className="pt-2 flex justify-end gap-2">
           <button
