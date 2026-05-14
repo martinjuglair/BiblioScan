@@ -31,13 +31,6 @@ const storeUrl = (type: "apple" | "google") =>
 const storeName = (type: "apple" | "google") =>
   type === "apple" ? "App Store" : "Google Play";
 
-// Once Google Play review completes and the app is live, both stores
-// are rendered as active CTAs. Kept as a constant in case we ever need
-// to pull Android offline for an emergency rollback.
-const GOOGLE_PLAY_LIVE = true;
-const isStoreLive = (type: "apple" | "google") =>
-  type === "apple" || GOOGLE_PLAY_LIVE;
-
 // Smart-link that detects the platform client-side and redirects to
 // the right store (iOS → App Store, Android → Play Store, desktop →
 // home). Served as a static HTML at /app.html via a Vercel rewrite —
@@ -1791,47 +1784,14 @@ function SocialScreen() {
    ═══════════════════════════════════════════════════════════════════════ */
 
 /** Compact store badge used inside the sticky nav. Just the logo +
- *  store name so it doesn't crowd the right side on mobile. Falls back
- *  to a disabled "Bientôt" pill when the store isn't live yet. */
+ *  store name so it doesn't crowd the right side on mobile. */
 function NavStoreBadge({ type }: { type: "apple" | "google" }) {
-  const live = isStoreLive(type);
-  const commonClass =
-    "group flex items-center gap-1.5 bg-text-primary text-white rounded-pill pl-2.5 pr-3 py-1.5 shadow-card relative";
-
-  if (!live) {
-    return (
-      <button
-        disabled
-        className={`${commonClass} opacity-60 cursor-default pointer-events-none`}
-        aria-label={`${storeName(type)} — bientôt disponible`}
-      >
-        <div className="w-4 h-4 flex items-center justify-center">
-          {type === "apple" ? (
-            <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
-              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" className="w-full h-full">
-              <path fill="#00C4FF" d="M3.6 1.6c-.2.2-.3.5-.3.9v19c0 .4.1.7.3.9l11-11-11-9.8z" />
-              <path fill="#FFCC00" d="M18.5 10.2L14.6 8l-3.3 3 3.3 3 3.9-2.2c1.2-.7 1.2-2 0-2.6z" />
-              <path fill="#00E676" d="M3.6 1.6l11 9.8 3-2.7L5.2 1c-.7-.2-1.3-.1-1.6.6z" />
-              <path fill="#FF3B4E" d="M14.6 11.4l-11 11c.3.7.9.8 1.6.6l12.4-7.1-3-4.5z" />
-            </svg>
-          )}
-        </div>
-        <span className="text-[11px] font-bold leading-none hidden sm:inline">
-          Bientôt
-        </span>
-      </button>
-    );
-  }
-
   return (
     <a
       href={storeUrl(type)}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${commonClass} hover:opacity-90 transition-opacity`}
+      className="group flex items-center gap-1.5 bg-text-primary text-white rounded-pill pl-2.5 pr-3 py-1.5 shadow-card relative hover:opacity-90 transition-opacity"
       aria-label={`Télécharger Ploom sur ${storeName(type)}`}
     >
       <div className="w-4 h-4 flex items-center justify-center">
@@ -1856,50 +1816,14 @@ function NavStoreBadge({ type }: { type: "apple" | "google" }) {
 }
 
 /** Bigger store badge used as the primary CTA in the hero. Same black
- *  pill pattern as the footer one but a touch larger. Falls back to a
- *  disabled "Bientôt disponible" variant when the store isn't live. */
+ *  pill pattern as the footer one but a touch larger. */
 function HeroStoreBadge({ type }: { type: "apple" | "google" }) {
-  const live = isStoreLive(type);
-  const commonClass =
-    "flex items-center gap-3 bg-text-primary text-white rounded-pill pl-5 pr-6 py-3.5 shadow-hero relative w-full sm:w-auto justify-center sm:justify-start";
-
-  if (!live) {
-    return (
-      <button
-        disabled
-        className={`${commonClass} opacity-70 cursor-default pointer-events-none`}
-        aria-label={`${storeName(type)} — bientôt disponible`}
-      >
-        <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
-          {type === "apple" ? (
-            <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
-              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" className="w-full h-full">
-              <path fill="#00C4FF" d="M3.6 1.6c-.2.2-.3.5-.3.9v19c0 .4.1.7.3.9l11-11-11-9.8z" />
-              <path fill="#FFCC00" d="M18.5 10.2L14.6 8l-3.3 3 3.3 3 3.9-2.2c1.2-.7 1.2-2 0-2.6z" />
-              <path fill="#00E676" d="M3.6 1.6l11 9.8 3-2.7L5.2 1c-.7-.2-1.3-.1-1.6.6z" />
-              <path fill="#FF3B4E" d="M14.6 11.4l-11 11c.3.7.9.8 1.6.6l12.4-7.1-3-4.5z" />
-            </svg>
-          )}
-        </div>
-        <div className="text-left leading-none">
-          <p className="text-[10px] font-semibold text-brand-sun uppercase tracking-wider">
-            Bientôt disponible
-          </p>
-          <p className="text-[16px] font-extrabold mt-1">{storeName(type)}</p>
-        </div>
-      </button>
-    );
-  }
-
   return (
     <a
       href={storeUrl(type)}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${commonClass} hover:opacity-90 transition-opacity`}
+      className="flex items-center gap-3 bg-text-primary text-white rounded-pill pl-5 pr-6 py-3.5 shadow-hero relative w-full sm:w-auto justify-center sm:justify-start hover:opacity-90 transition-opacity"
       aria-label={`Télécharger Ploom sur ${storeName(type)}`}
     >
       <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
@@ -1928,50 +1852,14 @@ function HeroStoreBadge({ type }: { type: "apple" | "google" }) {
   );
 }
 
+/** Final-CTA store badge — slightly wider variant with a fuller label. */
 function StoreBadge({ type }: { type: "apple" | "google" }) {
-  const live = isStoreLive(type);
-  const commonClass =
-    "flex items-center gap-2 bg-black text-white rounded-xl px-4 py-3 shadow-card relative overflow-hidden";
-
-  if (!live) {
-    return (
-      <button
-        disabled
-        className={`${commonClass} opacity-70 cursor-default pointer-events-none`}
-        aria-label={`${storeName(type)} — bientôt disponible`}
-      >
-        <div className="w-6 h-6 flex items-center justify-center">
-          {type === "apple" ? (
-            <svg viewBox="0 0 24 24" fill="white" className="w-full h-full">
-              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" className="w-full h-full">
-              <path fill="#00C4FF" d="M3.6 1.6c-.2.2-.3.5-.3.9v19c0 .4.1.7.3.9l11-11-11-9.8z" />
-              <path fill="#FFCC00" d="M18.5 10.2L14.6 8l-3.3 3 3.3 3 3.9-2.2c1.2-.7 1.2-2 0-2.6z" />
-              <path fill="#00E676" d="M3.6 1.6l11 9.8 3-2.7L5.2 1c-.7-.2-1.3-.1-1.6.6z" />
-              <path fill="#FF3B4E" d="M14.6 11.4l-11 11c.3.7.9.8 1.6.6l12.4-7.1-3-4.5z" />
-            </svg>
-          )}
-        </div>
-        <div className="text-left">
-          <p className="text-[9px] leading-none opacity-70 uppercase">
-            Bientôt sur
-          </p>
-          <p className="text-sm font-bold leading-none mt-0.5">
-            {storeName(type)}
-          </p>
-        </div>
-      </button>
-    );
-  }
-
   return (
     <a
       href={storeUrl(type)}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${commonClass} hover:opacity-90 transition-opacity`}
+      className="flex items-center gap-2 bg-black text-white rounded-xl px-4 py-3 shadow-card relative overflow-hidden hover:opacity-90 transition-opacity"
       aria-label={`Télécharger Ploom sur ${storeName(type)}`}
     >
       <div className="w-6 h-6 flex items-center justify-center">
