@@ -9,6 +9,9 @@
       "source": "/.well-known/assetlinks.json",
       "destination": "/well-known/assetlinks.json"
     },
+    { "source": "/app", "destination": "/app.html" },
+    { "source": "/get", "destination": "/app.html" },
+    { "source": "/download", "destination": "/app.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

@@ -31,12 +31,18 @@ const storeUrl = (type: "apple" | "google") =>
 const storeName = (type: "apple" | "google") =>
   type === "apple" ? "App Store" : "Google Play";
 
-// Flip this to true once Google Play review completes and the app is
-// live. Until then the Play Store link returns 404 so we render the
-// Google badge as a disabled "Bientôt" tease.
-const GOOGLE_PLAY_LIVE = false;
+// Once Google Play review completes and the app is live, both stores
+// are rendered as active CTAs. Kept as a constant in case we ever need
+// to pull Android offline for an emergency rollback.
+const GOOGLE_PLAY_LIVE = true;
 const isStoreLive = (type: "apple" | "google") =>
   type === "apple" || GOOGLE_PLAY_LIVE;
+
+// Smart-link that detects the platform client-side and redirects to
+// the right store (iOS → App Store, Android → Play Store, desktop →
+// home). Served as a static HTML at /app.html via a Vercel rewrite —
+// useful in marketing materials when we need a single shareable URL.
+const SMART_DOWNLOAD_URL = "/app";
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -633,7 +639,7 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
           </div>
 
           <p className="text-sm font-semibold opacity-90">
-            Disponible dès maintenant sur l'App Store. Bientôt sur Google Play.
+            Disponible sur l'App Store et Google Play.
           </p>
           <p className="text-xs font-semibold opacity-80 mt-2">
             Sans engagement · Sans pub · Pour toujours
@@ -733,16 +739,13 @@ export function LandingPage({ onLogin, onOpenLegal }: LandingPageProps) {
       </footer>
 
       {/* Sticky mobile-only download bar — anchors visitors to the
-          download CTAs no matter where they are on the page. Defaults
-          to iOS since most French mobile traffic is iOS-heavy; users on
-          Android can scroll back up to the hero or final CTA where both
-          badges are side by side. */}
+          download CTAs no matter where they are on the page. Uses the
+          smart link (/app) so it routes iOS visitors to the App Store
+          and Android visitors to Google Play with a single href. */}
       {scrolled && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-border shadow-hero px-4 py-3">
           <a
-            href={APP_STORE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={SMART_DOWNLOAD_URL}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-pill bg-brand-grape text-white font-bold text-sm"
             aria-label="Télécharger Ploom"
           >
