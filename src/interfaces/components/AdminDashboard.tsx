@@ -93,6 +93,18 @@ interface RecentFeedback {
   user_email: string | null;
 }
 
+interface RecentUser {
+  id: string;
+  display_name: string;
+  email: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  email_confirmed: boolean;
+  book_count: number;
+  read_count: number;
+  group_count: number;
+}
+
 interface Metrics {
   totals: {
     users: number;
@@ -165,8 +177,20 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   // Top-level tab — splits the dashboard between metrics analytics
-  // (default) and the engagement / push-notif tool.
-  const [view, setView] = useState<"metrics" | "engagement">("metrics");
+  // (default), the engagement / push-notif tool, and the recent-
+  // accounts list (useful to see signups with zero activity yet).
+  const [view, setView] = useState<"metrics" | "users" | "engagement">(
+    "metrics"
+  );
+  // Recent-users tab state. Lazy-loaded the first time the tab is
+  // opened (and on manual refresh) to avoid an extra RPC on metrics
+  // page loads.
+  const [recentUsers, setRecentUsers] = useState<RecentUser[] | null>(null);
+  const [recentUsersLoading, setRecentUsersLoading] = useState(false);
+  const [recentUsersError, setRecentUsersError] = useState<string | null>(
+    null
+  );
+  const [recentUsersLimit, setRecentUsersLimit] = useState<number>(50);
 
   const signOut = useCallback(() => {
     window.sessionStorage.removeItem(SESSION_KEY);
@@ -226,6 +250,56 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   useEffect(() => {
     if (password) loadMetrics(period, password, sinceLaunch);
   }, [period, password, sinceLaunch, loadMetrics]);
+
+  // ---------- Recent users (separate RPC, lazy) ----------
+  const loadRecentUsers = useCallback(
+    async (pwd: string, limit: number) => {
+      setRecentUsersLoading(true);
+      setRecentUsersError(null);
+      try {
+        const { data, error: rpcError } = await supabase.rpc(
+          "admin_recent_users",
+          { p_password: pwd, p_limit: limit }
+        );
+        if (rpcError) {
+          const parts = [
+            rpcError.message,
+            rpcError.details,
+            rpcError.hint,
+            rpcError.code ? `(code ${rpcError.code})` : null,
+          ].filter(Boolean);
+          throw new Error(parts.join(" · ") || "Erreur RPC inconnue");
+        }
+        setRecentUsers((data as RecentUser[]) ?? []);
+      } catch (e) {
+        const msg =
+          e instanceof Error
+            ? e.message
+            : typeof e === "object" && e !== null
+              ? JSON.stringify(e)
+              : String(e);
+        if (msg.toLowerCase().includes("invalid password")) {
+          window.sessionStorage.removeItem(SESSION_KEY);
+          setPassword(null);
+          setRecentUsersError("Mot de passe incorrect.");
+        } else {
+          setRecentUsersError(msg);
+        }
+      } finally {
+        setRecentUsersLoading(false);
+      }
+    },
+    []
+  );
+
+  // Fetch on first opening of the Utilisateurs tab, or when the
+  // limit changes while on it. Re-uses the same dependency style
+  // as `loadMetrics` so the password guard naturally applies.
+  useEffect(() => {
+    if (view === "users" && password) {
+      loadRecentUsers(password, recentUsersLimit);
+    }
+  }, [view, password, recentUsersLimit, loadRecentUsers]);
 
   const handlePasswordSubmit = useCallback((pwd: string) => {
     window.sessionStorage.setItem(SESSION_KEY, pwd);
@@ -341,6 +415,11 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             onClick={() => setView("metrics")}
           />
           <TabButton
+            label="Utilisateurs"
+            active={view === "users"}
+            onClick={() => setView("users")}
+          />
+          <TabButton
             label="Engagement"
             active={view === "engagement"}
             onClick={() => setView("engagement")}
@@ -349,6 +428,17 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
 
         {view === "engagement" && password && (
           <EngagementView password={password} />
+        )}
+
+        {view === "users" && password && (
+          <RecentUsersView
+            users={recentUsers}
+            loading={recentUsersLoading}
+            error={recentUsersError}
+            limit={recentUsersLimit}
+            onLimitChange={setRecentUsersLimit}
+            onRefresh={() => loadRecentUsers(password, recentUsersLimit)}
+          />
         )}
 
         {view === "metrics" && (
@@ -1085,9 +1175,239 @@ function ChartTooltip({
   );
 }
 
+/* ════════════════════ Recent users view ════════════════════ */
+
+/** Lists all users sorted by signup date (most recent first).
+ *  Unlike the "Top utilisateurs" list in Métriques (ordered by
+ *  book_count and capped at 10), this view shows every signup —
+ *  including those who haven't added a single book yet, which is
+ *  the actual blind spot when validating onboarding. */
+function RecentUsersView({
+  users,
+  loading,
+  error,
+  limit,
+  onLimitChange,
+  onRefresh,
+}: {
+  users: RecentUser[] | null;
+  loading: boolean;
+  error: string | null;
+  limit: number;
+  onLimitChange: (n: number) => void;
+  onRefresh: () => void;
+}) {
+  const LIMITS = [25, 50, 100, 200];
+  const formatDate = (iso: string | null) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    });
+  };
+  const formatRelative = (iso: string | null) => {
+    if (!iso) return "Jamais";
+    const ms = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(ms / 60_000);
+    if (mins < 1) return "à l'instant";
+    if (mins < 60) return `il y a ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `il y a ${hours} h`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `il y a ${days} j`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `il y a ${months} mois`;
+    return `il y a ${Math.floor(months / 12)} an${
+      Math.floor(months / 12) > 1 ? "s" : ""
+    }`;
+  };
+
+  const totalGhosts = users
+    ? users.filter((u) => u.book_count === 0).length
+    : 0;
+  const totalUnconfirmed = users
+    ? users.filter((u) => !u.email_confirmed).length
+    : 0;
+
+  return (
+    <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-extrabold text-slate-900">
+            Comptes récents
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Triés par date d'inscription (plus récent en premier)
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            {LIMITS.map((n) => (
+              <button
+                key={n}
+                onClick={() => onLimitChange(n)}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
+                  limit === n
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="px-3 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition"
+          >
+            {loading ? "..." : "↻ Rafraîchir"}
+          </button>
+        </div>
+      </header>
+
+      {error && (
+        <div className="m-5 bg-rose-50 border border-rose-200 text-rose-900 rounded-lg p-4 text-sm">
+          <strong className="font-semibold">Erreur :</strong> {error}
+        </div>
+      )}
+
+      {!error && users && users.length > 0 && (
+        <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-600">
+          <span>
+            <strong className="font-semibold text-slate-900">
+              {users.length}
+            </strong>{" "}
+            compte{users.length > 1 ? "s" : ""} affiché
+            {users.length > 1 ? "s" : ""}
+          </span>
+          <span>
+            <strong className="font-semibold text-slate-900">
+              {totalGhosts}
+            </strong>{" "}
+            sans aucun livre
+          </span>
+          <span>
+            <strong className="font-semibold text-slate-900">
+              {totalUnconfirmed}
+            </strong>{" "}
+            email non confirmé
+          </span>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wide text-slate-500 bg-slate-50 border-b border-slate-200">
+              <th className="px-5 py-3 font-semibold">Utilisateur</th>
+              <th className="px-3 py-3 font-semibold">Inscription</th>
+              <th className="px-3 py-3 font-semibold">Dernière connexion</th>
+              <th className="px-3 py-3 font-semibold text-right">Livres</th>
+              <th className="px-3 py-3 font-semibold text-right">Lus</th>
+              <th className="px-3 py-3 font-semibold text-right">Groupes</th>
+              <th className="px-5 py-3 font-semibold">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (!users || users.length === 0) && (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-5 py-12 text-center text-sm text-slate-400"
+                >
+                  Chargement…
+                </td>
+              </tr>
+            )}
+            {!loading && users && users.length === 0 && (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-5 py-12 text-center text-sm text-slate-400"
+                >
+                  Aucun compte trouvé.
+                </td>
+              </tr>
+            )}
+            {users?.map((u) => {
+              const isGhost = u.book_count === 0;
+              return (
+                <tr
+                  key={u.id}
+                  className="border-b border-slate-100 hover:bg-slate-50 transition"
+                >
+                  <td className="px-5 py-3">
+                    <div className="font-semibold text-slate-900">
+                      {u.display_name || u.email || "—"}
+                    </div>
+                    <div className="text-xs text-slate-500">{u.email}</div>
+                  </td>
+                  <td className="px-3 py-3 text-slate-700 whitespace-nowrap">
+                    <div>{formatDate(u.created_at)}</div>
+                    <div className="text-xs text-slate-400">
+                      {formatRelative(u.created_at)}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3 text-slate-700 whitespace-nowrap">
+                    {u.last_sign_in_at ? (
+                      <>
+                        <div>{formatDate(u.last_sign_in_at)}</div>
+                        <div className="text-xs text-slate-400">
+                          {formatRelative(u.last_sign_in_at)}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">Jamais</span>
+                    )}
+                  </td>
+                  <td
+                    className={`px-3 py-3 text-right font-semibold tabular-nums ${
+                      isGhost ? "text-slate-400" : "text-slate-900"
+                    }`}
+                  >
+                    {u.book_count}
+                  </td>
+                  <td className="px-3 py-3 text-right text-slate-700 tabular-nums">
+                    {u.read_count}
+                  </td>
+                  <td className="px-3 py-3 text-right text-slate-700 tabular-nums">
+                    {u.group_count}
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {!u.email_confirmed && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-200">
+                          ⚠ Email
+                        </span>
+                      )}
+                      {isGhost && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
+                          👻 Inactif
+                        </span>
+                      )}
+                      {!isGhost && u.email_confirmed && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+                          ✓ Actif
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 /* ════════════════════ Login screen ════════════════════ */
 
-/** Top-level tab button for switching between Metrics and
+/** Top-level tab button for switching between Metrics, Users and
  *  Engagement views inside the dashboard. */
 function TabButton({
   label,
