@@ -76,12 +76,21 @@ interface TopGroup {
   members: GroupMember[] | null;
 }
 
+interface BookOwner {
+  id: string;
+  name: string | null;
+  email: string | null;
+  is_read: boolean;
+  added_at: string;
+}
+
 interface TopBook {
   isbn: string;
   title: string | null;
   cover_url: string | null;
   add_count: number;
   read_count: number;
+  owners: BookOwner[] | null;
 }
 
 interface RecentFeedback {
@@ -684,18 +693,8 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             groups={metrics?.top_groups ?? []}
             loading={loading}
           />
-          <TopList
-            title="Top livres"
-            subtitle="Par # ajouts"
-            rows={(metrics?.top_books ?? []).map((b) => ({
-              key: b.isbn,
-              primary: b.title ?? b.isbn,
-              secondary: b.isbn,
-              value: b.add_count,
-              tag: `${b.read_count} lus`,
-              cover: b.cover_url ?? undefined,
-            }))}
-            color={COLORS.books}
+          <TopBooksCard
+            books={metrics?.top_books ?? []}
             loading={loading}
           />
         </section>
@@ -1023,6 +1022,131 @@ function TopGroupsCard({
                             </span>
                             <span className="text-slate-400 flex-shrink-0">
                               {new Date(m.joined_at).toLocaleDateString(
+                                "fr-FR",
+                                { day: "numeric", month: "short" }
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Top-books card with expandable owner list. Same expand/collapse
+ *  pattern as TopGroupsCard — one row open at a time, click anywhere
+ *  on the row to toggle. Owner list comes embedded in each book's
+ *  `owners` field so expanding is instant (no extra RPC). */
+function TopBooksCard({
+  books,
+  loading,
+}: {
+  books: TopBook[];
+  loading: boolean;
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <h3 className="text-base font-extrabold text-slate-900">Top livres</h3>
+      <p className="text-xs text-slate-500 mb-3">
+        Par # ajouts · clique pour voir qui les a
+      </p>
+      {loading && books.length === 0 ? (
+        <p className="text-sm text-slate-400">Chargement…</p>
+      ) : books.length === 0 ? (
+        <p className="text-sm text-slate-400">Aucun livre.</p>
+      ) : (
+        <ul className="space-y-2">
+          {books.map((b, i) => {
+            const isOpen = expanded === b.isbn;
+            return (
+              <li
+                key={b.isbn}
+                className="border-b border-slate-100 last:border-0"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isOpen ? null : b.isbn)}
+                  className="w-full flex items-center gap-3 py-2 text-left hover:bg-slate-50 rounded transition px-1 -mx-1"
+                >
+                  <span
+                    className="w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center text-white flex-shrink-0"
+                    style={{ backgroundColor: COLORS.books }}
+                  >
+                    {i + 1}
+                  </span>
+                  {b.cover_url ? (
+                    <img
+                      src={b.cover_url}
+                      alt={b.title ?? b.isbn}
+                      className="w-8 h-12 object-cover rounded shadow-sm flex-shrink-0 bg-slate-100"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-8 h-12 rounded bg-slate-100 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {b.title ?? b.isbn}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate">{b.isbn}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-extrabold text-slate-900 tabular-nums">
+                      {b.add_count}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {b.read_count} lus
+                    </p>
+                  </div>
+                  <span
+                    className={`text-slate-400 text-sm flex-shrink-0 transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div className="pb-3 pl-8 pr-1">
+                    {!b.owners || b.owners.length === 0 ? (
+                      <p className="text-xs text-slate-400">
+                        Aucun utilisateur (hors période sélectionnée).
+                      </p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {b.owners.map((o) => (
+                          <li
+                            key={o.id}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                o.is_read
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {o.is_read ? "Lu" : "À lire"}
+                            </span>
+                            <span className="font-semibold text-slate-900 truncate">
+                              {o.name || "—"}
+                            </span>
+                            <span className="text-slate-500 truncate flex-1">
+                              {o.email || ""}
+                            </span>
+                            <span className="text-slate-400 flex-shrink-0">
+                              {new Date(o.added_at).toLocaleDateString(
                                 "fr-FR",
                                 { day: "numeric", month: "short" }
                               )}

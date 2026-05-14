@@ -237,17 +237,35 @@ BEGIN
     ),
 
     -- ---------- top books (by # users who added the same ISBN) ----------
+    -- Mirrors the top_groups pattern: each row carries the full owners
+    -- list as a JSON array so the dashboard can render an expandable
+    -- "who owns this book" panel without a second round-trip.
     'top_books', (
       SELECT json_agg(row_to_json(t) ORDER BY t.add_count DESC) FROM (
         SELECT
-          isbn,
-          max(title)     AS title,
-          max(cover_url) AS cover_url,
-          count(*)       AS add_count,
-          count(*) FILTER (WHERE is_read) AS read_count
-        FROM public.comic_books
-        WHERE since_date IS NULL OR added_at >= since_date
-        GROUP BY isbn
+          b.isbn,
+          max(b.title)     AS title,
+          max(b.cover_url) AS cover_url,
+          count(*)         AS add_count,
+          count(*) FILTER (WHERE b.is_read) AS read_count,
+          (
+            SELECT json_agg(row_to_json(o) ORDER BY o.added_at DESC) FROM (
+              SELECT
+                b2.user_id                                         AS id,
+                coalesce(u.raw_user_meta_data->>'first_name',
+                         u.email)                                  AS name,
+                u.email,
+                b2.is_read,
+                b2.added_at
+              FROM public.comic_books b2
+              LEFT JOIN auth.users u ON u.id = b2.user_id
+              WHERE b2.isbn = b.isbn
+                AND (since_date IS NULL OR b2.added_at >= since_date)
+            ) o
+          ) AS owners
+        FROM public.comic_books b
+        WHERE since_date IS NULL OR b.added_at >= since_date
+        GROUP BY b.isbn
         ORDER BY add_count DESC
         LIMIT 10
       ) t
