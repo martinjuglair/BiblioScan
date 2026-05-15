@@ -1,17 +1,17 @@
 -- ============================================================
 -- Engagement admin RPCs — dashboard CRUD on campaigns
 -- ------------------------------------------------------------
--- These functions are how the password-gated /admin dashboard
--- interacts with the engagement tables. Same pattern as
--- admin_dashboard_metrics: the password is verified server-side
--- via `verify_admin_password` (already installed by
--- supabase/admin-dashboard.sql), and the function runs as
+-- These functions are how the Google-OAuth-gated /admin dashboard
+-- interacts with the engagement tables. The session's email is
+-- verified server-side via `verify_admin()` (installed by
+-- supabase/admin-google-auth.sql), and each function runs as
 -- security definer so it can read/write the otherwise-locked-down
 -- engagement_campaigns table.
 --
--- Run AFTER both:
---   - admin-dashboard.sql (which sets up the password helper)
---   - engagement-schema.sql (which creates the tables)
+-- Run AFTER all three of:
+--   - admin-google-auth.sql (drops bcrypt era + creates verify_admin)
+--   - admin-dashboard.sql   (no-op for engagement, but co-required)
+--   - engagement-schema.sql (creates the tables)
 --
 -- Idempotent. Safe to re-run.
 -- ============================================================
@@ -19,7 +19,7 @@
 
 -- ---------- 1. admin_list_campaigns — for the campaign list view ----------
 
-CREATE OR REPLACE FUNCTION public.admin_list_campaigns(p_password text)
+CREATE OR REPLACE FUNCTION public.admin_list_campaigns()
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -28,8 +28,8 @@ AS $$
 DECLARE
   result json;
 BEGIN
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
 
   SELECT json_agg(row_to_json(c) ORDER BY c.created_at DESC) INTO result
@@ -48,14 +48,13 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_list_campaigns(text) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_list_campaigns(text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_list_campaigns() FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_list_campaigns() TO authenticated;
 
 
 -- ---------- 2. admin_create_campaign — saves a draft ----------
 
 CREATE OR REPLACE FUNCTION public.admin_create_campaign(
-  p_password       text,
   p_name           text,
   p_push_title     text,
   p_push_body      text,
@@ -75,8 +74,8 @@ AS $$
 DECLARE
   new_id uuid;
 BEGIN
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
 
   IF p_segment IS NULL OR p_segment = '' THEN
@@ -113,8 +112,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_create_campaign(text, text, text, text, text, text, text, text, text, text, text) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_create_campaign(text, text, text, text, text, text, text, text, text, text, text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_create_campaign(text, text, text, text, text, text, text, text, text, text) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_create_campaign(text, text, text, text, text, text, text, text, text, text) TO authenticated;
 
 
 -- ---------- 3. admin_delete_campaign — drafts + tests ----------
@@ -125,7 +124,6 @@ GRANT EXECUTE ON FUNCTION public.admin_create_campaign(text, text, text, text, t
 -- them up periodically.
 
 CREATE OR REPLACE FUNCTION public.admin_delete_campaign(
-  p_password    text,
   p_campaign_id uuid
 )
 RETURNS json
@@ -137,8 +135,8 @@ DECLARE
   current_status text;
   current_name   text;
 BEGIN
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
 
   SELECT status, name INTO current_status, current_name
@@ -160,15 +158,14 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_delete_campaign(text, uuid) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_delete_campaign(text, uuid) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_delete_campaign(uuid) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_delete_campaign(uuid) TO authenticated;
 
 
 -- ---------- 4. admin_segment_count — for the "(N users)" preview ----------
 
 CREATE OR REPLACE FUNCTION public.admin_segment_count(
-  p_password text,
-  p_segment  text
+  p_segment text
 )
 RETURNS int
 LANGUAGE plpgsql
@@ -179,16 +176,16 @@ AS $$
 DECLARE
   c int;
 BEGIN
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
   SELECT count(*) INTO c FROM public.resolve_segment(p_segment);
   RETURN c;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_segment_count(text, text) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_segment_count(text, text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_segment_count(text) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_segment_count(text) TO authenticated;
 
 
 -- ---------- 5. admin_send_campaign — orchestrates the send ----------
@@ -198,7 +195,6 @@ GRANT EXECUTE ON FUNCTION public.admin_segment_count(text, text) TO anon, authen
 -- RPC first to get the list of (user_id, token) tuples to push to.
 
 CREATE OR REPLACE FUNCTION public.admin_prepare_send_campaign(
-  p_password    text,
   p_campaign_id uuid
 )
 RETURNS json
@@ -211,8 +207,8 @@ DECLARE
   segment_size int;
   result       json;
 BEGIN
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
 
   -- Lock the campaign row so two concurrent sends can't race.
@@ -271,8 +267,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_prepare_send_campaign(text, uuid) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_prepare_send_campaign(text, uuid) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_prepare_send_campaign(uuid) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_prepare_send_campaign(uuid) TO authenticated;
 
 
 -- ---------- 6. admin_get_push_tokens_for_email — for test push ----------
@@ -286,8 +282,7 @@ GRANT EXECUTE ON FUNCTION public.admin_prepare_send_campaign(text, uuid) TO anon
 -- surface and keeps the SECURITY DEFINER pattern consistent.
 
 CREATE OR REPLACE FUNCTION public.admin_get_push_tokens_for_email(
-  p_password text,
-  p_email    text
+  p_email text
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -299,8 +294,8 @@ DECLARE
   target_user_id uuid;
   tokens json;
 BEGIN
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
 
   SELECT id INTO target_user_id
@@ -329,8 +324,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_get_push_tokens_for_email(text, text) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_get_push_tokens_for_email(text, text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_get_push_tokens_for_email(text) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_push_tokens_for_email(text) TO authenticated;
 
 
 -- ---------- 7. admin_create_test_inapp — one-shot in-app to one user ----------
@@ -347,7 +342,6 @@ GRANT EXECUTE ON FUNCTION public.admin_get_push_tokens_for_email(text, text) TO 
 -- recognise + delete them later.
 
 CREATE OR REPLACE FUNCTION public.admin_create_test_inapp(
-  p_password         text,
   p_email            text,
   p_inapp_title      text,
   p_inapp_body       text,
@@ -364,8 +358,8 @@ DECLARE
   target_user_id uuid;
   new_id         uuid;
 BEGIN
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
 
   IF p_inapp_title IS NULL OR p_inapp_title = '' THEN
@@ -411,15 +405,14 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_create_test_inapp(text, text, text, text, text, text, text) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_create_test_inapp(text, text, text, text, text, text, text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_create_test_inapp(text, text, text, text, text, text) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_create_test_inapp(text, text, text, text, text, text) TO authenticated;
 
 
 -- ---------- 8. admin_mark_campaign_sent — final state transition ----------
 -- Called by the Edge Function once it has finished pushing to Expo.
 
 CREATE OR REPLACE FUNCTION public.admin_mark_campaign_sent(
-  p_password    text,
   p_campaign_id uuid,
   p_delivered   int,
   p_failed      int
@@ -430,8 +423,8 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
 
   UPDATE public.engagement_campaigns
@@ -445,5 +438,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_mark_campaign_sent(text, uuid, int, int) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_mark_campaign_sent(text, uuid, int, int) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_mark_campaign_sent(uuid, int, int) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_mark_campaign_sent(uuid, int, int) TO authenticated;

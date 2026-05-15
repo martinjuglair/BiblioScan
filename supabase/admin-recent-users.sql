@@ -10,14 +10,19 @@
 -- inactive cohorts.
 --
 -- Returns JSON array of users sorted by created_at DESC.
--- Gated by verify_admin_password() — same guard as the rest.
+-- Gated by verify_admin() — same Google-OAuth guard as every
+-- other admin_* RPC (see admin-google-auth.sql).
 --
--- Idempotent: CREATE OR REPLACE.
+-- Idempotent: DROP old signature + CREATE OR REPLACE the new one.
 -- ============================================================
 
+-- Drop any prior bcrypt-era signature so the new one isn't
+-- shadowed by a function-overload from the previous version.
+DROP FUNCTION IF EXISTS public.admin_recent_users(text, int);
+DROP FUNCTION IF EXISTS public.admin_recent_users(int);
+
 CREATE OR REPLACE FUNCTION public.admin_recent_users(
-  p_password text,
-  p_limit    int DEFAULT 50
+  p_limit int DEFAULT 50
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -27,9 +32,9 @@ AS $$
 DECLARE
   result json;
 BEGIN
-  -- Same admin gate as every other admin_* RPC. Throws on mismatch.
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password';
+  -- Admin guard (Google-OAuth email check, see admin-google-auth.sql)
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized';
   END IF;
 
   -- Clamp to avoid pathological values
@@ -63,10 +68,10 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_recent_users(text, int) FROM public, anon, authenticated;
-GRANT  EXECUTE ON FUNCTION public.admin_recent_users(text, int) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.admin_recent_users(int) FROM public, anon, authenticated;
+GRANT  EXECUTE ON FUNCTION public.admin_recent_users(int) TO authenticated;
 
--- Sanity test (uncomment + replace password to verify after install):
+-- Sanity test (run while signed in as the admin email):
 /*
-SELECT public.admin_recent_users('your_password_here', 5);
+SELECT public.admin_recent_users(5);
 */

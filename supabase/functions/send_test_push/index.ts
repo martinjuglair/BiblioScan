@@ -17,21 +17,17 @@
  *   npx supabase functions deploy send_test_push --project-ref <ref>
  *
  * Invocation:
- *   POST https://<project>.supabase.co/functions/v1/send_test_push
- *   Authorization: Bearer <SUPABASE_ANON_KEY>
- *   Content-Type: application/json
- *   {
- *     "admin_password": "...",
- *     "email": "test@example.com",
- *     "push_title": "Hello",
- *     "push_body": "World",
- *     "push_deep_link": "ploom://discover"   // optional
- *   }
+ *   supabase.functions.invoke("send_test_push", { body: { email, push_title, push_body, push_deep_link } })
+ *   (supabase-js auto-forwards the user JWT in the Authorization header)
  */
 // @ts-expect-error — Deno runtime resolves this URL at edge build time
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
+
+// Hard-coded admin email — must match the one in verify_admin() (see
+// supabase/admin-google-auth.sql). Update in both places if it changes.
+const ADMIN_EMAIL = "martin.juglair@gmail.com";
 
 interface TokenRow {
   user_id: string;
@@ -49,17 +45,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const {
-      admin_password,
-      email,
-      push_title,
-      push_body,
-      push_deep_link,
-    } = body;
+    const { email, push_title, push_body, push_deep_link } = body;
 
-    if (!admin_password || !email) {
+    if (!email) {
       return Response.json(
-        { ok: false, error: "admin_password and email required" },
+        { ok: false, error: "email required" },
         { status: 400 },
       );
     }
@@ -83,10 +73,39 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    // 1. Lookup tokens via SQL RPC (verifies password + scopes by email)
+    // 0. Authorise the caller via Supabase user JWT (replaces the old
+    //    admin_password param). Only ADMIN_EMAIL is allowed through.
+    const userJwt = (req.headers.get("Authorization") ?? "").replace(
+      /^Bearer\s+/i,
+      "",
+    );
+    if (!userJwt) {
+      return Response.json(
+        { ok: false, error: "Missing Authorization header" },
+        { status: 401 },
+      );
+    }
+    const { data: { user }, error: userError } = await supabase.auth.getUser(
+      userJwt,
+    );
+    if (userError || !user) {
+      return Response.json(
+        { ok: false, error: "Invalid token" },
+        { status: 401 },
+      );
+    }
+    if (user.email !== ADMIN_EMAIL) {
+      return Response.json(
+        { ok: false, error: "Forbidden" },
+        { status: 403 },
+      );
+    }
+
+    // 1. Lookup tokens via SQL RPC (RPC accepts service_role context
+    //    via verify_admin() bypass).
     const { data: rpcData, error: rpcError } = await supabase.rpc(
       "admin_get_push_tokens_for_email",
-      { p_password: admin_password, p_email: email },
+      { p_email: email },
     );
 
     if (rpcError) {

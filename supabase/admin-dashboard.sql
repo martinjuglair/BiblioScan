@@ -1,77 +1,29 @@
 -- ============================================================
--- Admin dashboard RPCs — password-gated
+-- Admin dashboard RPCs — Google-OAuth-gated
 -- ------------------------------------------------------------
--- Public access to the LP makes Supabase-auth-based gating
--- impractical (there's no login UI on the web), so the
--- dashboard auths against a single bcrypt-hashed password
--- stored in `public.admin_credentials`. The hash is read only
--- by the security-definer function — RLS blocks any direct
--- SELECT from clients, even with the service-role key revoked.
+-- The dashboard now relies on Supabase Auth (Google provider) for
+-- authentication. The single admin email is hard-coded in the
+-- `verify_admin()` function installed by `admin-google-auth.sql`,
+-- which reads `auth.jwt() ->> 'email'` server-side — so a tampered
+-- client cannot bypass the gate.
 --
--- Note: pgcrypto on Supabase lives in the `extensions` schema,
--- so every function that calls `crypt()` / `gen_salt()` must
--- include `extensions` in its `search_path`. Same applies to
--- the one-shot password setter at the bottom of this file.
+-- Run order on a fresh DB (or after the bcrypt→Google migration):
+--   1. admin-google-auth.sql  (creates verify_admin, drops legacy)
+--   2. this file              (recreates admin_dashboard_metrics)
+--   3. admin-recent-users.sql (recreates admin_recent_users)
+--   4. engagement-admin-rpcs.sql (recreates 8 engagement RPCs)
 --
--- To install / rotate the password:
---   1. Run this whole file once (it creates tables + functions
---      but does NOT set a password)
---   2. Run the snippet at the bottom (commented out) with your
---      chosen password substituted in
+-- Idempotent — safe to re-run.
 -- ============================================================
 
--- ---------- 0. Required extensions ----------
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
-
--- ---------- 1. Credentials table (single-row by design) ----------
-CREATE TABLE IF NOT EXISTS public.admin_credentials (
-  id            integer     PRIMARY KEY DEFAULT 1,
-  password_hash text        NOT NULL,
-  updated_at    timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT admin_credentials_single_row CHECK (id = 1)
-);
-
-ALTER TABLE public.admin_credentials ENABLE ROW LEVEL SECURITY;
--- Intentionally NO policies: clients can never SELECT/INSERT/UPDATE
--- directly. Only security-definer functions reach the data.
-
-
--- ---------- 2. Password verification helper ----------
-CREATE OR REPLACE FUNCTION public.verify_admin_password(p_password text)
-RETURNS boolean
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-DECLARE
-  stored_hash text;
-BEGIN
-  IF p_password IS NULL OR length(p_password) = 0 THEN
-    RETURN false;
-  END IF;
-  SELECT password_hash INTO stored_hash
-  FROM public.admin_credentials
-  WHERE id = 1;
-  IF stored_hash IS NULL THEN
-    RETURN false;
-  END IF;
-  RETURN stored_hash = crypt(p_password, stored_hash);
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.verify_admin_password(text) FROM public;
-GRANT EXECUTE ON FUNCTION public.verify_admin_password(text) TO anon, authenticated;
-
-
--- ---------- 3. Main metrics RPC (password-gated) ----------
+-- ---------- Main metrics RPC (Google-auth-gated) ----------
 -- Drop any prior overload so the new signature is unambiguous.
 DROP FUNCTION IF EXISTS public.admin_dashboard_metrics(text, int);
 DROP FUNCTION IF EXISTS public.admin_dashboard_metrics(text, int, timestamptz);
+DROP FUNCTION IF EXISTS public.admin_dashboard_metrics(int, timestamptz);
 
 CREATE OR REPLACE FUNCTION public.admin_dashboard_metrics(
-  p_password   text,
   period_days  int         DEFAULT 30,
   since_date   timestamptz DEFAULT NULL
 )
@@ -85,9 +37,9 @@ DECLARE
   start_ts timestamptz;
   total_users int;
 BEGIN
-  -- Password guard
-  IF NOT public.verify_admin_password(p_password) THEN
-    RAISE EXCEPTION 'Invalid password' USING ERRCODE = '42501';
+  -- Admin guard (Google-OAuth email check, see admin-google-auth.sql)
+  IF NOT public.verify_admin() THEN
+    RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
 
   -- Clamp the period to something sensible
@@ -317,25 +269,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.admin_dashboard_metrics(text, int, timestamptz) FROM public;
-GRANT EXECUTE ON FUNCTION public.admin_dashboard_metrics(text, int, timestamptz) TO anon, authenticated;
-
-
--- ============================================================
--- ONE-TIME PASSWORD SETUP
--- ------------------------------------------------------------
--- Run the snippet below ONCE in the SQL Editor with your chosen
--- password substituted for 'CHANGE_ME'. Use a strong one — this
--- is the only thing standing between the public internet and
--- your user data.
---
--- To rotate the password later, run the same snippet again with
--- the new password.
--- ============================================================
-/*
-INSERT INTO public.admin_credentials (id, password_hash)
-VALUES (1, extensions.crypt('CHANGE_ME', extensions.gen_salt('bf', 10)))
-ON CONFLICT (id) DO UPDATE
-  SET password_hash = excluded.password_hash,
-      updated_at    = now();
-*/
+REVOKE ALL ON FUNCTION public.admin_dashboard_metrics(int, timestamptz) FROM public;
+GRANT EXECUTE ON FUNCTION public.admin_dashboard_metrics(int, timestamptz) TO authenticated;

@@ -3,9 +3,10 @@ import { supabase } from "@infrastructure/supabase/client";
 
 /**
  * Engagement (push + in-app) management view, embedded inside the
- * /admin dashboard. Self-contained: parent passes the admin password
- * once at mount, every action calls a password-gated RPC or the
- * `send_campaign` Edge Function.
+ * /admin dashboard. Authentication is handled by the parent
+ * (AdminDashboard) — by the time this component mounts the user is
+ * already signed in via Google OAuth as the configured admin, so all
+ * RPC and Edge Function calls inherit that session automatically.
  *
  * Layout:
  *   - Header with "Nouvelle campagne" button
@@ -16,10 +17,6 @@ import { supabase } from "@infrastructure/supabase/client";
  * State is loaded fresh on mount (and on every send) — no realtime
  * subscriptions yet. Refresh button is in the header.
  */
-
-interface Props {
-  password: string;
-}
 
 interface Campaign {
   id: string;
@@ -59,7 +56,7 @@ const STATUS_BADGE: Record<Campaign["status"], { label: string; color: string; b
   failed: { label: "Échec", color: "#DC2626", bg: "#FEF2F2" },
 };
 
-export function EngagementView({ password }: Props) {
+export function EngagementView() {
   const [mode, setMode] = useState<"list" | "compose">("list");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +68,6 @@ export function EngagementView({ password }: Props) {
     try {
       const { data, error: rpcError } = await supabase.rpc(
         "admin_list_campaigns",
-        { p_password: password },
       );
       if (rpcError) throw rpcError;
       setCampaigns((data as Campaign[]) ?? []);
@@ -81,7 +77,7 @@ export function EngagementView({ password }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [password]);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -129,14 +125,12 @@ export function EngagementView({ password }: Props) {
         <CampaignList
           campaigns={campaigns}
           loading={loading}
-          password={password}
           onChange={refresh}
         />
       )}
 
       {mode === "compose" && (
         <Composer
-          password={password}
           onDone={() => {
             setMode("list");
             refresh();
@@ -156,12 +150,10 @@ function isTestCampaign(c: Campaign): boolean {
 function CampaignList({
   campaigns,
   loading,
-  password,
   onChange,
 }: {
   campaigns: Campaign[];
   loading: boolean;
-  password: string;
   onChange: () => void;
 }) {
   // Tests are ephemeral debug data — admin can hide them to focus
@@ -230,7 +222,6 @@ function CampaignList({
               <CampaignRow
                 key={c.id}
                 campaign={c}
-                password={password}
                 onChange={onChange}
               />
             ))}
@@ -243,11 +234,9 @@ function CampaignList({
 
 function CampaignRow({
   campaign,
-  password,
   onChange,
 }: {
   campaign: Campaign;
-  password: string;
   onChange: () => void;
 }) {
   const [sending, setSending] = useState(false);
@@ -284,23 +273,16 @@ function CampaignRow({
     if (!yes) return;
     setSending(true);
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send_campaign`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          campaign_id: campaign.id,
-          admin_password: password,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error ?? `HTTP ${res.status}`);
-      }
-      alert(`✅ Envoyée à ${json.sent} utilisateur(s) (${json.failed} échecs).`);
+      // supabase.functions.invoke auto-forwards the user JWT in the
+      // Authorization header — Edge Function reads it to verify admin.
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "send_campaign",
+        { body: { campaign_id: campaign.id } },
+      );
+      if (invokeError) throw invokeError;
+      const json = data as { ok?: boolean; sent?: number; failed?: number; error?: string };
+      if (!json?.ok) throw new Error(json?.error ?? "Réponse inattendue");
+      alert(`✅ Envoyée à ${json.sent ?? 0} utilisateur(s) (${json.failed ?? 0} échecs).`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       alert(`❌ Échec de l'envoi : ${msg}`);
@@ -319,7 +301,6 @@ function CampaignRow({
     if (!yes) return;
     try {
       const { error } = await supabase.rpc("admin_delete_campaign", {
-        p_password: password,
         p_campaign_id: campaign.id,
       });
       if (error) throw error;
@@ -407,10 +388,8 @@ function CampaignRow({
 /* ════════════════════════ Composer ════════════════════════ */
 
 function Composer({
-  password,
   onDone,
 }: {
-  password: string;
   onDone: () => void;
 }) {
   // Campaign type — decides which fields are visible/required. Set
@@ -470,24 +449,25 @@ function Composer({
 
       if (showPush) {
         tasks.push((async () => {
-          const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send_test_push`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          // supabase.functions.invoke auto-forwards the user JWT → the
+          // Edge Function validates it against the admin email.
+          const { data, error: invokeError } = await supabase.functions.invoke(
+            "send_test_push",
+            {
+              body: {
+                email: testEmail.trim(),
+                push_title: pushTitle.trim() || undefined,
+                push_body: pushBody.trim() || undefined,
+                push_deep_link: pushDeepLink.trim() || undefined,
+              },
             },
-            body: JSON.stringify({
-              admin_password: password,
-              email: testEmail.trim(),
-              push_title: pushTitle.trim() || undefined,
-              push_body: pushBody.trim() || undefined,
-              push_deep_link: pushDeepLink.trim() || undefined,
-            }),
-          });
-          const json = await res.json();
-          if (!res.ok || !json.ok) {
-            throw new Error(`Push: ${json.error ?? `HTTP ${res.status}`}`);
+          );
+          if (invokeError) throw new Error(`Push: ${invokeError.message}`);
+          const json = data as {
+            ok?: boolean; sent?: number; warning?: string; error?: string;
+          };
+          if (!json?.ok) {
+            throw new Error(`Push: ${json?.error ?? "Réponse inattendue"}`);
           }
           if (json.warning) pushResultMsg.push(`⚠️ Push: ${json.warning}`);
           else if (json.sent === 0)
@@ -499,7 +479,6 @@ function Composer({
       if (showInapp) {
         tasks.push((async () => {
           const { error } = await supabase.rpc("admin_create_test_inapp", {
-            p_password: password,
             p_email: testEmail.trim(),
             p_inapp_title: inappTitle.trim(),
             p_inapp_body: inappBody.trim(),
@@ -529,7 +508,7 @@ function Composer({
     let cancelled = false;
     setSegmentCount(null);
     supabase
-      .rpc("admin_segment_count", { p_password: password, p_segment: segment })
+      .rpc("admin_segment_count", { p_segment: segment })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (!error) setSegmentCount(data as number);
@@ -537,7 +516,7 @@ function Composer({
     return () => {
       cancelled = true;
     };
-  }, [segment, password]);
+  }, [segment]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -555,7 +534,6 @@ function Composer({
     setSaving(true);
     try {
       const { error } = await supabase.rpc("admin_create_campaign", {
-        p_password: password,
         p_name: name.trim(),
         // Only persist fields for the active channel(s). Hidden fields
         // are saved as empty strings → server-side nullif() turns them

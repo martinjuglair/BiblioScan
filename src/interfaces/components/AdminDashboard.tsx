@@ -3,8 +3,8 @@ import {
   useEffect,
   useMemo,
   useState,
-  type FormEvent,
 } from "react";
+import type { User } from "@supabase/supabase-js";
 import {
   Area,
   AreaChart,
@@ -148,9 +148,14 @@ interface AdminDashboardProps {
   onExit: () => void;
 }
 
-// Where we cache the password for the session. Cleared on browser
-// tab close, on logout, and on Invalid-password errors.
-const SESSION_KEY = "ploom-admin-password";
+// The only email allowed to use the admin dashboard. Server-side
+// `verify_admin()` (see supabase/admin-google-auth.sql) enforces the
+// same check; this constant is only used for UI gating so non-admin
+// signed-in users don't see the dashboard chrome flash before the
+// RPCs would reject them anyway. If you change this, also update
+// verify_admin() + the two Edge Functions (send_campaign,
+// send_test_push) that hard-code it as ADMIN_EMAIL.
+const ADMIN_EMAIL = "martin.juglair@gmail.com";
 
 // App Store launch date. The "Depuis le lancement" toggle (default on)
 // passes this as `since_date` to the RPC so pre-launch test traffic
@@ -175,10 +180,33 @@ const COLORS = {
 };
 
 export function AdminDashboard({ onExit }: AdminDashboardProps) {
-  const [password, setPassword] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return window.sessionStorage.getItem(SESSION_KEY);
-  });
+  // ---------- Supabase Auth session (Google OAuth) ----------
+  // Replaces the old bcrypt password gate. We listen to auth state
+  // changes so the dashboard reacts to sign-in / sign-out without a
+  // full page reload (e.g. after the OAuth redirect lands).
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        setAuthLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const [period, setPeriod] = useState<Period>(30);
   const [sinceLaunch, setSinceLaunch] = useState<boolean>(true);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -201,22 +229,21 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   );
   const [recentUsersLimit, setRecentUsersLimit] = useState<number>(50);
 
-  const signOut = useCallback(() => {
-    window.sessionStorage.removeItem(SESSION_KEY);
-    setPassword(null);
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
     setMetrics(null);
+    setRecentUsers(null);
     setError(null);
   }, []);
 
   const loadMetrics = useCallback(
-    async (days: Period, pwd: string, since: boolean) => {
+    async (days: Period, since: boolean) => {
       setLoading(true);
       setError(null);
       try {
         const { data, error: rpcError } = await supabase.rpc(
           "admin_dashboard_metrics",
           {
-            p_password: pwd,
             period_days: days,
             since_date: since ? LAUNCH_DATE_ISO : null,
           }
@@ -241,14 +268,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             : typeof e === "object" && e !== null
               ? JSON.stringify(e)
               : String(e);
-        // Wrong password → clear cache so we re-prompt
-        if (msg.toLowerCase().includes("invalid password")) {
-          window.sessionStorage.removeItem(SESSION_KEY);
-          setPassword(null);
-          setError("Mot de passe incorrect.");
-        } else {
-          setError(msg);
-        }
+        setError(msg);
       } finally {
         setLoading(false);
       }
@@ -257,18 +277,18 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   );
 
   useEffect(() => {
-    if (password) loadMetrics(period, password, sinceLaunch);
-  }, [period, password, sinceLaunch, loadMetrics]);
+    if (isAdmin) loadMetrics(period, sinceLaunch);
+  }, [period, isAdmin, sinceLaunch, loadMetrics]);
 
   // ---------- Recent users (separate RPC, lazy) ----------
   const loadRecentUsers = useCallback(
-    async (pwd: string, limit: number) => {
+    async (limit: number) => {
       setRecentUsersLoading(true);
       setRecentUsersError(null);
       try {
         const { data, error: rpcError } = await supabase.rpc(
           "admin_recent_users",
-          { p_password: pwd, p_limit: limit }
+          { p_limit: limit }
         );
         if (rpcError) {
           const parts = [
@@ -287,13 +307,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             : typeof e === "object" && e !== null
               ? JSON.stringify(e)
               : String(e);
-        if (msg.toLowerCase().includes("invalid password")) {
-          window.sessionStorage.removeItem(SESSION_KEY);
-          setPassword(null);
-          setRecentUsersError("Mot de passe incorrect.");
-        } else {
-          setRecentUsersError(msg);
-        }
+        setRecentUsersError(msg);
       } finally {
         setRecentUsersLoading(false);
       }
@@ -302,18 +316,12 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   );
 
   // Fetch on first opening of the Utilisateurs tab, or when the
-  // limit changes while on it. Re-uses the same dependency style
-  // as `loadMetrics` so the password guard naturally applies.
+  // limit changes while on it.
   useEffect(() => {
-    if (view === "users" && password) {
-      loadRecentUsers(password, recentUsersLimit);
+    if (view === "users" && isAdmin) {
+      loadRecentUsers(recentUsersLimit);
     }
-  }, [view, password, recentUsersLimit, loadRecentUsers]);
-
-  const handlePasswordSubmit = useCallback((pwd: string) => {
-    window.sessionStorage.setItem(SESSION_KEY, pwd);
-    setPassword(pwd);
-  }, []);
+  }, [view, isAdmin, recentUsersLimit, loadRecentUsers]);
 
   // IMPORTANT: every hook in this component must run on every render.
   // `exportCSV` was previously declared *after* the `if (!password)`
@@ -341,13 +349,24 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     URL.revokeObjectURL(url);
   }, [metrics, period]);
 
-  // Not authenticated yet → show password prompt
-  if (!password) {
+  // Still verifying initial session → light placeholder so we don't
+  // flash the login screen on every refresh when a session exists.
+  if (authLoading) {
     return (
-      <AdminLogin
-        onSubmit={handlePasswordSubmit}
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-sm text-slate-500">Vérification de la session…</p>
+      </div>
+    );
+  }
+
+  // Not signed in, or signed in with the wrong account → show the
+  // Google login (or the "wrong account" recovery flow).
+  if (!isAdmin) {
+    return (
+      <AdminGoogleLogin
+        currentEmail={user?.email ?? null}
         onExit={onExit}
-        error={error}
+        onSignOut={signOut}
       />
     );
   }
@@ -387,10 +406,8 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             </label>
             <PeriodSelector value={period} onChange={setPeriod} />
             <button
-              onClick={() =>
-                password && loadMetrics(period, password, sinceLaunch)
-              }
-              disabled={loading || !password}
+              onClick={() => loadMetrics(period, sinceLaunch)}
+              disabled={loading}
               className="px-3 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition"
             >
               {loading ? "..." : "↻ Rafraîchir"}
@@ -435,18 +452,16 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
           />
         </nav>
 
-        {view === "engagement" && password && (
-          <EngagementView password={password} />
-        )}
+        {view === "engagement" && <EngagementView />}
 
-        {view === "users" && password && (
+        {view === "users" && (
           <RecentUsersView
             users={recentUsers}
             loading={recentUsersLoading}
             error={recentUsersError}
             limit={recentUsersLimit}
             onLimitChange={setRecentUsersLimit}
-            onRefresh={() => loadRecentUsers(password, recentUsersLimit)}
+            onRefresh={() => loadRecentUsers(recentUsersLimit)}
           />
         )}
 
@@ -1556,22 +1571,42 @@ function TabButton({
   );
 }
 
-function AdminLogin({
-  onSubmit,
+/** Replaces the bcrypt password form with a Google OAuth flow.
+ *  Three states:
+ *    1. No session yet → render the "Se connecter avec Google" button
+ *    2. Signed in with the wrong account → show that email + a
+ *       sign-out button so the admin can switch
+ *    3. Signed in correctly → the parent renders the dashboard, this
+ *       component never mounts */
+function AdminGoogleLogin({
+  currentEmail,
   onExit,
-  error,
+  onSignOut,
 }: {
-  onSubmit: (pwd: string) => void;
+  currentEmail: string | null;
   onExit: () => void;
-  error: string | null;
+  onSignOut: () => Promise<void>;
 }) {
-  const [value, setValue] = useState("");
-  const [show, setShow] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (value.length === 0) return;
-    onSubmit(value);
+  const handleGoogleSignIn = async () => {
+    setSigningIn(true);
+    setSignInError(null);
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        // Land back on /admin so the dashboard re-renders with the
+        // new session instead of bouncing the user to the home page.
+        redirectTo: `${window.location.origin}/admin`,
+      },
+    });
+    // signInWithOAuth redirects the browser — we only reach here on
+    // failure (e.g. provider not configured server-side).
+    if (oauthError) {
+      setSignInError(oauthError.message);
+      setSigningIn(false);
+    }
   };
 
   return (
@@ -1592,54 +1627,62 @@ function AdminLogin({
             Ploom · Admin
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Accès restreint
+            Accès réservé
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3"
-        >
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-700">
-              Mot de passe
-            </span>
-            <div className="mt-1 relative">
-              <input
-                type={show ? "text" : "password"}
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                autoFocus
-                autoComplete="current-password"
-                className="w-full px-3 py-2.5 pr-12 text-base border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FB6538] focus:border-transparent"
-                placeholder="••••••••"
-              />
-              <button
-                type="button"
-                onClick={() => setShow((s) => !s)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500 hover:text-slate-700 px-2 py-1"
-              >
-                {show ? "Cacher" : "Voir"}
-              </button>
+        {currentEmail ? (
+          /* Already signed in but not the admin → recovery flow */
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-3 text-sm">
+              <p className="font-semibold">Compte non autorisé</p>
+              <p className="text-amber-800 mt-1">
+                Tu es connecté avec <strong>{currentEmail}</strong>, qui
+                n'est pas le compte admin.
+              </p>
             </div>
-          </label>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="w-full py-2.5 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition"
+            >
+              Se déconnecter
+            </button>
+            <p className="text-xs text-slate-500 text-center">
+              Puis reconnecte-toi avec le compte Google admin.
+            </p>
+          </div>
+        ) : (
+          /* Not signed in → Google OAuth button */
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={signingIn}
+              className="w-full py-2.5 bg-white border border-slate-300 text-slate-900 font-bold rounded-lg hover:bg-slate-50 disabled:opacity-50 transition flex items-center justify-center gap-2"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.61z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              <span>
+                {signingIn ? "Redirection…" : "Se connecter avec Google"}
+              </span>
+            </button>
 
-          {error && (
-            <p className="text-sm text-rose-600 font-medium">{error}</p>
-          )}
+            {signInError && (
+              <p className="text-sm text-rose-600 font-medium">
+                {signInError}
+              </p>
+            )}
 
-          <button
-            type="submit"
-            disabled={value.length === 0}
-            className="w-full py-2.5 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 disabled:opacity-40 transition"
-          >
-            Entrer
-          </button>
-        </form>
-
-        <p className="text-xs text-slate-400 text-center mt-4">
-          Le mot de passe est vérifié côté serveur (bcrypt).
-        </p>
+            <p className="text-xs text-slate-500 text-center pt-1">
+              Seul le compte Google admin a accès aux données.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
