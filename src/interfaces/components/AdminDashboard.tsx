@@ -1190,39 +1190,72 @@ function RecentFeedbackCard({
   feedback: RecentFeedback[];
   loading: boolean;
 }) {
+  // Locally hide rows the admin has marked as read so they disappear
+  // immediately without waiting for a metrics refresh. The next
+  // metrics fetch will already exclude them server-side (the RPC
+  // filters `read_at IS NULL`), so the local set stays in sync.
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [resolving, setResolving] = useState<Set<string>>(new Set());
+
+  const markAsRead = useCallback(async (id: string) => {
+    // Optimistic: hide right away, mark busy for the spinner.
+    setResolving((prev) => new Set(prev).add(id));
+    const { error: rpcError } = await supabase.rpc(
+      "admin_mark_feedback_read",
+      { p_id: id },
+    );
+    setResolving((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    if (rpcError) {
+      alert(`Échec : ${rpcError.message}`);
+      return;
+    }
+    setHiddenIds((prev) => new Set(prev).add(id));
+  }, []);
+
+  const visible = feedback.filter((fb) => !hiddenIds.has(fb.id));
+
   return (
     <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
       <h2 className="text-lg font-extrabold text-slate-900">
         Avis utilisateurs
       </h2>
       <p className="text-xs text-slate-500 mb-4">
-        Ce que tes users ont écrit dans Profil → « Votre avis compte »
+        Ce que tes users ont écrit dans Profil → « Votre avis compte ».{" "}
+        <span className="italic">Marque comme lu une fois traité.</span>
       </p>
-      {loading && feedback.length === 0 ? (
+      {loading && visible.length === 0 ? (
         <p className="text-sm text-slate-400">Chargement…</p>
-      ) : feedback.length === 0 ? (
-        <p className="text-sm text-slate-400">Aucun avis pour le moment.</p>
+      ) : visible.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          {feedback.length === 0
+            ? "Aucun avis pour le moment."
+            : "Tous les avis ont été traités. 🎉"}
+        </p>
       ) : (
         <ul className="space-y-3">
-          {feedback.map((fb) => (
-            <li
-              key={fb.id}
-              className="border border-slate-100 rounded-xl p-3 hover:bg-slate-50 transition"
-            >
-              <div className="flex items-baseline justify-between gap-3 mb-1.5">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-slate-900 truncate">
-                    {fb.user_name || "—"}
-                  </p>
-                  {fb.user_email && (
-                    <p className="text-xs text-slate-500 truncate">
-                      {fb.user_email}
+          {visible.map((fb) => {
+            const isResolving = resolving.has(fb.id);
+            return (
+              <li
+                key={fb.id}
+                className="border border-slate-100 rounded-xl p-3 hover:bg-slate-50 transition"
+              >
+                <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900 truncate">
+                      {fb.user_name || "—"}
                     </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <StarRating value={fb.rating} />
-                  <span className="text-xs text-slate-400">
+                    {fb.user_email && (
+                      <p className="text-xs text-slate-500 truncate">
+                        {fb.user_email}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xs text-slate-400 flex-shrink-0">
                     {new Date(fb.created_at).toLocaleDateString("fr-FR", {
                       day: "numeric",
                       month: "short",
@@ -1231,31 +1264,32 @@ function RecentFeedbackCard({
                     })}
                   </span>
                 </div>
-              </div>
-              {fb.message && fb.message.trim().length > 0 ? (
-                <p className="text-sm text-slate-700 whitespace-pre-wrap">
-                  {fb.message}
-                </p>
-              ) : (
-                <p className="text-xs italic text-slate-400">
-                  Pas de message — note seule.
-                </p>
-              )}
-            </li>
-          ))}
+                {fb.message && fb.message.trim().length > 0 ? (
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                    {fb.message}
+                  </p>
+                ) : (
+                  <p className="text-xs italic text-slate-400">
+                    Pas de message.
+                  </p>
+                )}
+                <div className="mt-2 pt-2 border-t border-slate-100 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => markAsRead(fb.id)}
+                    disabled={isResolving}
+                    className="text-xs font-semibold text-slate-500 hover:text-emerald-700 transition px-2 py-1 rounded disabled:opacity-50"
+                    aria-label="Marquer cet avis comme traité"
+                  >
+                    {isResolving ? "…" : "✓ Marquer comme lu"}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
-  );
-}
-
-function StarRating({ value }: { value: number }) {
-  const clamped = Math.max(0, Math.min(5, Math.round(value)));
-  return (
-    <span aria-label={`${clamped} sur 5`} className="text-sm tracking-tight">
-      {"★".repeat(clamped)}
-      <span className="text-slate-300">{"★".repeat(5 - clamped)}</span>
-    </span>
   );
 }
 

@@ -245,6 +245,10 @@ BEGIN
     ),
 
     -- ---------- recent app feedback (Profile → "Votre avis compte") ----------
+    -- Only un-resolved messages: the admin marks a row as read via
+    -- admin_mark_feedback_read() and it stops appearing here.
+    -- Rating column is still SELECT-ed for historical rows but the
+    -- UI no longer renders stars (the feature was removed in v1.1).
     'recent_feedback', (
       SELECT json_agg(row_to_json(f) ORDER BY f.created_at DESC) FROM (
         SELECT
@@ -256,7 +260,8 @@ BEGIN
           u.email AS user_email
         FROM public.app_feedback fb
         LEFT JOIN auth.users u ON u.id = fb.user_id
-        WHERE since_date IS NULL OR fb.created_at >= since_date
+        WHERE fb.read_at IS NULL
+          AND (since_date IS NULL OR fb.created_at >= since_date)
         ORDER BY fb.created_at DESC
         LIMIT 30
       ) f
